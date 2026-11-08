@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, CircleAlert, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
-import { Link, useParams } from 'wouter';
+import { Link, useParams } from 'react-router-dom';
 import type { UserSession } from '@/lib/auth';
 import { ApiError, backendApi, type CaseFile, type Sector } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
@@ -85,12 +85,12 @@ export function SubmissionDetailPage({
   }
 
   if (loading && !caseFile) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
-  if (!caseFile) return <div className="live-page"><Link href="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
+  if (!caseFile) return <div className="live-page"><Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
 
   const submission = caseFile.submission;
   return (
     <div className="live-page page-enter">
-      <Link href="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
+      <Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
       <div className="live-page-heading detail-heading">
         <div><p className="eyebrow">CASE FILE · {caseFile.reference || submission.code || 'DRAFT'}</p><h1>{submission.title}</h1><p>{submission.category === 'student' ? 'Student project' : 'General innovation'} · Created {formatDate(submission.createdAt)}</p></div>
         <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>

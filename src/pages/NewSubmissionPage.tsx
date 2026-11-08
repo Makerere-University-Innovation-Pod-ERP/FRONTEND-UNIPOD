@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react';
-import { Link, useLocation } from 'wouter';
+import { Link, useNavigate } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 
 export function NewSubmissionPage({
@@ -10,7 +10,7 @@ export function NewSubmissionPage({
   token: string;
   onUnauthorized: () => void;
 }) {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const [category, setCategory] = useState<'student' | 'general'>('student');
   const [title, setTitle] = useState('');
   const [purpose, setPurpose] = useState('');
@@ -56,7 +56,7 @@ export function NewSubmissionPage({
 
   return (
     <div className="live-page page-enter">
-      <Link href="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
+      <Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
       <div className="live-page-heading compact-heading"><div><p className="eyebrow">INTAKE · NEW CASE</p><h1>Register an idea.</h1><p>Create a draft record in the live Innovation Hub database.</p></div></div>
       <form className="live-panel create-form" onSubmit={submit}>
         <div className="form-section">
@@ -91,7 +91,7 @@ export function NewSubmissionPage({
           </div>
         </div>}
         {error && <div className="api-error api-error-banner" role="alert">{error}</div>}
-        <div className="form-actions"><Link href="/submissions" className="btn btn-outline">Cancel</Link><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : null}{busy ? 'Saving draft…' : 'Create draft'}{!busy && <ArrowRight size={15} />}</button></div>
+        <div className="form-actions"><Link to="/submissions" className="btn btn-outline">Cancel</Link><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : null}{busy ? 'Saving draft…' : 'Create draft'}{!busy && <ArrowRight size={15} />}</button></div>
       </form>
     </div>
   );
