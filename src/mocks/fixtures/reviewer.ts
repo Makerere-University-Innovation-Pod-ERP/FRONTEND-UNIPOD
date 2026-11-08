@@ -1,0 +1,70 @@
+import type { ReviewerAssignedCase, ReviewerCaseSummary } from '@/services/reviewer';
+
+export const reviewerAssigned: ReviewerAssignedCase[] = [
+  {
+    id: 'IH-26031',
+    code: 'STU-2026-001',
+    title: 'Smart Irrigation Monitoring System',
+    category: 'student',
+    stage: 'UNDER_REVIEW',
+    assignedAt: '2026-10-09',
+    pendingAction: 'Submit your independent decision',
+    decisionStatus: 'pending',
+  },
+  {
+    id: 'IH-26024',
+    code: 'STU-2026-005',
+    title: 'Low-cost Water Quality Alert',
+    category: 'student',
+    stage: 'UNDER_REVIEW',
+    assignedAt: '2026-10-05',
+    pendingAction: 'Awaiting your decision alongside one other reviewer',
+    decisionStatus: 'pending',
+  },
+  {
+    id: 'IH-26029',
+    code: 'STU-2026-002',
+    title: 'Maternal Health Follow-up Platform',
+    category: 'student',
+    stage: 'REFINEMENT_REQUESTED',
+    assignedAt: '2026-10-01',
+    pendingAction: 'Changes requested — waiting on resubmission',
+    decisionStatus: 'changes_needed',
+  },
+];
+
+export const reviewerCases: Record<string, ReviewerCaseSummary> = {
+  'IH-26031': {
+    id: 'IH-26031',
+    code: 'STU-2026-001',
+    title: 'Smart Irrigation Monitoring System',
+    purpose: 'Improve water efficiency for local growers.',
+    problemAddressed: 'Manual irrigation schedules do not account for changing soil moisture.',
+    stage: 'UNDER_REVIEW',
+    documents: [{ id: 'doc-1', name: 'Project brief', status: 'Verified' }],
+    pendingAction: 'Submit your independent decision',
+    decisionStatus: 'pending',
+  },
+  'IH-26024': {
+    id: 'IH-26024',
+    code: 'STU-2026-005',
+    title: 'Low-cost Water Quality Alert',
+    purpose: 'Make early water-quality concerns easier to flag.',
+    problemAddressed: 'Routine testing is not always available close to source.',
+    stage: 'UNDER_REVIEW',
+    documents: [{ id: 'doc-2', name: 'Project brief', status: 'Verified' }],
+    pendingAction: 'Awaiting your decision alongside one other reviewer',
+    decisionStatus: 'pending',
+  },
+  'IH-26029': {
+    id: 'IH-26029',
+    code: 'STU-2026-002',
+    title: 'Maternal Health Follow-up Platform',
+    purpose: 'Improve continuity of postnatal care.',
+    problemAddressed: 'Follow-up visits can be missed when records are fragmented.',
+    stage: 'REFINEMENT_REQUESTED',
+    documents: [{ id: 'doc-3', name: 'Project brief', status: 'Submitted' }],
+    pendingAction: 'Changes requested — waiting on resubmission',
+    decisionStatus: 'changes_needed',
+  },
+};
