@@ -7,11 +7,11 @@ import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
-import { backendApi } from '@/services/backend-api';
+import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
 
-type BackendHealth = 'checking' | 'online' | 'offline';
+type BackendHealth = 'checking' | 'online' | 'reachable' | 'offline';
 
 function AuthenticatedApp({
   session,
@@ -45,7 +45,10 @@ function App() {
     const controller = new AbortController();
     backendApi.health(controller.signal)
       .then(() => setHealth('online'))
-      .catch(() => setHealth('offline'));
+      .catch((reason: unknown) => {
+        if (reason instanceof ApiError && reason.status === 401) setHealth('reachable');
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) setHealth('offline');
+      });
     return () => controller.abort();
   }, []);
 

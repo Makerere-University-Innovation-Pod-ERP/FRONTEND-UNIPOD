@@ -17,7 +17,7 @@ export function BackendWorkspace({
   children,
 }: {
   session: UserSession;
-  health: 'checking' | 'online' | 'offline';
+  health: 'checking' | 'online' | 'reachable' | 'offline';
   onLogout: () => void;
   children: ReactNode;
 }) {
@@ -56,7 +56,7 @@ export function BackendWorkspace({
         </nav>
         <div className="live-connection">
           <span className={`connection-dot ${health}`} />
-          <span>Backend {health === 'online' ? 'connected' : health === 'checking' ? 'connecting' : 'unavailable'}</span>
+          <span>Backend {health === 'online' ? 'healthy' : health === 'reachable' ? 'reachable' : health === 'checking' ? 'connecting' : 'unavailable'}</span>
           <small>Render API</small>
         </div>
         <div className="live-profile">

@@ -43,6 +43,27 @@ For static hosting, build with `npm run build` and publish `dist`. Set
 `VITE_API_BASE_URL` in the hosting provider's build environment if the API
 origin differs from the default.
 
+## Deploy to Render
+
+The root `render.yaml` defines a static site named `frontend-unipod`, builds
+the app with `npm ci && npm run build`, publishes `dist`, and rewrites
+client-side routes to `index.html`. Create/update the frontend from this
+Blueprint and confirm its assigned public URL.
+
+In the backend Web Service's Render environment, set
+`CORS_ALLOWED_ORIGINS` to a comma-separated list that includes the exact
+frontend origin, plus any development origins still needed. For the default
+Render URL, use:
+
+```text
+CORS_ALLOWED_ORIGINS=https://frontend-unipod.onrender.com,http://localhost:5173,http://localhost:3000
+```
+
+If Render assigns a different URL, replace the frontend origin with the actual
+origin (scheme and host only; no trailing slash or path). Save and redeploy the
+backend after changing this variable. No PostgreSQL URL or database credential
+belongs in the frontend service.
+
 ## Integrated workflows
 
 - Sign in with an administrator-provisioned account; public signup is disabled.
