@@ -63,7 +63,9 @@ export function LiveSubmissions({
           <button className="btn btn-outline" type="submit">Search</button>
         </form>
         {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
-        {loading && !result ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading submissions…</div> : <SubmissionRows rows={result?.items ?? []} />}
+        {loading && !result
+          ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading submissions…</div>
+          : result ? <SubmissionRows rows={result.items} /> : null}
         {result && <div className="pagination">
           <span>{result.totalElements} {result.totalElements === 1 ? 'submission' : 'submissions'}</span>
           <div><button className="btn btn-outline" disabled={page <= 0 || loading} onClick={() => { setError(''); setLoading(true); setPage((value) => Math.max(0, value - 1)); }}>Previous</button><span>Page {result.totalPages ? page + 1 : 0} of {result.totalPages}</span><button className="btn btn-outline" disabled={page + 1 >= result.totalPages || loading} onClick={() => { setError(''); setLoading(true); setPage((value) => value + 1); }}>Next</button></div>

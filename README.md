@@ -13,9 +13,11 @@ npm install
 npm run dev
 ```
 
-By default, the frontend calls `https://backend-unipod.onrender.com/api`.
-Override the API origin by copying `.env.example` to `.env.local` and setting
-`VITE_API_BASE_URL`. For a local Java backend, use
+By default, both local development and production builds call
+`https://backend-unipod.onrender.com/api` directly. The backend must allow the
+frontend's exact browser origin in `CORS_ALLOWED_ORIGINS`. Override the API
+origin by copying `.env.example` to `.env.local` and setting
+`VITE_API_BASE_URL`. For a local Java backend, set it to
 `http://localhost:8080/api`.
 
 The backend must allow the frontend's exact browser origin in
@@ -69,9 +71,11 @@ belongs in the frontend service.
 - Sign in with an administrator-provisioned account; public signup is disabled.
 - View role-scoped dashboard metrics and cases requiring attention.
 - Search and filter paginated submissions.
+- Review the reception queue and create administrator-provisioned accounts.
+- Manage sectors and sector-officer assignments as an Administrator.
 - Create submission drafts and view case details.
 - Register drafts, forward received cases to a sector, and apply backend-approved
-  case-stage transitions.
+  case-stage transitions, outcomes, reviewer assignments, and document metadata.
 - Check service health from the workspace connection indicator.
 
 Access tokens are kept in `sessionStorage` and sent as bearer tokens. The
