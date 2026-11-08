@@ -1,11 +1,60 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
 
-@layer base {
-  body {
-    min-width: 320px;
-    min-height: 100vh;
-    margin: 0;
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  --background: 60 20% 97%;
+  --foreground: 160 8% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 160 8% 12%;
+  --card-border: 72 10% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 160 8% 12%;
+  --popover-border: 72 10% 88%;
+  --primary: 161 63% 25%;
+  --primary-foreground: 60 20% 98%;
+  --secondary: 72 22% 92%;
+  --secondary-foreground: 160 8% 16%;
+  --muted: 72 14% 94%;
+  --muted-foreground: 160 5% 46%;
+  --accent: 72 40% 88%;
+  --accent-foreground: 160 30% 19%;
+  --destructive: 2 56% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 72 10% 87%;
+  --input: 72 10% 84%;
+  --ring: 161 63% 25%;
+  --chart-1: 161 63% 25%;
+  --chart-2: 72 54% 66%;
+  --chart-3: 202 28% 60%;
+  --chart-4: 34 67% 68%;
+  --chart-5: 288 18% 62%;
+  --sidebar: 60 18% 95%;
+  --sidebar-foreground: 160 8% 17%;
+  --sidebar-border: 72 10% 87%;
+  --sidebar-primary: 161 63% 25%;
+  --sidebar-primary-foreground: 60 20% 98%;
+  --sidebar-accent: 72 24% 90%;
+  --sidebar-accent-foreground: 160 20% 18%;
+  --sidebar-ring: 161 63% 25%;
+  --font-sans: 'Manrope', sans-serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'DM Mono', monospace;
+  --radius: 0.65rem;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #f8f8f5; color: #202522; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { outline-color: #176b52; }
+button { cursor: pointer; }
+::selection { color: #173d30; background: #d9f27a; }
+.font-editorial { font-family: var(--font-serif); }
+.font-data { font-family: var(--font-mono); }
+.app-shell { min-height: 100dvh; }
+.sidebar-scroll { scrollbar-width: thin; scrollbar-color: #d6d8d0 transparent; }
+.page-enter { animation: enter .36s ease both; }
+@keyframes enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
