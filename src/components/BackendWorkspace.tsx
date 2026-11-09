@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import {
-  Activity, Boxes, CircleHelp, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck,
+  Activity, Boxes, CircleHelp, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, Settings2, Workflow,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { displayRole, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
@@ -26,6 +26,12 @@ export function BackendWorkspace({
   const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const canCreate = session.roles.some((userRole) => SUBMISSION_INTAKE_ROLES.includes(userRole));
+  const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
+  const links = [
+    ...navigation,
+    ...(canCreate ? [{ label: 'Reception queue', href: '/reception', icon: Workflow }] : []),
+    ...(isAdministrator ? [{ label: 'Management', href: '/management', icon: Settings2 }] : []),
+  ];
 
   return (
     <div className="live-shell">
@@ -36,7 +42,7 @@ export function BackendWorkspace({
         </Link>
         <p className="live-nav-heading">WORKSPACE</p>
         <nav className="live-nav" aria-label="Main navigation">
-          {navigation.map(({ label, href, icon: Icon }) => (
+          {links.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
               href={href}
@@ -69,7 +75,7 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{navigation.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
+          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
           <div className="live-top-actions">
             <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
             <a className="icon-button live-help" href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" aria-label="Backend health"><CircleHelp size={17} /></a>
