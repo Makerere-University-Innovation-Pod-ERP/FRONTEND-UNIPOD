@@ -70,7 +70,10 @@ belongs in the frontend service.
 
 - Sign in with an administrator-provisioned account; public signup is disabled.
 - View role-scoped dashboard metrics and cases requiring attention.
-- Search and filter paginated submissions.
+- Search by exact case code or title with Ctrl/Cmd+K; browse all, student, and
+  general submission lists with category, stage, and sector filters.
+- Give submitters a dedicated, read-only My Submissions home with account
+  capabilities and locked-module guidance.
 - Review the reception queue and create administrator-provisioned accounts.
 - Manage sectors and sector-officer assignments as an Administrator.
 - Create submission drafts and view case details.

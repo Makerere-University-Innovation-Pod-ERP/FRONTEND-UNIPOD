@@ -73,8 +73,19 @@ export type DashboardOverview = {
     reason: string;
     updatedAt: string;
   }>;
-  operations: { availability: string; reason: string | null } | null;
-  finance: { availability: string; reason: string | null } | null;
+  operations: {
+    availability: string;
+    reason: string | null;
+    equipmentUnderRepair: number | null;
+    bookingsToday: number | null;
+    facilitiesFreeNow: number | null;
+  } | null;
+  finance: {
+    availability: string;
+    reason: string | null;
+    incomeMonthToDate: number | null;
+    incomeBars: Array<{ period: string; income: number }>;
+  } | null;
   recentActivity: {
     availability: string;
     reason: string | null;
@@ -96,6 +107,8 @@ export type Sector = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SectorFilterOption = Pick<Sector, 'id' | 'name'>;
 
 export type ApiUserRole =
   | 'ADMINISTRATOR'
@@ -171,7 +184,13 @@ export type CaseFile = {
     note: string | null;
   }>;
   stepper: Array<{ stage: string; state: string }>;
-  outcome: { status: string; decision: string | null; note: string | null } | null;
+  outcome: {
+    status: string;
+    decision: string | null;
+    note: string | null;
+    decidedBy: string | null;
+    decidedAt: string | null;
+  } | null;
   capabilities: {
     nextStep: { enabled: boolean; reason: string | null };
     saveOutcome: { enabled: boolean; reason: string | null };
@@ -310,20 +329,20 @@ export const backendApi = {
     if (options.sector) query.set('sector', options.sector);
     return request<PageResponse<Submission>>(`/submissions?${query}`, { token, signal });
   },
-  searchSubmissions: (token: string, code: string, page = 0, size = 25) => {
+  searchSubmissions: (token: string, code: string, page = 0, size = 25, signal?: AbortSignal) => {
     const query = new URLSearchParams({ code, page: String(page), size: String(size) });
-    return request<PageResponse<Submission>>(`/submissions/search?${query}`, { token });
+    return request<PageResponse<Submission>>(`/submissions/search?${query}`, { token, signal });
   },
   mySubmissions: (token: string, page = 0, size = 25) => {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
     return request<PageResponse<Submission>>(`/submissions/mine?${query}`, { token });
   },
-  submitterSubmissions: (token: string, page = 0, size = 25) => {
+  submitterSubmissions: (token: string, page = 0, size = 25, signal?: AbortSignal) => {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
-    return request<PageResponse<SubmitterSubmission>>(`/me/submissions?${query}`, { token });
+    return request<PageResponse<SubmitterSubmission>>(`/me/submissions?${query}`, { token, signal });
   },
-  submitterCapabilities: (token: string) =>
-    request<SubmitterCapabilities>('/me/capabilities', { token }),
+  submitterCapabilities: (token: string, signal?: AbortSignal) =>
+    request<SubmitterCapabilities>('/me/capabilities', { token, signal }),
   createSubmission: (token: string, body: Record<string, unknown>) =>
     request<Submission>('/submissions', { token, body }),
   submissionCaseFile: (token: string, id: string, signal?: AbortSignal) =>
@@ -344,6 +363,8 @@ export const backendApi = {
     request<Sector[]>('/sectors', { token, signal }),
   sectorCatalog: (token: string) =>
     request<Sector[]>('/sectors/catalog', { token }),
+  sectorFilterOptions: (token: string, signal?: AbortSignal) =>
+    request<SectorFilterOption[]>('/sectors/filter-options', { token, signal }),
   createSector: (token: string, body: { name: string; notificationEmail: string; active: boolean }) =>
     request<Sector>('/sectors', { token, body }),
   updateSector: (

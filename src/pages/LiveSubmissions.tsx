@@ -5,27 +5,48 @@ import { ApiError, backendApi, type PageResponse, type Submission } from '@/serv
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { SubmissionRows } from '@/components/SubmissionRows';
 
+type Category = 'student' | 'general';
+
 export function LiveSubmissions({
   token,
   roles,
   onUnauthorized,
+  fixedCategory,
 }: {
   token: string;
   roles: string[];
   onUnauthorized: () => void;
+  fixedCategory?: Category;
 }) {
   const [result, setResult] = useState<PageResponse<Submission> | null>(null);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [stage, setStage] = useState('');
+  const [sector, setSector] = useState('');
+  const [sectors, setSectors] = useState<Array<{ id: string; name: string }>>([]);
+  const [sectorError, setSectorError] = useState('');
   const [page, setPage] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const selectedCategory = fixedCategory ?? category;
 
   useEffect(() => {
     const controller = new AbortController();
-    backendApi.submissions(token, { page, size: 25, q: search, category, stage }, controller.signal)
+    backendApi.sectorFilterOptions(token, controller.signal)
+      .then(setSectors)
+      .catch((reason: unknown) => {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setSectorError(reason instanceof Error ? reason.message : 'Could not load sector filters.');
+        }
+      });
+    return () => controller.abort();
+  }, [token, onUnauthorized]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    backendApi.submissions(token, { page, size: 25, q: search, category: selectedCategory, stage, sector }, controller.signal)
       .then(setResult)
       .catch((reason: unknown) => {
         if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
@@ -35,7 +56,7 @@ export function LiveSubmissions({
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [token, page, search, category, stage, onUnauthorized]);
+  }, [token, page, search, selectedCategory, stage, sector, onUnauthorized]);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,20 +69,24 @@ export function LiveSubmissions({
   return (
     <div className="live-page page-enter">
       <div className="live-page-heading">
-        <div><p className="eyebrow">WORKSPACE · CASE REGISTER</p><h1>Submissions</h1><p>Search and review cases visible to your account.</p></div>
+        <div><p className="eyebrow">WORKSPACE · CASE REGISTER</p><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
         {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" href="/submissions/new"><Plus size={16} />New submission</Link>}
       </div>
       <section className="live-panel">
         <form className="submission-filters" onSubmit={submitSearch}>
           <label className="live-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title…" aria-label="Search submissions" /></label>
-          <select aria-label="Filter by category" value={category} onChange={(event) => { setError(''); setLoading(true); setPage(0); setCategory(event.target.value); }}>
+          {!fixedCategory && <select aria-label="Filter by category" value={category} onChange={(event) => { setError(''); setLoading(true); setPage(0); setCategory(event.target.value); }}>
             <option value="">All categories</option><option value="student">Student projects</option><option value="general">General innovations</option>
-          </select>
+          </select>}
           <select aria-label="Filter by stage" value={stage} onChange={(event) => { setError(''); setLoading(true); setPage(0); setStage(event.target.value); }}>
             <option value="">All stages</option>{['DRAFT','RECEIVED','REGISTERED','FACT_FINDING','UNDER_REVIEW','REFINEMENT_REQUESTED','FURTHER_HANDLING','FORWARDED','IN_PROGRESS','COMPLETED'].map((value) => <option value={value} key={value}>{value.replaceAll('_', ' ')}</option>)}
           </select>
+          <select aria-label="Filter by sector" value={sector} onChange={(event) => { setError(''); setLoading(true); setPage(0); setSector(event.target.value); }}>
+            <option value="">All sectors</option>{sectors.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
+          </select>
           <button className="btn btn-outline" type="submit">Search</button>
         </form>
+        {sectorError && <div className="api-error api-error-banner" role="alert">{sectorError}</div>}
         {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
         {loading && !result
           ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading submissions…</div>

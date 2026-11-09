@@ -9,6 +9,7 @@ import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
+import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
@@ -30,6 +31,9 @@ function AuthenticatedApp({
         <Switch>
           <Route path="/" component={() => <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/submissions" component={() => <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/student" component={() => <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
+          <Route path="/submissions/general" component={() => <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" />} />
+          <Route path="/my-submissions" component={() => session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>This page is for submitter accounts.</h1></div>} />
           <Route path="/reception" component={() => session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Your account cannot view the reception queue.</h1></div>} />
           <Route path="/management" component={() => session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Administrator access is required.</h1></div>} />
           <Route path="/submissions/new" component={() => session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Your account cannot create submissions.</h1></div>} />
