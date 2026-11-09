@@ -17,15 +17,16 @@ export type RequestOptions = {
   token?: string;
   signal?: AbortSignal;
   body?: unknown;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 };
 
 export async function request<T>(
   path: string,
   { token, signal, body, method = body === undefined ? 'GET' : 'POST' }: RequestOptions = {},
 ): Promise<T> {
+  const isFormData = body instanceof FormData;
   const headers = new Headers({ Accept: 'application/json' });
-  if (body !== undefined) headers.set('Content-Type', 'application/json');
+  if (body !== undefined && !isFormData) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const timeoutController = new AbortController();
@@ -39,7 +40,7 @@ export async function request<T>(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
       signal: timeoutController.signal,
       credentials: 'omit',
     });
@@ -85,4 +86,31 @@ export async function request<T>(
   }
 
   return payload as T;
+}
+
+/** Fetches a binary file (e.g. a document download) as a Blob, with the same auth/error handling as request(). */
+export async function requestFile(path: string, token?: string, signal?: AbortSignal): Promise<Blob> {
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { headers, signal, credentials: 'omit' });
+  } catch (reason) {
+    if (signal?.aborted) throw reason;
+    throw new ApiError('Could not reach the backend to download this file.', 0);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      response.status === 401
+        ? 'Your session has expired. Sign in again.'
+        : response.status === 403
+          ? 'Your account does not have permission to download this file.'
+          : `The file download failed (${response.status}).`,
+      response.status,
+    );
+  }
+
+  return response.blob();
 }

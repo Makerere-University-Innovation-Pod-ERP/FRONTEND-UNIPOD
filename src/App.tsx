@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Route, Router, Switch } from 'wouter';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
+import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -9,9 +11,20 @@ import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
+import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
+import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
+import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
+import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
+import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
+
+const queryClient = new QueryClient();
+
+function AccessRestricted({ label }: { label: string }) {
+  return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
+}
 
 type BackendHealth = 'checking' | 'online' | 'reachable' | 'offline';
 
@@ -24,20 +37,30 @@ function AuthenticatedApp({
   health: BackendHealth;
   onLogout: () => void;
 }) {
+  const canFactFind = isFactFindingOfficer(session.roles);
+  const canReview = isReviewer(session.roles);
+
   return (
-    <Router>
-      <BackendWorkspace session={session} health={health} onLogout={onLogout}>
-        <Switch>
-          <Route path="/" component={() => <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/submissions" component={() => <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/reception" component={() => session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Your account cannot view the reception queue.</h1></div>} />
-          <Route path="/management" component={() => session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Administrator access is required.</h1></div>} />
-          <Route path="/submissions/new" component={() => session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>Your account cannot create submissions.</h1></div>} />
-          <Route path="/submissions/:id" component={() => <SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
-          <Route><div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div></Route>
-        </Switch>
-      </BackendWorkspace>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <BackendWorkspace session={session} health={health} onLogout={onLogout}>
+          <Routes>
+            <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+            <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+            <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
+            <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
+            <Route path="/submissions/new" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot create submissions." />} />
+            <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
+            <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
+            <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
+            <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
+            <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+            <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+            <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />
+          </Routes>
+        </BackendWorkspace>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiError, request } from './api-client';
+import { API_BASE_URL, ApiError, request, requestFile } from './api-client';
 
 export { API_BASE_URL, ApiError };
 

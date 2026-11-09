@@ -1,10 +1,20 @@
 import type { CaseFile, Sector, Submission } from '@/services/backend-api';
 
+const sectorSeed = (id: string, name: string): Sector => ({
+  id,
+  name,
+  notificationEmail: `${id}@unipod.test`,
+  active: true,
+  version: 1,
+  createdAt: '2026-09-01',
+  updatedAt: '2026-09-01',
+});
+
 export const sectors: Sector[] = [
-  { id: 'sec-1', name: 'Technical Assessment', active: true },
-  { id: 'sec-2', name: 'Research & Innovation', active: true },
-  { id: 'sec-3', name: 'Academic Department', active: true },
-  { id: 'sec-4', name: 'Intellectual Property', active: true },
+  sectorSeed('sec-1', 'Technical Assessment'),
+  sectorSeed('sec-2', 'Research & Innovation'),
+  sectorSeed('sec-3', 'Academic Department'),
+  sectorSeed('sec-4', 'Intellectual Property'),
 ];
 
 export const submissions: Submission[] = [
@@ -30,7 +40,18 @@ export function toCaseFile(submission: Submission): CaseFile {
     submission,
     currentStage: submission.stage,
     reference: submission.code,
-    documents: [{ id: `doc-${submission.id}`, name: 'Project brief', status: 'Verified', createdAt: submission.createdAt }],
+    documents: [{
+      id: `doc-${submission.id}`,
+      submissionId: submission.id,
+      name: 'Project brief',
+      status: 'Verified',
+      fileReference: null,
+      contentType: 'application/pdf',
+      fileSize: 184320,
+      originalFilename: 'project-brief.pdf',
+      createdBy: submission.registeredBy,
+      createdAt: submission.createdAt,
+    }],
     stageHistory: stageHistoryFor(submission),
     stepper: ['RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'FORWARDED', 'COMPLETED'].map((stage) => ({
       stage,
