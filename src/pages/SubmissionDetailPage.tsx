@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, CircleAlert, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import type { UserSession } from '@/lib/auth';
 import { ApiError, backendApi, type CaseFile, type Sector } from '@/services/backend-api';
