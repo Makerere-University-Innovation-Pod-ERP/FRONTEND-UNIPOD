@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CircleAlert, LoaderCircle, Plus, Search } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link } from 'react-router-dom';
 import { ApiError, backendApi, type PageResponse, type Submission } from '@/services/backend-api';
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { SubmissionRows } from '@/components/SubmissionRows';
@@ -70,7 +70,7 @@ export function LiveSubmissions({
     <div className="live-page page-enter">
       <div className="live-page-heading">
         <div><p className="eyebrow">WORKSPACE · CASE REGISTER</p><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
-        {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" href="/submissions/new"><Plus size={16} />New submission</Link>}
+        {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
       </div>
       <section className="live-panel">
         <form className="submission-filters" onSubmit={submitSearch}>

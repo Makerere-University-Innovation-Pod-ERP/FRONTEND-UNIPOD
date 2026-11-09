@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ArrowUpRight, CircleAlert, LoaderCircle, Plus, RefreshCw } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link } from 'react-router-dom';
 import { SubmissionRows } from '@/components/SubmissionRows';
 import { ApiError, backendApi, type DashboardOverview, type Submission } from '@/services/backend-api';
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
@@ -50,7 +50,7 @@ export function LiveDashboard({
         <div><p className="eyebrow">INNOVATION HUB · OVERVIEW</p><h1>Good work starts here.</h1><p>Your role-scoped view of submissions, workflow and cases needing attention.</p></div>
         <div className="heading-actions">
           <button className="btn btn-outline" onClick={() => { setLoading(true); setError(''); void load(); }} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''} />Refresh</button>
-          {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" href="/submissions/new"><Plus size={16} />New submission</Link>}
+          {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
         </div>
       </div>
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
@@ -66,10 +66,10 @@ export function LiveDashboard({
           </section>
           <div className="live-dashboard-grid">
             <section className="live-panel live-attention">
-              <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link href="/submissions">All cases <ArrowUpRight size={14} /></Link></div>
+              <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/submissions">All cases <ArrowUpRight size={14} /></Link></div>
               {overview.needsAttention.length ? (
                 <div className="attention-list">{overview.needsAttention.slice(0, 5).map((item) => (
-                  <Link className="attention-row" href={`/submissions/${item.id}`} key={item.id}>
+                  <Link className="attention-row" to={`/submissions/${item.id}`} key={item.id}>
                     <span className="attention-icon"><CircleAlert size={16} /></span>
                     <span className="attention-copy"><b>{item.title}</b><small>{item.code || 'Uncoded'} · {formatStage(item.stage)} · {item.reason}</small></span>
                     <ArrowRight size={15} />
@@ -88,7 +88,7 @@ export function LiveDashboard({
             </section>
           </div>
           <section className="live-panel live-recent">
-            <div className="live-panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h2>Recent submissions</h2></div><Link href="/submissions">Browse submissions <ArrowUpRight size={14} /></Link></div>
+            <div className="live-panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h2>Recent submissions</h2></div><Link to="/submissions">Browse submissions <ArrowUpRight size={14} /></Link></div>
             <SubmissionRows rows={recent} />
           </section>
           {(overview.operations || overview.finance) && <section className="live-panel live-recent">

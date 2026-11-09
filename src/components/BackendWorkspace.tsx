@@ -1,15 +1,33 @@
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, Boxes, CircleHelp, LayoutDashboard, LogOut, Menu, Plus, Search, ShieldCheck, Settings2, Workflow, X,
+  Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
+  LayoutDashboard, LogOut, Menu, Moon, Plus, Search, Settings2, ShieldCheck, Sun, Users, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError, backendApi, type Submission } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
+import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
+import { useTheme } from '@/hooks/useTheme';
+import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
+import { formatDate } from '@/lib/presentation';
 
-const navigation = [
-  { label: 'Overview', href: '/', icon: LayoutDashboard },
-  { label: 'Submissions', href: '/submissions', icon: Boxes },
-];
+type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
+
+function buildNavigation(roles: string[]): NavItem[] {
+  const items: NavItem[] = [
+    { label: 'Overview', href: '/', icon: LayoutDashboard },
+    { label: 'Submissions', href: '/submissions', icon: Boxes },
+  ];
+  if (isFactFindingOfficer(roles)) {
+    items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
+    items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
+  }
+  if (isReviewer(roles)) {
+    items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
+    items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
+  }
+  return items;
+}
 
 export function BackendWorkspace({
   session,
@@ -22,18 +40,23 @@ export function BackendWorkspace({
   onLogout: () => void;
   children: ReactNode;
 }) {
-  const [location, navigate] = useLocation();
+  const { pathname: location } = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [openPopover, setOpenPopover] = useState<'notifications' | 'help' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Submission[]>([]);
   const [searchError, setSearchError] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const canCreate = session.roles.some((userRole) => SUBMISSION_INTAKE_ROLES.includes(userRole));
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
+  const navigation = buildNavigation(session.roles);
   const links = [
     ...navigation,
     ...(isSubmitter ? [{ label: 'My submissions', href: '/my-submissions', icon: Boxes }] : []),
@@ -96,31 +119,51 @@ export function BackendWorkspace({
     };
   }, [searchOpen]);
 
+  const notificationsQuery = useNotifications(session.accessToken);
+  const markAllRead = useMarkAllNotificationsRead(session.accessToken);
+  const notificationItems = notificationsQuery.data ?? [];
+  const hasUnread = notificationItems.some((item) => !item.read);
+
+  const togglePopover = (name: 'notifications' | 'help') => setOpenPopover((current) => (current === name ? null : name));
+
   return (
     <div className="live-shell">
-      <aside className={`live-sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <Link href="/" className="live-brand" onClick={() => setMobileOpen(false)}>
-          <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-          <span><b>INNOVATION HUB</b><small>Project & Ideas Management</small></span>
-        </Link>
+      <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div className="live-brand">
+          <Link to="/" className="live-brand-link" onClick={() => setMobileOpen(false)}>
+            <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
+            <span><b>INNOVATION HUB</b><small>Project & Ideas Management</small></span>
+          </Link>
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+          >
+            <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
+          </button>
+        </div>
         <p className="live-nav-heading">WORKSPACE</p>
         <nav className="live-nav" aria-label="Main navigation">
           {links.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
-              href={href}
+              to={href}
+              title={collapsed ? label : undefined}
               onClick={() => setMobileOpen(false)}
               className={`live-nav-link ${location === href ? 'active' : ''}`}
             >
-              <Icon size={17} />{label}
+              <Icon size={17} /><span>{label}</span>
             </Link>
           ))}
           {canCreate && <Link
-            href="/submissions/new"
+            to="/submissions/new"
+            title={collapsed ? 'Register submission' : undefined}
             onClick={() => setMobileOpen(false)}
             className={`live-nav-link ${location === '/submissions/new' ? 'active' : ''}`}
           >
-            <Plus size={17} />Register submission
+            <Plus size={17} /><span>Register submission</span>
           </Link>}
         </nav>
         <div className="live-connection">
@@ -138,13 +181,63 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
+          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
               <Search size={14} /><span>Search cases</span><kbd>Ctrl K</kbd>
             </button>
             <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
-            <a className="icon-button live-help" href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" aria-label="Backend health"><CircleHelp size={17} /></a>
+            <button className="icon-button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <div className="top-pop-wrap">
+              <button className="icon-button notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
+                <Bell size={16} />
+                {hasUnread && <span className="notification-mark" />}
+              </button>
+              {openPopover === 'notifications' && (
+                <div className="notification-popover">
+                  <div className="notification-head">
+                    <b>Notifications</b>
+                    <button className="notification-read-all" onClick={() => markAllRead.mutate()} disabled={!hasUnread || markAllRead.isPending}>
+                      <CheckCheck size={12} /> Mark all read
+                    </button>
+                  </div>
+                  <div className="notification-list">
+                    {notificationsQuery.isLoading ? (
+                      <p>Loading…</p>
+                    ) : notificationsQuery.isError ? (
+                      <p>Notifications aren't available for this account yet.</p>
+                    ) : notificationItems.length ? (
+                      notificationItems.map((item) => (
+                        <Link
+                          key={item.id}
+                          to={item.link}
+                          className={`notification-item ${item.read ? '' : 'unread'}`}
+                          onClick={() => setOpenPopover(null)}
+                        >
+                          <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
+                        </Link>
+                      ))
+                    ) : (
+                      <p>No notifications yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="top-pop-wrap">
+              <button className="icon-button" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={17} /></button>
+              {openPopover === 'help' && (
+                <div className="top-popover">
+                  <b>Workspace guide</b>
+                  <p>Stages are a flexible guide; exact roles and destinations remain configurable with the backend team.</p>
+                  <a href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" onClick={() => setOpenPopover(null)}>
+                    Check backend health <ArrowUpRight size={13} />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="live-content">{children}</main>
