@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
-import { Link } from 'wouter';
-import { ApiError, backendApi, type ReceptionQueue } from '@/services/backend-api';
+import { Link } from 'react-router-dom';
+import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate } from '@/lib/presentation';
 
 export function ReceptionQueuePage({
   token,
   onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
 }) {
-  const [queue, setQueue] = useState<ReceptionQueue | null>(null);
+  const [queue, setQueue] = useState(null);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal) => {
     try {
       setQueue(await backendApi.receptionQueue(token, page, 25, signal));
       setError('');
@@ -57,11 +54,11 @@ export function ReceptionQueuePage({
             ? <div className="live-table-wrap"><table className="live-table">
               <thead><tr><th>Draft</th><th>Type</th><th>Stage</th><th>Submitted</th><th /></tr></thead>
               <tbody>{queue.items.map((item) => <tr key={item.id}>
-                <td><Link className="case-title" href={`/submissions/${item.id}`}><b>{item.title}</b><small>{item.code || 'Draft · no reference yet'}</small></Link></td>
+                <td><Link className="case-title" to={`/submissions/${item.id}`}><b>{item.title}</b><small>{item.code || 'Draft · no reference yet'}</small></Link></td>
                 <td>{item.category === 'student' ? 'Student project' : 'General innovation'}</td>
                 <td>{item.stage}</td>
                 <td>{formatDate(item.createdAt)}</td>
-                <td><Link className="btn btn-outline" href={`/submissions/${item.id}`}>Open draft</Link></td>
+                <td><Link className="btn btn-outline" to={`/submissions/${item.id}`}>Open draft</Link></td>
               </tr>)}</tbody>
             </table></div>
             : queue ? <p className="live-empty">There are no drafts in the reception queue.</p> : null}
@@ -78,6 +75,6 @@ export function ReceptionQueuePage({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }) {
   return <article className="live-metric"><p>{label}</p><strong>{value}</strong></article>;
 }

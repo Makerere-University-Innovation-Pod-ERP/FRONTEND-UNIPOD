@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react';
 import { CircleAlert, LoaderCircle, LockKeyhole } from 'lucide-react';
-import { Link } from 'wouter';
-import { ApiError, backendApi, type PageResponse, type SubmitterCapabilities, type SubmitterSubmission } from '@/services/backend-api';
+import { Link } from 'react-router-dom';
+import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 
 export function MySubmissionsPage({
   token,
   onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
 }) {
-  const [result, setResult] = useState<PageResponse<SubmitterSubmission> | null>(null);
-  const [capabilities, setCapabilities] = useState<SubmitterCapabilities | null>(null);
+  const [result, setResult] = useState(null);
+  const [capabilities, setCapabilities] = useState(null);
   const [page, setPage] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,7 +22,7 @@ export function MySubmissionsPage({
     ]).then(([submissions, currentCapabilities]) => {
       setResult(submissions);
       setCapabilities(currentCapabilities);
-    }).catch((reason: unknown) => {
+    }).catch((reason) => {
       if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
       else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
         setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
@@ -56,7 +53,7 @@ export function MySubmissionsPage({
             ? <div className="live-table-wrap"><table className="live-table">
               <thead><tr><th>Case</th><th>Type</th><th>Stage</th><th>Received</th><th>Updated</th></tr></thead>
               <tbody>{result.items.map((item) => <tr key={item.id}>
-                <td><Link className="case-title" href={`/submissions/${item.id}`}><b>{item.title}</b><small>{item.code || 'Draft · no reference yet'}</small></Link></td>
+                <td><Link className="case-title" to={`/submissions/${item.id}`}><b>{item.title}</b><small>{item.code || 'Draft · no reference yet'}</small></Link></td>
                 <td>{item.category === 'student' ? 'Student project' : 'General innovation'}</td>
                 <td>{formatStage(item.stage)}</td>
                 <td>{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>

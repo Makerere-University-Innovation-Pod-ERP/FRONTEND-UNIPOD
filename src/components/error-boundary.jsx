@@ -1,27 +1,6 @@
-import {
-  Component,
-  type ComponentType,
-  type ErrorInfo,
-  type ReactNode,
-} from 'react';
+import { Component } from 'react';
 
-export interface ErrorFallbackProps {
-  error: Error;
-  resetError: () => void;
-}
-
-interface ErrorBoundaryProps {
-  children: ReactNode;
-  FallbackComponent?: ComponentType<ErrorFallbackProps>;
-  /** Changing this clears a caught error. Pass the route to recover on navigation. */
-  resetKey?: unknown;
-}
-
-interface ErrorBoundaryState {
-  error: Error | null;
-}
-
-function toError(value: unknown): Error {
+function toError(value) {
   if (value instanceof Error) {
     return value;
   }
@@ -35,7 +14,7 @@ function toError(value: unknown): Error {
   }
 }
 
-function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
+function DefaultFallback({ error, resetError }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
       <div className="max-w-lg w-full text-center">
@@ -64,17 +43,14 @@ function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
   );
 }
 
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
-  state: ErrorBoundaryState = { error: null };
+export class ErrorBoundary extends Component {
+  state = { error: null };
 
-  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+  static getDerivedStateFromError(error) {
     return { error: toError(error) };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo): void {
+  componentDidCatch(error, info) {
     console.error(
       'ErrorBoundary caught an error:',
       toError(error),
@@ -82,7 +58,7 @@ export class ErrorBoundary extends Component<
     );
   }
 
-  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+  componentDidUpdate(prevProps) {
     if (
       this.state.error !== null &&
       prevProps.resetKey !== this.props.resetKey
@@ -91,11 +67,11 @@ export class ErrorBoundary extends Component<
     }
   }
 
-  resetError = (): void => {
+  resetError = () => {
     this.setState({ error: null });
   };
 
-  render(): ReactNode {
+  render() {
     const { error } = this.state;
     if (error === null) {
       return this.props.children;

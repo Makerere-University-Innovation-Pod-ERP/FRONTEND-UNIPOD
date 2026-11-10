@@ -3,18 +3,16 @@ import {
   Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
   LayoutDashboard, LogOut, Menu, Moon, Plus, Search, Settings2, ShieldCheck, Sun, Users, Workflow, X,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, backendApi, type Submission } from '@/services/backend-api';
-import { displayRole, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
+import { useEffect, useState } from 'react';
+import { ApiError, backendApi } from '@/services/backend-api';
+import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
 
-type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
-
-function buildNavigation(roles: string[]): NavItem[] {
-  const items: NavItem[] = [
+function buildNavigation(roles) {
+  const items = [
     { label: 'Overview', href: '/', icon: LayoutDashboard },
     { label: 'Submissions', href: '/submissions', icon: Boxes },
   ];
@@ -34,20 +32,15 @@ export function BackendWorkspace({
   health,
   onLogout,
   children,
-}: {
-  session: UserSession;
-  health: 'checking' | 'online' | 'reachable' | 'offline';
-  onLogout: () => void;
-  children: ReactNode;
 }) {
   const { pathname: location } = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [openPopover, setOpenPopover] = useState<'notifications' | 'help' | null>(null);
+  const [openPopover, setOpenPopover] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Submission[]>([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [searchError, setSearchError] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -67,7 +60,7 @@ export function BackendWorkspace({
   ];
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onKeyDown = (event) => {
       if (event.key === 'Escape' && searchOpen) {
         setSearchOpen(false);
         setSearchQuery('');
@@ -92,7 +85,7 @@ export function BackendWorkspace({
       setSearchResults([]);
       void backendApi.searchSubmissions(session.accessToken, query, 0, 10, controller.signal)
         .then((result) => setSearchResults(result.items))
-        .catch((reason: unknown) => {
+        .catch((reason) => {
           if (reason instanceof ApiError && reason.status === 401) onLogout();
           else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
             setSearchError(reason instanceof Error ? reason.message : 'Could not search cases.');
@@ -124,7 +117,7 @@ export function BackendWorkspace({
   const notificationItems = notificationsQuery.data ?? [];
   const hasUnread = notificationItems.some((item) => !item.read);
 
-  const togglePopover = (name: 'notifications' | 'help') => setOpenPopover((current) => (current === name ? null : name));
+  const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
     <div className="live-shell">
@@ -251,7 +244,7 @@ export function BackendWorkspace({
       }}>
         <section className="case-search-dialog" role="dialog" aria-modal="true" aria-label="Search cases" onKeyDown={(event) => {
           if (event.key !== 'Tab') return;
-          const focusable = event.currentTarget.querySelectorAll<HTMLElement>('input, button:not([disabled])');
+          const focusable = event.currentTarget.querySelectorAll('input, button:not([disabled])');
           const first = focusable[0];
           const last = focusable[focusable.length - 1];
           if (event.shiftKey && document.activeElement === first) {

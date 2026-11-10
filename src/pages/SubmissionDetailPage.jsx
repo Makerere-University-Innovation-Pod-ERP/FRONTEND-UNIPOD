@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import type { UserSession } from '@/lib/auth';
-import { ApiError, backendApi, type CaseFile, type Sector } from '@/services/backend-api';
+import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 
 const INTAKE_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR', 'ROLE_RECEPTIONIST', 'ROLE_FACT_FINDING_OFFICER'];
@@ -11,14 +10,11 @@ const TRANSITION_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR'];
 export function SubmissionDetailPage({
   session,
   onUnauthorized,
-}: {
-  session: UserSession;
-  onUnauthorized: () => void;
 }) {
-  const { id = '' } = useParams<{ id: string }>();
-  const [caseFile, setCaseFile] = useState<CaseFile | null>(null);
-  const [sectors, setSectors] = useState<Sector[]>([]);
-  const [allowedStages, setAllowedStages] = useState<string[]>([]);
+  const { id = '' } = useParams();
+  const [caseFile, setCaseFile] = useState(null);
+  const [sectors, setSectors] = useState([]);
+  const [allowedStages, setAllowedStages] = useState([]);
   const [sectorId, setSectorId] = useState('');
   const [nextStage, setNextStage] = useState('');
   const [note, setNote] = useState('');
@@ -38,7 +34,7 @@ export function SubmissionDetailPage({
   const backHref = session.roles.includes('ROLE_SUBMITTER') ? '/my-submissions' : '/submissions';
   const backLabel = session.roles.includes('ROLE_SUBMITTER') ? 'Back to my submissions' : 'Back to submissions';
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal) => {
     try {
       const current = isReceptionist
         ? asIntakeCaseFile(await backendApi.submissionCaseFile(session.accessToken, id, signal))
@@ -47,7 +43,7 @@ export function SubmissionDetailPage({
       setReviewerSubject(current.submission.assignedReviewerSubject || '');
       setOutcomeDecision(current.outcome?.decision || '');
       setOutcomeNote(current.outcome?.note || '');
-      const tasks: Promise<void>[] = [];
+      const tasks = [];
       if (['DRAFT', 'RECEIVED'].includes(current.submission.stage) && canIntake) {
         tasks.push(backendApi.sectors(session.accessToken, signal).then(setSectors));
       }
@@ -74,7 +70,7 @@ export function SubmissionDetailPage({
     return () => controller.abort();
   }, [load]);
 
-  async function act(action: () => Promise<unknown>): Promise<boolean> {
+  async function act(action) {
     setBusy(true);
     setError('');
     try {
@@ -90,7 +86,7 @@ export function SubmissionDetailPage({
     }
   }
 
-  async function transition(event: FormEvent<HTMLFormElement>) {
+  async function transition(event) {
     event.preventDefault();
     if (!caseFile || !nextStage) return;
     if (await act(() => backendApi.transition(session.accessToken, id, {
@@ -100,7 +96,7 @@ export function SubmissionDetailPage({
     }))) setNote('');
   }
 
-  async function saveOutcome(event: FormEvent<HTMLFormElement>) {
+  async function saveOutcome(event) {
     event.preventDefault();
     if (!caseFile) return;
     await act(() => backendApi.saveOutcome(session.accessToken, id, {
@@ -110,7 +106,7 @@ export function SubmissionDetailPage({
     }));
   }
 
-  async function addDocument(event: FormEvent<HTMLFormElement>) {
+  async function addDocument(event) {
     event.preventDefault();
     if (!documentName.trim()) return;
     if (await act(() => backendApi.addDocument(session.accessToken, id, {
@@ -123,7 +119,7 @@ export function SubmissionDetailPage({
     }
   }
 
-  async function uploadDocument(event: FormEvent<HTMLFormElement>) {
+  async function uploadDocument(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -137,7 +133,7 @@ export function SubmissionDetailPage({
     }
   }
 
-  async function downloadDocument(documentId: string, name: string) {
+  async function downloadDocument(documentId, name) {
     try {
       const blob = await backendApi.downloadDocument(session.accessToken, id, documentId);
       const objectUrl = URL.createObjectURL(blob);
@@ -292,11 +288,11 @@ export function SubmissionDetailPage({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }) {
   return <div className="case-field"><span>{label}</span><p>{value}</p></div>;
 }
 
-function asIntakeCaseFile(value: Awaited<ReturnType<typeof backendApi.submissionCaseFile>>): CaseFile {
+function asIntakeCaseFile(value) {
   return {
     submission: value.submission,
     currentStage: value.submission.stage,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
+import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
@@ -23,20 +23,14 @@ import './app.css';
 
 const queryClient = new QueryClient();
 
-function AccessRestricted({ label }: { label: string }) {
+function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
 }
-
-type BackendHealth = 'checking' | 'online' | 'reachable' | 'offline';
 
 function AuthenticatedApp({
   session,
   health,
   onLogout,
-}: {
-  session: UserSession;
-  health: BackendHealth;
-  onLogout: () => void;
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
@@ -69,12 +63,12 @@ function AuthenticatedApp({
 }
 
 function App() {
-  const [session, setSession] = useState<UserSession | null>(() => loadSession());
-  const [health, setHealth] = useState<BackendHealth>('checking');
+  const [session, setSession] = useState(() => loadSession());
+  const [health, setHealth] = useState('checking');
 
   useEffect(() => {
     let active = true;
-    let controller: AbortController | null = null;
+    let controller = null;
     const checkHealth = () => {
       controller?.abort();
       controller = new AbortController();
@@ -82,7 +76,7 @@ function App() {
         .then(() => {
           if (active) setHealth('online');
         })
-        .catch((reason: unknown) => {
+        .catch((reason) => {
           if (!active || (reason instanceof DOMException && reason.name === 'AbortError')) return;
           if (reason instanceof ApiError && reason.status === 401) setHealth('reachable');
           else setHealth('offline');
@@ -104,7 +98,7 @@ function App() {
     setSession(null);
   }, []);
 
-  const acceptSession = useCallback((nextSession: UserSession) => {
+  const acceptSession = useCallback((nextSession) => {
     saveSession(nextSession);
     setSession(nextSession);
   }, []);

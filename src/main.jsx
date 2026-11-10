@@ -9,7 +9,7 @@ import './index.css';
 applyStoredTheme();
 
 function renderApp() {
-  createRoot(document.getElementById('root')!, {
+  createRoot(document.getElementById('root'), {
     // Keeps caught errors off reportError(), which would raise the dev overlay.
     onCaughtError: (error, errorInfo) => {
       console.error(error, errorInfo.componentStack);

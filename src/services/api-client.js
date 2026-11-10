@@ -4,26 +4,17 @@ export const API_BASE_URL = (
 ).replace(/\/+$/, '');
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
+  constructor(message, status) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
   }
 }
 
-export type RequestOptions = {
-  token?: string;
-  signal?: AbortSignal;
-  body?: unknown;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-};
-
-export async function request<T>(
-  path: string,
-  { token, signal, body, method = body === undefined ? 'GET' : 'POST' }: RequestOptions = {},
-): Promise<T> {
+export async function request(
+  path,
+  { token, signal, body, method = body === undefined ? 'GET' : 'POST' } = {},
+) {
   const isFormData = body instanceof FormData;
   const headers = new Headers({ Accept: 'application/json' });
   if (body !== undefined && !isFormData) headers.set('Content-Type', 'application/json');
@@ -35,12 +26,12 @@ export async function request<T>(
   if (signal?.aborted) abortRequest();
   else signal?.addEventListener('abort', abortRequest, { once: true });
 
-  let response: Response;
+  let response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: timeoutController.signal,
       credentials: 'omit',
     });
@@ -58,9 +49,9 @@ export async function request<T>(
     signal?.removeEventListener('abort', abortRequest);
   }
 
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204) return undefined;
   const contentType = response.headers.get('content-type') ?? '';
-  const payload: unknown = contentType.includes('json')
+  const payload = contentType.includes('json')
     ? await response.json().catch(() => null)
     : await response.text().catch(() => '');
 
@@ -85,15 +76,15 @@ export async function request<T>(
     throw new ApiError(message, response.status);
   }
 
-  return payload as T;
+  return payload;
 }
 
 /** Fetches a binary file (e.g. a document download) as a Blob, with the same auth/error handling as request(). */
-export async function requestFile(path: string, token?: string, signal?: AbortSignal): Promise<Blob> {
+export async function requestFile(path, token, signal) {
   const headers = new Headers();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  let response: Response;
+  let response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { headers, signal, credentials: 'omit' });
   } catch (reason) {

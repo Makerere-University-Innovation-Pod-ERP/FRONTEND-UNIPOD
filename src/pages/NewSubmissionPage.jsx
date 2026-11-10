@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
@@ -6,12 +6,9 @@ import { ApiError, backendApi } from '@/services/backend-api';
 export function NewSubmissionPage({
   token,
   onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
 }) {
   const navigate = useNavigate();
-  const [category, setCategory] = useState<'student' | 'general'>('student');
+  const [category, setCategory] = useState('student');
   const [title, setTitle] = useState('');
   const [purpose, setPurpose] = useState('');
   const [problemAddressed, setProblemAddressed] = useState('');
@@ -23,11 +20,11 @@ export function NewSubmissionPage({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event) {
     event.preventDefault();
     setError('');
     setBusy(true);
-    const body: Record<string, unknown> = {
+    const body = {
       category,
       title: title.trim(),
       purpose: purpose.trim(),

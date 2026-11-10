@@ -1,5 +1,3 @@
-import type { LoginResponse } from '@/services/backend-api';
-
 const SESSION_KEY = 'unipod.access-token';
 export const SUBMISSION_INTAKE_ROLES = [
   'ROLE_ADMINISTRATOR',
@@ -8,22 +6,7 @@ export const SUBMISSION_INTAKE_ROLES = [
   'ROLE_FACT_FINDING_OFFICER',
 ];
 
-export type UserSession = {
-  accessToken: string;
-  expiresAt: string;
-  subject: string;
-  roles: string[];
-};
-
-type JwtPayload = {
-  sub?: string;
-  exp?: number;
-  email?: string;
-  name?: string;
-  roles?: string[];
-};
-
-function decodePayload(token: string): JwtPayload | null {
+function decodePayload(token) {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
@@ -31,13 +14,13 @@ function decodePayload(token: string): JwtPayload | null {
       atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
       (character) => character.charCodeAt(0),
     );
-    return JSON.parse(new TextDecoder().decode(bytes)) as JwtPayload;
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;
   }
 }
 
-export function createSession(response: LoginResponse): UserSession {
+export function createSession(response) {
   const payload = decodePayload(response.accessToken);
   const roles = Array.isArray(payload?.roles) ? payload.roles : [];
   return {
@@ -48,19 +31,19 @@ export function createSession(response: LoginResponse): UserSession {
   };
 }
 
-export function saveSession(session: UserSession): void {
+export function saveSession(session) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
-export function clearSession(): void {
+export function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-export function loadSession(): UserSession | null {
+export function loadSession() {
   try {
     const saved = sessionStorage.getItem(SESSION_KEY);
     if (!saved) return null;
-    const session = JSON.parse(saved) as UserSession;
+    const session = JSON.parse(saved);
     const payload = decodePayload(session.accessToken);
     if (!payload?.exp || payload.exp * 1000 <= Date.now()) {
       clearSession();
@@ -73,7 +56,7 @@ export function loadSession(): UserSession | null {
   }
 }
 
-export function displayRole(role: string): string {
+export function displayRole(role) {
   return role
     .replace(/^ROLE_/, '')
     .toLowerCase()
