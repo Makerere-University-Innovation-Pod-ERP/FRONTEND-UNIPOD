@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { reviewerApi } from '@/services/reviewer';
 
 export const reviewerKeys = {
-  assigned: (token: string) => ['reviewer', 'assigned', token] as const,
-  case: (token: string, id: string) => ['reviewer', 'case', token, id] as const,
+  assigned: (token) => ['reviewer', 'assigned', token],
+  case: (token, id) => ['reviewer', 'case', token, id],
 };
 
-export function useReviewerAssigned(token: string) {
+export function useReviewerAssigned(token) {
   return useQuery({
     queryKey: reviewerKeys.assigned(token),
     queryFn: ({ signal }) => reviewerApi.assigned(token, signal),
@@ -14,7 +14,7 @@ export function useReviewerAssigned(token: string) {
   });
 }
 
-export function useReviewerCase(token: string, id: string) {
+export function useReviewerCase(token, id) {
   return useQuery({
     queryKey: reviewerKeys.case(token, id),
     queryFn: ({ signal }) => reviewerApi.caseSummary(token, id, signal),

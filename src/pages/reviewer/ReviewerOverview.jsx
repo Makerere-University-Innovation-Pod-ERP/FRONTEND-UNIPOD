@@ -5,13 +5,7 @@ import { useReviewerAssigned } from '@/hooks/useReviewer';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 
-export function ReviewerOverview({
-  token,
-  onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
-}) {
+export function ReviewerOverview({ token, onUnauthorized }) {
   const { data: assigned, isLoading, error } = useReviewerAssigned(token);
 
   useEffect(() => {
@@ -57,6 +51,6 @@ export function ReviewerOverview({
   );
 }
 
-function Metric({ label, value, note }: { label: string; value: number; note: string }) {
+function Metric({ label, value, note }) {
   return <article className="live-metric"><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
 }

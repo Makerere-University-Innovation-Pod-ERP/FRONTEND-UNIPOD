@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { notificationsApi, type AppNotification } from '@/services/notifications';
+import { notificationsApi } from '@/services/notifications';
 
 export const notificationKeys = {
-  list: (token: string) => ['notifications', token] as const,
+  list: (token) => ['notifications', token],
 };
 
-export function useNotifications(token: string) {
+export function useNotifications(token) {
   return useQuery({
     queryKey: notificationKeys.list(token),
     queryFn: ({ signal }) => notificationsApi.list(token, signal),
@@ -14,12 +14,12 @@ export function useNotifications(token: string) {
   });
 }
 
-export function useMarkAllNotificationsRead(token: string) {
+export function useMarkAllNotificationsRead(token) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => notificationsApi.markAllRead(token),
     onSuccess: () => {
-      queryClient.setQueryData<AppNotification[]>(notificationKeys.list(token), (current) =>
+      queryClient.setQueryData(notificationKeys.list(token), (current) =>
         current?.map((item) => ({ ...item, read: true })),
       );
     },

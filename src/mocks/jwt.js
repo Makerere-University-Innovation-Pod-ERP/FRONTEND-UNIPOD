@@ -1,4 +1,4 @@
-function base64url(input: object | string): string {
+function base64url(input) {
   // Keeps standard '=' padding (unlike strict base64url) so atob() in
   // lib/auth.ts's decoder — which only undoes the -/_ substitution — can
   // decode this reliably in every environment (browser, jsdom, Node).
@@ -11,7 +11,7 @@ function base64url(input: object | string): string {
  * lib/auth.ts (which never verifies a signature) can derive a mock session.
  * Never used against the real backend.
  */
-export function makeMockToken(roles: string[], subject: string): string {
+export function makeMockToken(roles, subject) {
   const header = base64url({ alg: 'none', typ: 'JWT' });
   const payload = base64url({
     sub: subject,

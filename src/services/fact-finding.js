@@ -16,7 +16,6 @@ export const checklistItemSchema = z.object({
   checked: z.boolean(),
   note: z.string(),
 });
-export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 
 export const factFindingQueueItemSchema = z.object({
   id: z.string(),
@@ -28,7 +27,6 @@ export const factFindingQueueItemSchema = z.object({
   updatedAt: z.string(),
   reason: z.string(),
 });
-export type FactFindingQueueItem = z.infer<typeof factFindingQueueItemSchema>;
 
 export const factFindingQueueSchema = z.object({
   items: z.array(factFindingQueueItemSchema),
@@ -63,9 +61,8 @@ export const factFindingCaseSchema = z.object({
     options: z.array(z.string()),
   }),
 });
-export type FactFindingCase = z.infer<typeof factFindingCaseSchema>;
 
-export const defaultChecklist = (): ChecklistItem[] => [
+export const defaultChecklist = () => [
   { id: 'title', label: 'Title is clear', checked: false, note: '' },
   { id: 'purpose', label: 'Purpose is defined', checked: false, note: '' },
   { id: 'evidence', label: 'Evidence is adequate', checked: false, note: '' },
@@ -74,20 +71,16 @@ export const defaultChecklist = (): ChecklistItem[] => [
 ];
 
 export const factFindingApi = {
-  queue: async (token: string, signal?: AbortSignal) => {
-    const payload = await request<unknown>('/fact-finding/queue', { token, signal });
+  queue: async (token, signal) => {
+    const payload = await request('/fact-finding/queue', { token, signal });
     return factFindingQueueSchema.parse(payload).items;
   },
-  caseFile: async (token: string, id: string, signal?: AbortSignal) => {
-    const payload = await request<unknown>(`/fact-finding/cases/${encodeURIComponent(id)}`, { token, signal });
+  caseFile: async (token, id, signal) => {
+    const payload = await request(`/fact-finding/cases/${encodeURIComponent(id)}`, { token, signal });
     return factFindingCaseSchema.parse(payload);
   },
-  saveAssessment: async (
-    token: string,
-    id: string,
-    body: { checklist: ChecklistItem[]; assessment: string; nextAction: string },
-  ) => {
-    const payload = await request<unknown>(`/fact-finding/cases/${encodeURIComponent(id)}/assessment`, {
+  saveAssessment: async (token, id, body) => {
+    const payload = await request(`/fact-finding/cases/${encodeURIComponent(id)}/assessment`, {
       token,
       body,
     });

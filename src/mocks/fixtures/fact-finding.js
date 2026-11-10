@@ -1,6 +1,4 @@
-import type { FactFindingCase, FactFindingQueueItem } from '@/services/fact-finding';
-
-export const factFindingQueue: FactFindingQueueItem[] = [
+export const factFindingQueue = [
   {
     id: 'IH-26030',
     code: null,
@@ -33,7 +31,7 @@ export const factFindingQueue: FactFindingQueueItem[] = [
   },
 ];
 
-export const factFindingCases: Record<string, FactFindingCase> = Object.fromEntries(
+export const factFindingCases = Object.fromEntries(
   factFindingQueue.map((item) => [
     item.id,
     {
@@ -68,6 +66,6 @@ export const factFindingCases: Record<string, FactFindingCase> = Object.fromEntr
         recommendation: 'Forward to sector once evidence is confirmed',
         options: ['Forward to sector', 'Request refinement', 'Keep in fact-finding'],
       },
-    } satisfies FactFindingCase,
+    },
   ]),
 );

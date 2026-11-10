@@ -1,6 +1,4 @@
-import type { ReviewerAssignedCase, ReviewerCaseSummary } from '@/services/reviewer';
-
-export const reviewerAssigned: ReviewerAssignedCase[] = [
+export const reviewerAssigned = [
   {
     id: 'IH-26031',
     code: 'STU-2026-001',
@@ -33,7 +31,7 @@ export const reviewerAssigned: ReviewerAssignedCase[] = [
   },
 ];
 
-export const reviewerCases: Record<string, ReviewerCaseSummary> = {
+export const reviewerCases = {
   'IH-26031': {
     id: 'IH-26031',
     code: 'STU-2026-001',

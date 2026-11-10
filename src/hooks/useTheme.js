@@ -1,16 +1,16 @@
 import { useCallback, useState } from 'react';
-import { getStoredTheme, prefersDarkSystemTheme, setTheme as persistTheme, type Theme } from '@/lib/theme';
+import { getStoredTheme, prefersDarkSystemTheme, setTheme as persistTheme } from '@/lib/theme';
 
-function resolveInitialTheme(): Theme {
+function resolveInitialTheme() {
   return getStoredTheme() ?? (prefersDarkSystemTheme() ? 'dark' : 'light');
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(resolveInitialTheme);
+  const [theme, setThemeState] = useState(resolveInitialTheme);
 
   const toggleTheme = useCallback(() => {
     setThemeState((current) => {
-      const next: Theme = current === 'dark' ? 'light' : 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
       persistTheme(next);
       return next;
     });

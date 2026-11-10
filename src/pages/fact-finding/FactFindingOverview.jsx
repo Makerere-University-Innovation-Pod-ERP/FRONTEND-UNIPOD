@@ -5,13 +5,7 @@ import { useFactFindingQueue } from '@/hooks/useFactFinding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 
-export function FactFindingOverview({
-  token,
-  onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
-}) {
+export function FactFindingOverview({ token, onUnauthorized }) {
   const { data: queue, isLoading, error } = useFactFindingQueue(token);
 
   useEffect(() => {
@@ -57,6 +51,6 @@ export function FactFindingOverview({
   );
 }
 
-function Metric({ label, value, note }: { label: string; value: number; note: string }) {
+function Metric({ label, value, note }) {
   return <article className="live-metric"><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
 }

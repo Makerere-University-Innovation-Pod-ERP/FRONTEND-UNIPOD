@@ -1,11 +1,11 @@
 export const ROLE_FACT_FINDING_OFFICER = 'ROLE_FACT_FINDING_OFFICER';
 export const ROLE_REVIEWER = 'ROLE_REVIEWER';
 
-export function isFactFindingOfficer(roles: string[]): boolean {
+export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
 }
 
-export function isReviewer(roles: string[]): boolean {
+export function isReviewer(roles) {
   return roles.includes(ROLE_REVIEWER);
 }
 

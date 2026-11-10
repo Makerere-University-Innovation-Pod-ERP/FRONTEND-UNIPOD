@@ -18,14 +18,13 @@ export const notificationSchema = z.object({
   createdAt: z.string(),
   read: z.boolean(),
 });
-export type AppNotification = z.infer<typeof notificationSchema>;
 
 const notificationListSchema = z.object({ items: z.array(notificationSchema) });
 
 export const notificationsApi = {
-  list: async (token: string, signal?: AbortSignal) => {
-    const payload = await request<unknown>('/notifications', { token, signal });
+  list: async (token, signal) => {
+    const payload = await request('/notifications', { token, signal });
     return notificationListSchema.parse(payload).items;
   },
-  markAllRead: (token: string) => request<void>('/notifications/read-all', { token, method: 'POST' }),
+  markAllRead: (token) => request('/notifications/read-all', { token, method: 'POST' }),
 };

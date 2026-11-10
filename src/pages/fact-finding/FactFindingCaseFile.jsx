@@ -5,14 +5,8 @@ import { useFactFindingCase } from '@/hooks/useFactFinding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 
-export function FactFindingCaseFile({
-  token,
-  onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
-}) {
-  const { id = '' } = useParams<{ id: string }>();
+export function FactFindingCaseFile({ token, onUnauthorized }) {
+  const { id = '' } = useParams();
   const { data: caseFile, isLoading, error } = useFactFindingCase(token, id);
 
   useEffect(() => {
@@ -75,6 +69,6 @@ export function FactFindingCaseFile({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }) {
   return <div className="case-field"><span>{label}</span><p>{value}</p></div>;
 }
