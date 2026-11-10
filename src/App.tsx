@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES, type UserSession } from '@/lib/auth';
@@ -11,6 +11,8 @@ import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
+import { SubmissionConfirmationPage } from '@/pages/SubmissionConfirmationPage';
+import { SubmitterBriefPage } from '@/pages/SubmitterBriefPage';
 import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
 import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
 import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
@@ -25,6 +27,22 @@ const queryClient = new QueryClient();
 
 function AccessRestricted({ label }: { label: string }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
+}
+
+function SubmissionWorkspaceRoute({
+  session,
+  onUnauthorized,
+}: {
+  session: UserSession;
+  onUnauthorized: () => void;
+}) {
+  const { id = '' } = useParams<{ id: string }>();
+  const hasIntakeRole = session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role));
+  const isSubmitterOnly = session.roles.includes('ROLE_SUBMITTER') && !hasIntakeRole;
+  if (id.startsWith('local-') || isSubmitterOnly) {
+    return <SubmitterBriefPage key={id} session={session} onUnauthorized={onUnauthorized} />;
+  }
+  return <SubmissionDetailPage key={id} session={session} onUnauthorized={onUnauthorized} />;
 }
 
 type BackendHealth = 'checking' | 'online' | 'reachable' | 'offline';
@@ -53,8 +71,9 @@ function AuthenticatedApp({
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
-          <Route path="/submissions/new" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot create submissions." />} />
-          <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/new" element={session.roles.includes('ROLE_SUBMITTER') || session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot submit a brief." />} />
+          <Route path="/submissions/:id/confirmation" element={<SubmissionConfirmationPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/:id" element={<SubmissionWorkspaceRoute session={session} onUnauthorized={onLogout} />} />
           <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, MessageSquare, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import type { UserSession } from '@/lib/auth';
 import { ApiError, backendApi, type CaseFile, type Sector } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
+import { getBrief, requestInformation, type InformationRequest } from '@/lib/brief';
 
 const INTAKE_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR', 'ROLE_RECEPTIONIST', 'ROLE_FACT_FINDING_OFFICER'];
 const TRANSITION_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR'];
@@ -28,6 +29,10 @@ export function SubmissionDetailPage({
   const [documentName, setDocumentName] = useState('');
   const [documentStatus, setDocumentStatus] = useState('SUBMITTED');
   const [fileReference, setFileReference] = useState('');
+  const [infoRequests, setInfoRequests] = useState<InformationRequest[]>(() => getBrief(id)?.infoRequests ?? []);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [requestItems, setRequestItems] = useState('');
+  const [requestSuccess, setRequestSuccess] = useState('');
   const [error, setError] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [loading, setLoading] = useState(true);
@@ -73,6 +78,25 @@ export function SubmissionDetailPage({
     void load(controller.signal);
     return () => controller.abort();
   }, [load]);
+
+  function submitInformationRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!requestMessage.trim()) {
+      setError('Describe the information or document the submitter needs to provide.');
+      return;
+    }
+    requestInformation(id, {
+      message: requestMessage.trim(),
+      items: requestItems.split('\n').map((item) => item.trim()).filter(Boolean),
+      requestedBy: session.subject,
+      title: caseFile?.submission.title,
+      category: caseFile?.submission.category,
+    });
+    setInfoRequests(getBrief(id)?.infoRequests ?? []);
+    setRequestMessage('');
+    setRequestItems('');
+    setRequestSuccess('Information request saved to the local brief. The submitter sees it on this device.');
+  }
 
   async function act(action: () => Promise<unknown>): Promise<boolean> {
     setBusy(true);
@@ -270,6 +294,29 @@ export function SubmissionDetailPage({
             {caseFile.activity.availability === 'AVAILABLE' && caseFile.activity.items.length
               ? <ul className="activity-feed">{caseFile.activity.items.map((item, index) => <li key={`${item.occurredAt}-${index}`}><b>{item.action}</b><span>{item.summary}</span><small>{item.actor} · {formatDate(item.occurredAt)}</small></li>)}</ul>
               : <p className="live-note">Case activity integration is not configured.</p>}
+          </section>}
+          {(canIntake || canTransition) && <section className="live-panel">
+            <div className="live-panel-heading"><div><p className="eyebrow">REQUEST MORE INFORMATION</p><h2>Ask the submitter</h2></div></div>
+            {infoRequests.length > 0 ? <ul className="staff-info-requests">
+              {infoRequests.map((request) => <li key={request.id} className={request.status === 'OPEN' ? 'open' : 'answered'}>
+                <div><b>{request.message}</b><span>{request.status === 'OPEN' ? 'Open' : 'Answered'}</span></div>
+                {request.items.length > 0 && <ul>{request.items.map((item) => <li key={item.id}>{item.label}</li>)}</ul>}
+                {request.response && <p className="info-answer"><b>Reply:</b> {request.response}</p>}
+                <small>{request.requestedBy} · {formatDate(request.requestedAt)}</small>
+              </li>)}
+            </ul> : <p className="live-note">No information requests have been recorded for this case.</p>}
+            <form className="case-action" onSubmit={submitInformationRequest}>
+              <p className="form-section-title">New request</p>
+              <label className="form-field">What do you need?
+                <textarea rows={3} maxLength={2000} required value={requestMessage} onChange={(event) => { setRequestSuccess(''); setRequestMessage(event.target.value); }} placeholder="Explain what is missing or what the submitter should clarify." />
+              </label>
+              <label className="form-field">Specific items <span className="field-note">One per line, optional</span>
+                <textarea rows={2} maxLength={1000} value={requestItems} onChange={(event) => { setRequestSuccess(''); setRequestItems(event.target.value); }} placeholder={'e.g. Clarify the intended user group\nAttach the signed recommendation letter'} />
+              </label>
+              {requestSuccess && <p className="live-note" role="status">{requestSuccess}</p>}
+              <button className="btn btn-outline" type="submit"><MessageSquare size={14} />Save information request</button>
+              <p className="field-note">Stored in the local brief record until the backend supports submitter information requests.</p>
+            </form>
           </section>}
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">CASE HISTORY</p><h2>Stage history</h2></div></div>

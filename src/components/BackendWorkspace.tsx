@@ -165,6 +165,14 @@ export function BackendWorkspace({
           >
             <Plus size={17} /><span>Register submission</span>
           </Link>}
+          {!canCreate && isSubmitter && <Link
+            to="/submissions/new"
+            title={collapsed ? 'Submit a brief' : undefined}
+            onClick={() => setMobileOpen(false)}
+            className={`live-nav-link ${location === '/submissions/new' ? 'active' : ''}`}
+          >
+            <Plus size={17} /><span>Submit a brief</span>
+          </Link>}
         </nav>
         <div className="live-connection">
           <span className={`connection-dot ${health}`} />
@@ -181,7 +189,7 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
+          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/confirmation') ? 'Submission confirmation' : location.includes('/new') ? (isSubmitter && !canCreate ? 'Submit a brief' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
               <Search size={14} /><span>Search cases</span><kbd>Ctrl K</kbd>
