@@ -1,13 +1,12 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
-import type { Submission } from '@/services/backend-api';
 import { makeMockToken } from './jwt';
 import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 
-const mockUsers: Record<string, { subject: string; roles: string[] }> = {
+const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
 };
@@ -16,7 +15,7 @@ export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
 
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as { email?: string };
+    const body = await request.json();
     const account = (body.email && mockUsers[body.email]) || mockUsers['factfinding@unipod.test'];
     return HttpResponse.json({
       tokenType: 'Bearer',
@@ -26,7 +25,7 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/dashboard/overview`, () => {
-    const byStage: Record<string, number> = {};
+    const byStage = {};
     for (const item of submissions) byStage[item.stage] = (byStage[item.stage] ?? 0) + 1;
     const needsAttention = submissions
       .filter((item) => ['FACT_FINDING', 'REFINEMENT_REQUESTED', 'RECEIVED'].includes(item.stage))
@@ -80,23 +79,23 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/submissions`, async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
+    const body = await request.json();
     const now = new Date().toISOString().slice(0, 10);
-    const created: Submission = {
+    const created = {
       id: `IH-${String(Date.now()).slice(-5)}`,
       code: null,
-      category: (body.category as Submission['category']) ?? 'general',
+      category: body.category ?? 'general',
       title: String(body.title ?? 'Untitled submission'),
       purpose: String(body.purpose ?? ''),
       problemAddressed: String(body.problemAddressed ?? ''),
       registeredBy: 'Mock account',
-      submitterId: (body.submitterId as string) ?? null,
+      submitterId: body.submitterId ?? null,
       receivingOfficer: null,
       assignedReviewerSubject: null,
-      studentNumber: (body.studentNumber as string) ?? null,
-      programme: (body.programme as string) ?? null,
-      supervisor: (body.supervisor as string) ?? null,
-      recommendationLetterStatus: (body.recommendationLetterStatus as string) ?? null,
+      studentNumber: body.studentNumber ?? null,
+      programme: body.programme ?? null,
+      supervisor: body.supervisor ?? null,
+      recommendationLetterStatus: body.recommendationLetterStatus ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
@@ -127,7 +126,7 @@ export const handlers = [
   http.post(`${API_BASE_URL}/cases/:id/transitions`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    const body = (await request.json()) as { to_stage: string };
+    const body = await request.json();
     item.stage = body.to_stage;
     item.updatedAt = new Date().toISOString().slice(0, 10);
     item.version += 1;
@@ -145,7 +144,7 @@ export const handlers = [
   http.post(`${API_BASE_URL}/submissions/:id/forward`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    const body = (await request.json()) as { sectorId: string };
+    const body = await request.json();
     const sector = sectors.find((candidate) => candidate.id === body.sectorId);
     item.responsibleSectorId = body.sectorId;
     item.responsibleSectorName = sector?.name ?? null;
@@ -158,16 +157,16 @@ export const handlers = [
   http.get(`${API_BASE_URL}/fact-finding/queue`, () => HttpResponse.json({ items: factFindingQueue })),
 
   http.get(`${API_BASE_URL}/fact-finding/cases/:id`, ({ params }) => {
-    const item = factFindingCases[params.id as string];
+    const item = factFindingCases[params.id];
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(item);
   }),
 
   http.post(`${API_BASE_URL}/fact-finding/cases/:id/assessment`, async ({ params, request }) => {
-    const id = params.id as string;
+    const id = params.id;
     const existing = factFindingCases[id];
     if (!existing) return new HttpResponse(null, { status: 404 });
-    const body = (await request.json()) as { checklist: typeof existing.checklist; assessment: string; nextAction: string };
+    const body = await request.json();
     const updated = {
       ...existing,
       checklist: body.checklist,
@@ -182,7 +181,7 @@ export const handlers = [
   http.get(`${API_BASE_URL}/reviewer/assigned`, () => HttpResponse.json({ items: reviewerAssigned })),
 
   http.get(`${API_BASE_URL}/reviewer/cases/:id`, ({ params }) => {
-    const item = reviewerCases[params.id as string];
+    const item = reviewerCases[params.id];
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(item);
   }),

@@ -14,15 +14,8 @@ const assessmentFormSchema = z.object({
   assessment: z.string(),
   nextAction: z.string().min(1, 'Choose a next action before saving.'),
 });
-type AssessmentFormValues = z.infer<typeof assessmentFormSchema>;
 
-export function FactFindingWorkspace({
-  token,
-  onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
-}) {
+export function FactFindingWorkspace({ token, onUnauthorized }) {
   const { data: queue, isLoading: queueLoading, error: queueError } = useFactFindingQueue(token);
   const [selectedId, setSelectedId] = useState('');
 
@@ -70,10 +63,10 @@ export function FactFindingWorkspace({
   );
 }
 
-function AssessmentPanel({ token, id, onUnauthorized }: { token: string; id: string; onUnauthorized: () => void }) {
+function AssessmentPanel({ token, id, onUnauthorized }) {
   const { data: caseFile, isLoading, error } = useFactFindingCase(token, id);
   const saveAssessment = useSaveAssessment(token, id);
-  const { register, handleSubmit, formState: { errors } } = useForm<AssessmentFormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(assessmentFormSchema),
     values: caseFile ? { checklist: caseFile.checklist, assessment: caseFile.assessment, nextAction: '' } : undefined,
   });

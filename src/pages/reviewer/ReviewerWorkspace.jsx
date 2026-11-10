@@ -5,20 +5,14 @@ import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 import { REVIEWER_CANNOT_ASSIGN_REASON } from '@/lib/permissions';
 
-const decisionLabel: Record<string, string> = {
+const decisionLabel = {
   pending: 'Decision pending',
   recommended: 'Recommended',
   changes_needed: 'Changes needed',
   not_recommended: 'Not recommended',
 };
 
-export function ReviewerWorkspace({
-  token,
-  onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
-}) {
+export function ReviewerWorkspace({ token, onUnauthorized }) {
   const { data: assigned, isLoading, error } = useReviewerAssigned(token);
   const [selectedId, setSelectedId] = useState('');
 
@@ -66,7 +60,7 @@ export function ReviewerWorkspace({
   );
 }
 
-function CaseSummaryPanel({ token, id, onUnauthorized }: { token: string; id: string; onUnauthorized: () => void }) {
+function CaseSummaryPanel({ token, id, onUnauthorized }) {
   const { data: summary, isLoading, error } = useReviewerCase(token, id);
 
   useEffect(() => {
@@ -109,6 +103,6 @@ function CaseSummaryPanel({ token, id, onUnauthorized }: { token: string; id: st
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }) {
   return <div className="case-field"><span>{label}</span><p>{value}</p></div>;
 }
