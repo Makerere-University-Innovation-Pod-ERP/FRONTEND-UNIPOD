@@ -68,7 +68,7 @@ export function LiveDashboard({
             <section className="live-panel live-attention">
               <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/submissions">All cases <ArrowUpRight size={14} /></Link></div>
               {overview.needsAttention.length ? (
-                <div className="attention-list">{overview.needsAttention.slice(0, 6).map((item) => (
+                <div className="attention-list">{overview.needsAttention.slice(0, 5).map((item) => (
                   <Link className="attention-row" to={`/submissions/${item.id}`} key={item.id}>
                     <span className="attention-icon"><CircleAlert size={16} /></span>
                     <span className="attention-copy"><b>{item.title}</b><small>{item.code || 'Uncoded'} · {formatStage(item.stage)} · {item.reason}</small></span>
@@ -91,7 +91,34 @@ export function LiveDashboard({
             <div className="live-panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h2>Recent submissions</h2></div><Link to="/submissions">Browse submissions <ArrowUpRight size={14} /></Link></div>
             <SubmissionRows rows={recent} />
           </section>
-          {overview.recentActivity?.availability === 'UNAVAILABLE' && <p className="live-note">{overview.recentActivity.reason || 'Activity feed is not configured.'}</p>}
+          {(overview.operations || overview.finance) && <section className="live-panel live-recent">
+            <div className="live-panel-heading"><div><p className="eyebrow">OPERATIONS & FINANCE</p><h2>Service summaries</h2></div></div>
+            <div className="service-summary-grid">
+              {overview.operations && <article className="service-summary">
+                <h3>Facilities</h3>
+                {overview.operations.availability === 'AVAILABLE' ? <>
+                  <SummaryValue label="Equipment under repair" value={overview.operations.equipmentUnderRepair} />
+                  <SummaryValue label="Bookings today" value={overview.operations.bookingsToday} />
+                  <SummaryValue label="Facilities free now" value={overview.operations.facilitiesFreeNow} />
+                </> : <p className="live-note">{overview.operations.reason || 'Operations integration is not configured.'}</p>}
+              </article>}
+              {overview.finance && <article className="service-summary">
+                <h3>Finance</h3>
+                {overview.finance.availability === 'AVAILABLE' ? <>
+                  <SummaryValue label="Income month to date" value={overview.finance.incomeMonthToDate} />
+                  <IncomeBars bars={overview.finance.incomeBars} />
+                </> : <p className="live-note">{overview.finance.reason || 'Finance integration is not configured.'}</p>}
+              </article>}
+            </div>
+          </section>}
+          {overview.recentActivity && <section className="live-panel live-recent">
+            <div className="live-panel-heading"><div><p className="eyebrow">AUDIT</p><h2>Recent activity</h2></div></div>
+            {overview.recentActivity.availability === 'AVAILABLE'
+              ? overview.recentActivity.items.length
+                ? <ul className="activity-feed">{overview.recentActivity.items.map((item, index) => <li key={`${item.occurredAt}-${index}`}><b>{item.action}</b><span>{item.summary}</span><small>{item.actor} · {new Date(item.occurredAt).toLocaleString()}</small></li>)}</ul>
+                : <p className="live-empty">No recent activity.</p>
+              : <p className="live-note">{overview.recentActivity.reason || 'Activity feed is not configured.'}</p>}
+          </section>}
         </>
       ) : null}
     </div>
@@ -100,4 +127,19 @@ export function LiveDashboard({
 
 function Metric({ label, value, note }: { label: string; value: number; note: string }) {
   return <article className="live-metric"><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
+}
+
+function SummaryValue({ label, value }: { label: string; value: number | null }) {
+  return <p className="summary-value"><span>{label}</span><b>{value ?? '—'}</b></p>;
+}
+
+function IncomeBars({ bars }: { bars: Array<{ period: string; income: number }> }) {
+  const maximum = Math.max(0, ...bars.map((bar) => bar.income));
+  return <div className="income-bar-chart" aria-label="Income by period">
+    {bars.map((bar) => <div className="income-bar-column" key={bar.period}>
+      <b>{bar.income}</b>
+      <div className="income-bar-track"><span style={{ height: `${maximum ? Math.max(3, (bar.income / maximum) * 100) : 0}%` }} /></div>
+      <small>{bar.period}</small>
+    </div>)}
+  </div>;
 }

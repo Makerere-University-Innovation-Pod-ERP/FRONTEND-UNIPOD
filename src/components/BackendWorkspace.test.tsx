@@ -46,7 +46,8 @@ describe('BackendWorkspace', () => {
     const user = userEvent.setup();
     renderShell();
     const target = submissions[0];
-    await user.type(screen.getByPlaceholderText('Search submissions…'), target.title.slice(0, 6));
+    await user.click(screen.getByRole('button', { name: /search cases/i }));
+    await user.type(screen.getByRole('textbox', { name: 'Search cases' }), target.title.slice(0, 6));
     expect(await screen.findByText(target.title)).toBeInTheDocument();
   });
 

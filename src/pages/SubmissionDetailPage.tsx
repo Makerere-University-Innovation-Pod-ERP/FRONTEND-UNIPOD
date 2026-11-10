@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowDownToLine, ArrowLeft, CircleAlert, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import type { UserSession } from '@/lib/auth';
 import { ApiError, backendApi, type CaseFile, type Sector } from '@/services/backend-api';
@@ -29,11 +29,14 @@ export function SubmissionDetailPage({
   const [documentStatus, setDocumentStatus] = useState('SUBMITTED');
   const [fileReference, setFileReference] = useState('');
   const [error, setError] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const canIntake = session.roles.some((role) => INTAKE_ROLES.includes(role));
   const canTransition = session.roles.some((role) => TRANSITION_ROLES.includes(role));
   const isReceptionist = session.roles.includes('ROLE_RECEPTIONIST');
+  const backHref = session.roles.includes('ROLE_SUBMITTER') ? '/my-submissions' : '/submissions';
+  const backLabel = session.roles.includes('ROLE_SUBMITTER') ? 'Back to my submissions' : 'Back to submissions';
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -152,24 +155,52 @@ export function SubmissionDetailPage({
   }
 
   if (loading && !caseFile) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
-  if (!caseFile) return <div className="live-page"><Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
+  if (!caseFile) return <div className="live-page"><Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
 
   const submission = caseFile.submission;
+  const disabledCapabilities = [
+    { label: 'Next step', capability: caseFile.capabilities.nextStep },
+    { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
+    { label: 'Update document status', capability: caseFile.capabilities.updateDocumentStatus },
+  ].filter(({ capability }) => !capability.enabled && capability.reason);
   return (
     <div className="live-page page-enter">
-      <Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
+      <Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>
       <div className="live-page-heading detail-heading">
-        <div><p className="eyebrow">CASE FILE · {caseFile.reference || submission.code || 'DRAFT'}</p><h1>{submission.title}</h1><p>{submission.category === 'student' ? 'Student project' : 'General innovation'} · Created {formatDate(submission.createdAt)}</p></div>
-        <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
+        <div><p className="eyebrow">CASE FILE · {caseFile.reference || submission.code || 'DRAFT'}</p><h1>{submission.title}</h1><p>{submission.category === 'student' ? 'Student project' : 'General innovation'} · Received {submission.receivedAt ? formatDate(submission.receivedAt) : 'not yet'}</p></div>
+        <div className="detail-heading-actions">
+          {(caseFile.reference || submission.code) && <button className="btn btn-outline" onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(caseFile.reference || submission.code || '');
+              setCopyFeedback('Reference copied.');
+            } catch {
+              setError('Could not copy the reference. Copy it directly from the case heading.');
+            }
+          }}><Copy size={14} />Copy reference</button>}
+          <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
+        </div>
       </div>
+      {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
+      {disabledCapabilities.length > 0 && <section className="live-panel capability-notice" aria-label="Case permissions">
+        <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
+        {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
+        <ul>{disabledCapabilities.map(({ label, capability }) => <li key={label}><b>{label}:</b> {capability.reason}</li>)}</ul>
+      </section>}
+      {caseFile.stepper.length > 0 && <section className="live-panel case-stepper" aria-label="Case progress">
+        <p className="eyebrow">PIPELINE PROGRESS</p>
+        <ol>{caseFile.stepper.map((step) => <li className={`step-${step.state.toLowerCase()}`} key={step.stage}>
+          <span>{step.state === 'COMPLETE' ? '✓' : ''}</span><b>{formatStage(step.stage)}</b>
+        </li>)}</ol>
+      </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
           <div className="live-panel-heading"><div><p className="eyebrow">SUBMISSION</p><h2>Project summary</h2></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
           <div className="case-fields">
             <Field label="Purpose" value={submission.purpose} />
             <Field label="Problem addressed" value={submission.problemAddressed} />
-            <div className="form-grid"><Field label="Registered by" value={submission.registeredBy} /><Field label="Submitter ID" value={submission.submitterId || 'Not linked'} /></div>
+            <div className="form-grid"><Field label="Registered by" value={submission.registeredBy} /><Field label="Receiving officer" value={submission.receivingOfficer || 'Not assigned'} /></div>
+            <Field label="Submitter ID" value={submission.submitterId || 'Not linked'} />
             {submission.category === 'student' && <div className="form-grid"><Field label="Student number" value={submission.studentNumber || '—'} /><Field label="Programme" value={submission.programme || '—'} /></div>}
             {submission.category === 'student' && <Field label="Supervisor" value={submission.supervisor || '—'} />}
             <div className="form-grid"><Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} /><Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} /></div>
@@ -212,12 +243,35 @@ export function SubmissionDetailPage({
             <label className="form-field">Note <span className="field-note">Optional</span><textarea rows={3} maxLength={2000} value={note} onChange={(event) => setNote(event.target.value)} /></label>
             <button className="btn btn-primary" type="submit" disabled={busy || !nextStage}>{busy ? <LoaderCircle size={14} className="spin" /> : <Workflow size={14} />}Update case stage</button>
           </form>}
-          {canTransition && caseFile.capabilities.saveOutcome.enabled && <form className="live-panel case-transition" onSubmit={saveOutcome}>
+          <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">DECISION</p><h2>Case outcome</h2></div></div>
-            <label className="form-field">Decision<input maxLength={120} value={outcomeDecision} onChange={(event) => setOutcomeDecision(event.target.value)} /></label>
-            <label className="form-field">Outcome note<textarea rows={3} maxLength={5000} value={outcomeNote} onChange={(event) => setOutcomeNote(event.target.value)} /></label>
-            <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={14} className="spin" /> : <Workflow size={14} />}Save outcome</button>
-          </form>}
+            {caseFile.outcome && <div className="outcome-summary">
+              <Field label="Status" value={formatStage(caseFile.outcome.status)} />
+              {caseFile.outcome.decision && <Field label="Decision" value={caseFile.outcome.decision} />}
+              {caseFile.outcome.note && <Field label="Note" value={caseFile.outcome.note} />}
+              {caseFile.outcome.decidedBy && <Field label="Decided by" value={caseFile.outcome.decidedBy} />}
+              {caseFile.outcome.decidedAt && <Field label="Decision date" value={formatDate(caseFile.outcome.decidedAt)} />}
+            </div>}
+            {canTransition && caseFile.capabilities.saveOutcome.enabled && <form className="case-transition outcome-form" onSubmit={saveOutcome}>
+              <label className="form-field">Decision<input maxLength={120} value={outcomeDecision} onChange={(event) => setOutcomeDecision(event.target.value)} /></label>
+              <label className="form-field">Outcome note<textarea rows={3} maxLength={5000} value={outcomeNote} onChange={(event) => setOutcomeNote(event.target.value)} /></label>
+              <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={14} className="spin" /> : <Workflow size={14} />}Save outcome</button>
+            </form>}
+          </section>
+          {caseFile.reviewPanel && <section className="live-panel">
+            <div className="live-panel-heading"><div><p className="eyebrow">REVIEW PANEL</p><h2>Reviewers & IP</h2></div></div>
+            {caseFile.reviewPanel.availability === 'AVAILABLE' ? <>
+              <Field label="Reviewer quorum" value={caseFile.reviewPanel.quorumMet ? 'Met' : caseFile.reviewPanel.quorumAvailable ? 'Not met' : 'Unavailable'} />
+              <Field label="Reviewer team" value={caseFile.reviewPanel.reviewerTeam.join(', ') || 'No reviewers assigned'} />
+              <Field label="IP panel" value={caseFile.reviewPanel.ipPanel.join(', ') || 'No IP panel assigned'} />
+            </> : <p className="live-note">Reviewer and IP panel integration is not configured.</p>}
+          </section>}
+          {caseFile.activity && <section className="live-panel">
+            <div className="live-panel-heading"><div><p className="eyebrow">ACTIVITY</p><h2>Case activity</h2></div></div>
+            {caseFile.activity.availability === 'AVAILABLE' && caseFile.activity.items.length
+              ? <ul className="activity-feed">{caseFile.activity.items.map((item, index) => <li key={`${item.occurredAt}-${index}`}><b>{item.action}</b><span>{item.summary}</span><small>{item.actor} · {formatDate(item.occurredAt)}</small></li>)}</ul>
+              : <p className="live-note">Case activity integration is not configured.</p>}
+          </section>}
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">CASE HISTORY</p><h2>Stage history</h2></div></div>
             {caseFile.stageHistory.length ? <ol className="history-list">{caseFile.stageHistory.map((entry) => <li key={`${entry.changedAt}-${entry.toStage}`}><span className="history-dot" /><b>{formatStage(entry.toStage)}</b><small>{entry.changedBy} · {formatDate(entry.changedAt)}</small>{entry.note && <p>{entry.note}</p>}</li>)}</ol> : <p className="live-empty">No stage changes recorded yet.</p>}

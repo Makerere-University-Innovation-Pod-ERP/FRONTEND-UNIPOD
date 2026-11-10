@@ -78,6 +78,26 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_BASE_URL}/submissions/search`, ({ request }) => {
+    const url = new URL(request.url);
+    const code = url.searchParams.get('code')?.trim() ?? '';
+    const normalizedCode = code.toLowerCase();
+    const exactMatches = submissions.filter((item) => item.code?.toLowerCase() === normalizedCode);
+    const matchingItems = exactMatches.length
+      ? exactMatches
+      : submissions.filter((item) => item.title.toLowerCase().includes(normalizedCode));
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const items = matchingItems.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: matchingItems.length,
+      totalPages: Math.max(1, Math.ceil(matchingItems.length / size)),
+    });
+  }),
+
   http.post(`${API_BASE_URL}/submissions`, async ({ request }) => {
     const body = await request.json();
     const now = new Date().toISOString().slice(0, 10);

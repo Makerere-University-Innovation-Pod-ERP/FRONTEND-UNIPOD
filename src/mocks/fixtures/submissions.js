@@ -55,7 +55,9 @@ export function toCaseFile(submission) {
       stage,
       state: stage === submission.stage ? 'current' : 'pending',
     })),
-    outcome: submission.stage === 'COMPLETED' ? { status: 'COMPLETED', decision: 'Approved', note: null } : null,
+    outcome: submission.stage === 'COMPLETED'
+      ? { status: 'COMPLETED', decision: 'Approved', note: null, decidedBy: null, decidedAt: null }
+      : null,
     capabilities: {
       nextStep: { enabled: true, reason: null },
       saveOutcome: { enabled: submission.stage === 'COMPLETED', reason: submission.stage === 'COMPLETED' ? null : 'Outcome is recorded once review concludes.' },
