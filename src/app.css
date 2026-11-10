@@ -91,15 +91,6 @@
 .route-response{display:flex;gap:3px;width:100%}
 .route-response button{border:1px solid #e2e6dd;background:#fff;border-radius:3px;font-size:8px;padding:3px 6px;color:#617063}
 .route-response button:hover{background:#f1f5ed;color:#176b52}
-.ip-list{display:flex;flex-direction:column;gap:7px;margin-bottom:9px}
-.ip-record{border:1px solid #eef0e8;border-radius:4px;padding:8px;background:#fbfcf8}
-.ip-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.ip-head b{font-size:9px}
-.ip-record small{display:block;font-size:8px;color:#909890;margin:3px 0}
-.ip-record p{font-size:9px;color:#6c766d;margin:5px 0;line-height:1.5}
-.ip-feedback{color:#8a6b36!important;background:#faf4e8;padding:5px;border-radius:3px}
-.ip-record select{height:29px;width:100%;margin-top:5px;border:1px solid #e3e5dd;border-radius:3px;font-size:8px;color:#566158;background:#fff}
-.ip-textarea{width:100%;min-height:58px;margin-bottom:6px;padding:8px;border:1px solid #e3e5de;border-radius:4px;font-size:9px;resize:vertical}
 .notification-popover{width:310px;padding:0;overflow:hidden}
 .notification-head{display:flex;align-items:center;justify-content:space-between;padding:12px 13px;border-bottom:1px solid #edf0e9}
 .notification-head b{font-size:11px}

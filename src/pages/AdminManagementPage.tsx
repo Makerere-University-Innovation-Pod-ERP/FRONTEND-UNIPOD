@@ -9,7 +9,6 @@ const ROLES: ApiUserRole[] = [
   'FACT_FINDING_OFFICER',
   'REVIEWER',
   'SECTOR_OFFICER',
-  'IP_LIAISON',
   'SUBMITTER',
   'OBSERVER',
 ];

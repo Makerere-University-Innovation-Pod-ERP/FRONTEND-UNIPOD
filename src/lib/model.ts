@@ -17,7 +17,6 @@ export type BriefLifecycle = {
   completedBy?: string; completedAt?: string;
   submittedBy?: string; submittedAt?: string;
 };
-export type IPSubmission = { id: string; submittedAt: string; submittedBy: string; status: string; notes: string; feedback: string };
 export type ChecklistItem = { id: string; label: string; checked: boolean; note: string };
 export type RefinementItem = { id: string; label: string; done: boolean };
 export type RefinementRequest = {
@@ -33,7 +32,7 @@ export type Submission = {
   officer: string; receiver: string; stage: Stage; sector: string; reviewers: string[];
   docs: DemoDocument[]; reviews: Review[]; feedback: string[]; activities: Activity[];
   routing: RoutingRecord[]; revisionHistory: RevisionRecord[]; created: string; updated: string; revisions: number;
-  assessment?: string; receivedAt?: string; brief?: BriefLifecycle; ip?: IPSubmission[];
+  assessment?: string; receivedAt?: string; brief?: BriefLifecycle;
   refinementRequests?: RefinementRequest[]; documentRequests?: DocumentRequest[];
   assessmentChecklist?: ChecklistItem[]; outcomeState?: string; outcomeReason?: string;
 };
@@ -44,7 +43,6 @@ export type HubSettings = {
   codeAssignment: 'On receipt' | 'After fact-finding';
   reviewMode: 'Parallel' | 'Sequential';
   requiredReviewers: number;
-  ipRequirement: 'Not required' | 'Optional' | 'Student projects' | 'All submissions';
   notificationsEnabled: boolean;
 };
 export type State = {
@@ -65,7 +63,6 @@ const reviewerList: Reviewer[] = [
   { id: 'r2', name: 'Peter Okello', role: 'Technical assessor', sector: 'Technical Assessment' },
   { id: 'r3', name: 'Grace Namuli', role: 'Programme reviewer', sector: 'Academic Department' },
   { id: 'r4', name: 'Daniel Kato', role: 'Innovation liaison', sector: 'Research & Innovation' },
-  { id: 'r5', name: 'Amina Ssemanda', role: 'IP liaison', sector: 'Intellectual Property' },
 ];
 type SeedRow = Omit<Submission, 'activities' | 'reviews' | 'feedback' | 'docs' | 'routing' | 'revisionHistory'>;
 const seedRows: SeedRow[] = [
@@ -96,14 +93,12 @@ const settingsSeed: HubSettings = {
   codeAssignment: 'On receipt',
   reviewMode: 'Parallel',
   requiredReviewers: 2,
-  ipRequirement: 'Optional',
   notificationsEnabled: true,
 };
 
 const notificationSeed: Notification[] = [
   { id: 'n1', title: 'Fact-finding assessment needed', body: '4 submissions are waiting for an assessment.', link: '/fact-finding', date: '2026-10-18', read: false },
   { id: 'n2', title: 'Refinement response received', body: 'Inclusive Learning Audio Notes has a revised brief.', link: '/refinement', date: '2026-10-17', read: false },
-  { id: 'n3', title: 'IP feedback recorded', body: 'Digital Heritage Preservation Project has IP clearance.', link: '/submissions/IH-26026', date: '2026-10-14', read: true },
 ];
 
 const refinementFor = (submission: SeedRow): RefinementRequest[] => submission.stage !== 'Refinement Requested' ? [] : [{
@@ -119,12 +114,6 @@ const refinementFor = (submission: SeedRow): RefinementRequest[] => submission.s
   message: 'Good direction. Please strengthen the brief with the items above before resubmission.',
   status: 'Open',
 }];
-
-const ipFor = (i: number, s: SeedRow): IPSubmission[] => {
-  if (i === 0) return [{ id: `ip-${s.id}`, submittedAt: '2026-10-13', submittedBy: 'Amina Ssemanda', status: 'Under IP Review', notes: 'Submitted for a preliminary IP screening.', feedback: 'Awaiting a search report.' }];
-  if (i === 5) return [{ id: `ip-${s.id}`, submittedAt: '2026-10-01', submittedBy: 'Amina Ssemanda', status: 'Cleared', notes: 'Submitted after fact-finding.', feedback: 'No conflicting claims identified. Cleared for further handling.' }];
-  return [];
-};
 
 const docsFor = (i: number, s: SeedRow): DemoDocument[] => {
   const officer = s.officer;
@@ -148,7 +137,6 @@ const seed: State = {
       activities: [{ id: `act-${s.id}`, action: 'Submission registered', actor: s.officer, date: s.created }],
       receivedAt: s.created,
       brief: { initiatedBy: s.officer, initiatedAt: s.created, completedBy: s.officer, completedAt: s.created, submittedBy: s.officer, submittedAt: s.created },
-      ip: ipFor(i, s),
       refinementRequests: refinementFor(s),
       documentRequests: demoDocsRequest(i, s),
       assessmentChecklist: defaultChecklist().map((item, idx) => ({ ...item, checked: i % 2 === 0 && idx < 3 })),
@@ -160,7 +148,7 @@ const seed: State = {
     return base;
   }),
   reviewers: reviewerList,
-  sectors: ['Intellectual Property', 'Technical Assessment', 'Research & Innovation', 'Academic Department', 'External or Specialized Assessment', 'Other Sector'],
+  sectors: ['Technical Assessment', 'Research & Innovation', 'Academic Department', 'External or Specialized Assessment', 'Other Sector'],
   role: 'Innovation coordinator', displayName: 'Sarah Kintu',
   documents: ['Project Brief', 'Recommendation Letter', 'Supporting Evidence', 'Technical Documentation', 'Other'],
   documentRequirements: requirementSeed,
@@ -172,7 +160,6 @@ const withDefaults = (s: Submission): Submission => ({
   ...s,
   brief: s.brief ?? { initiatedBy: s.officer, initiatedAt: s.created, completedBy: s.officer, completedAt: s.created, submittedBy: s.officer, submittedAt: s.created },
   receivedAt: s.receivedAt ?? s.created,
-  ip: s.ip ?? [],
   refinementRequests: s.refinementRequests ?? [],
   documentRequests: s.documentRequests ?? [],
   assessmentChecklist: s.assessmentChecklist ?? defaultChecklist(),

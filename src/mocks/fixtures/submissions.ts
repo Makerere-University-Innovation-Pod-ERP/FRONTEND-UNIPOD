@@ -14,7 +14,6 @@ export const sectors: Sector[] = [
   sectorSeed('sec-1', 'Technical Assessment'),
   sectorSeed('sec-2', 'Research & Innovation'),
   sectorSeed('sec-3', 'Academic Department'),
-  sectorSeed('sec-4', 'Intellectual Property'),
 ];
 
 export const submissions: Submission[] = [

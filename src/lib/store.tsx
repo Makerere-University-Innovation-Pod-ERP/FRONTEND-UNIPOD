@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import {
   defaultChecklist, demoState, initialState,
   type ChecklistItem, type DemoDocument, type DocumentRequirement, type HubSettings,
-  type IPSubmission, type Notification, type RefinementRequest, type Review,
+  type Notification, type RefinementRequest, type Review,
   type RoutingRecord, type State, type Submission, type Stage,
 } from './model';
 
@@ -17,7 +17,6 @@ const roleNames: Record<string, string> = {
   Reviewer: 'Dr. Miriam Nsubuga',
   'Fact-finding officer': 'Joseph Lwanga',
   'Sector officer': 'Peter Okello',
-  'IP liaison': 'Amina Ssemanda',
   'Student submitter': 'Lydia Nakanwagi',
   'Read-only observer': 'Guest Observer',
 };
@@ -39,8 +38,6 @@ type HubContextValue = {
   saveAssessment: (id: string, checklist: ChecklistItem[], assessment: string) => void;
   assignReview: (id: string, reviewer: string, role: string, mode: 'Sequential' | 'Parallel', sequence?: number) => void;
   recordReview: (id: string, review: NewReview) => void;
-  submitToIP: (id: string, notes: string) => void;
-  updateIP: (id: string, ipId: string, patch: Partial<IPSubmission>) => void;
   requestRefinement: (id: string, items: string[], message: string, due?: string) => void;
   resolveRefinement: (id: string, requestId: string) => void;
   resubmit: (id: string, response: string) => void;
@@ -112,7 +109,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
         codeAssignedAt: code ? today() : undefined,
         receivedAt: created,
         brief: { initiatedBy: record.officer, initiatedAt: created, completedBy: record.officer, completedAt: created, submittedBy: record.officer, submittedAt: created },
-        ip: [], refinementRequests: [], documentRequests: [], assessmentChecklist: defaultChecklist(),
+        refinementRequests: [], documentRequests: [], assessmentChecklist: defaultChecklist(),
         outcomeState: 'In progress', outcomeReason: '',
         activities: [{ id: uid('act'), action: 'Submission registered', actor: current.displayName, date: created }],
         reviews: [], feedback: [], routing: [], revisionHistory: [], revisions: 0,
@@ -166,14 +163,6 @@ export function HubProvider({ children }: { children: ReactNode }) {
       reviews: existing ? s.reviews.map(r => r.id === existing.id ? { ...r, ...record } : r) : [...s.reviews, record],
     };
   }, 'Review recorded', { title: 'Review recorded', body: 'A reviewer submitted their observations.' }), [commit]);
-
-  const submitToIP = useCallback((id: string, notes: string) => commit(id, (s, actor) => ({
-    ip: [...(s.ip ?? []), { id: uid('ip'), submittedAt: today(), submittedBy: actor, status: 'Submitted', notes, feedback: '' }],
-  }), 'Submitted to Intellectual Property', { title: 'IP submission recorded', body: 'The case was submitted to Intellectual Property.' }), [commit]);
-
-  const updateIP = useCallback((id: string, ipId: string, patch: Partial<IPSubmission>) => commit(id, s => ({
-    ip: (s.ip ?? []).map(record => record.id === ipId ? { ...record, ...patch } : record),
-  }), 'IP record updated'), [commit]);
 
   const requestRefinement = useCallback((id: string, items: string[], message: string, due?: string) => commit(id, (s, actor) => {
     const request: RefinementRequest = {
@@ -236,10 +225,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     state, update, register, reset, setRole, updateConfig, setStage,
     initBrief, completeBrief, submitBrief, saveAssessment, assignReview, recordReview,
-    submitToIP, updateIP, requestRefinement, resolveRefinement, resubmit,
+    requestRefinement, resolveRefinement, resubmit,
     route, respondRouting, addDocument, verifyDocument, requestDocument,
     markNotificationRead, markAllRead, setSettings, addRequirement, removeRequirement,
-  }), [state, update, register, reset, setRole, updateConfig, setStage, initBrief, completeBrief, submitBrief, saveAssessment, assignReview, recordReview, submitToIP, updateIP, requestRefinement, resolveRefinement, resubmit, route, respondRouting, addDocument, verifyDocument, requestDocument, markNotificationRead, markAllRead, setSettings, addRequirement, removeRequirement]);
+  }), [state, update, register, reset, setRole, updateConfig, setStage, initBrief, completeBrief, submitBrief, saveAssessment, assignReview, recordReview, requestRefinement, resolveRefinement, resubmit, route, respondRouting, addDocument, verifyDocument, requestDocument, markNotificationRead, markAllRead, setSettings, addRequirement, removeRequirement]);
 
   return <HubContext.Provider value={value}>{children}</HubContext.Provider>;
 }

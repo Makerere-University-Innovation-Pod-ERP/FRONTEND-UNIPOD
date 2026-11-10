@@ -105,7 +105,6 @@ export type ApiUserRole =
   | 'FACT_FINDING_OFFICER'
   | 'REVIEWER'
   | 'SECTOR_OFFICER'
-  | 'IP_LIAISON'
   | 'SUBMITTER'
   | 'OBSERVER';
 
@@ -188,7 +187,6 @@ export type CaseFile = {
   reviewPanel?: {
     availability: string;
     reviewerTeam: string[];
-    ipPanel: string[];
     quorumAvailable: boolean;
     quorumMet: boolean;
   };

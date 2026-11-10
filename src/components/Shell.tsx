@@ -36,7 +36,7 @@ export function Shell({ children }: { children: ReactNode }) {
     <button className="profile-card" data-testid="button-profile-menu" onClick={()=>setOpenMenu(openMenu==='profile'?null:'profile')}>
       <span className="avatar">{state.displayName.split(' ').map(x=>x[0]).slice(0,2).join('')}</span>{!collapsed&&<span className="profile-copy"><b>{state.displayName}</b><small>{state.role}</small></span>}{!collapsed&&<ChevronDown size={15}/>}
     </button>
-    {openMenu==='profile'&&<div className="profile-popover"><div className="popover-title">Demonstration role</div>{['Administrator','Innovation coordinator','Receiving officer','Reviewer','Fact-finding officer','Sector officer','IP liaison','Student submitter','Read-only observer'].map(role=><button key={role} data-testid={`button-role-${role.replaceAll(' ','-')}`} className="role-choice" onClick={()=>{setRole(role);setOpenMenu(null)}}>{role}{state.role===role&&<span className="check-dot"/>}</button>)}</div>}
+    {openMenu==='profile'&&<div className="profile-popover"><div className="popover-title">Demonstration role</div>{['Administrator','Innovation coordinator','Receiving officer','Reviewer','Fact-finding officer','Sector officer','Student submitter','Read-only observer'].map(role=><button key={role} data-testid={`button-role-${role.replaceAll(' ','-')}`} className="role-choice" onClick={()=>{setRole(role);setOpenMenu(null)}}>{role}{state.role===role&&<span className="check-dot"/>}</button>)}</div>}
   </aside>;
   return <div className="app-shell">
     {side}

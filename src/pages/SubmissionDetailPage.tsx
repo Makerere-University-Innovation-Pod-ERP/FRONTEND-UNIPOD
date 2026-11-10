@@ -259,12 +259,11 @@ export function SubmissionDetailPage({
             </form>}
           </section>
           {caseFile.reviewPanel && <section className="live-panel">
-            <div className="live-panel-heading"><div><p className="eyebrow">REVIEW PANEL</p><h2>Reviewers & IP</h2></div></div>
+            <div className="live-panel-heading"><div><p className="eyebrow">REVIEW PANEL</p><h2>Reviewers</h2></div></div>
             {caseFile.reviewPanel.availability === 'AVAILABLE' ? <>
               <Field label="Reviewer quorum" value={caseFile.reviewPanel.quorumMet ? 'Met' : caseFile.reviewPanel.quorumAvailable ? 'Not met' : 'Unavailable'} />
               <Field label="Reviewer team" value={caseFile.reviewPanel.reviewerTeam.join(', ') || 'No reviewers assigned'} />
-              <Field label="IP panel" value={caseFile.reviewPanel.ipPanel.join(', ') || 'No IP panel assigned'} />
-            </> : <p className="live-note">Reviewer and IP panel integration is not configured.</p>}
+            </> : <p className="live-note">Reviewer integration is not configured.</p>}
           </section>}
           {caseFile.activity && <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">ACTIVITY</p><h2>Case activity</h2></div></div>
