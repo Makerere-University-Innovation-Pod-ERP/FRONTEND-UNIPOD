@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ArrowUpRight, CircleAlert, LoaderCircle, Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SubmissionRows } from '@/components/SubmissionRows';
-import { ApiError, backendApi, type DashboardOverview, type Submission } from '@/services/backend-api';
+import { ApiError, backendApi } from '@/services/backend-api';
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { formatStage } from '@/lib/presentation';
 
@@ -10,17 +10,13 @@ export function LiveDashboard({
   token,
   roles,
   onUnauthorized,
-}: {
-  token: string;
-  roles: string[];
-  onUnauthorized: () => void;
 }) {
-  const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [recent, setRecent] = useState<Submission[]>([]);
+  const [overview, setOverview] = useState(null);
+  const [recent, setRecent] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async (signal) => {
     try {
       const [data, submissions] = await Promise.all([
         backendApi.dashboard(token, signal),
@@ -125,15 +121,15 @@ export function LiveDashboard({
   );
 }
 
-function Metric({ label, value, note }: { label: string; value: number; note: string }) {
+function Metric({ label, value, note }) {
   return <article className="live-metric"><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
 }
 
-function SummaryValue({ label, value }: { label: string; value: number | null }) {
+function SummaryValue({ label, value }) {
   return <p className="summary-value"><span>{label}</span><b>{value ?? '—'}</b></p>;
 }
 
-function IncomeBars({ bars }: { bars: Array<{ period: string; income: number }> }) {
+function IncomeBars({ bars }) {
   const maximum = Math.max(0, ...bars.map((bar) => bar.income));
   return <div className="income-bar-chart" aria-label="Income by period">
     {bars.map((bar) => <div className="income-bar-column" key={bar.period}>

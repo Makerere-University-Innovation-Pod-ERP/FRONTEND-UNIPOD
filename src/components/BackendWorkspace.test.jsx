@@ -4,11 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from './BackendWorkspace';
-import type { UserSession } from '@/lib/auth';
 import { submissions } from '@/mocks/fixtures/submissions';
 import { notifications } from '@/mocks/fixtures/notifications';
 
-const session: UserSession = {
+const session = {
   accessToken: 'test-token',
   expiresAt: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
   subject: 'Joseph Lwanga',

@@ -1,9 +1,8 @@
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Submission } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 
-export function SubmissionRows({ rows }: { rows: Submission[] }) {
+export function SubmissionRows({ rows }) {
   return rows.length ? (
     <div className="live-table-wrap"><table className="live-table">
       <thead><tr><th>Case</th><th>Type</th><th>Stage</th><th>Sector</th><th>Received</th><th /></tr></thead>

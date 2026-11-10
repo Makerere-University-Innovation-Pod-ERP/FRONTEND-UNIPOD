@@ -1,30 +1,23 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { CircleAlert, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ApiError, backendApi, type PageResponse, type Submission } from '@/services/backend-api';
+import { ApiError, backendApi } from '@/services/backend-api';
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { SubmissionRows } from '@/components/SubmissionRows';
-
-type Category = 'student' | 'general';
 
 export function LiveSubmissions({
   token,
   roles,
   onUnauthorized,
   fixedCategory,
-}: {
-  token: string;
-  roles: string[];
-  onUnauthorized: () => void;
-  fixedCategory?: Category;
 }) {
-  const [result, setResult] = useState<PageResponse<Submission> | null>(null);
+  const [result, setResult] = useState(null);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [stage, setStage] = useState('');
   const [sector, setSector] = useState('');
-  const [sectors, setSectors] = useState<Array<{ id: string; name: string }>>([]);
+  const [sectors, setSectors] = useState([]);
   const [sectorError, setSectorError] = useState('');
   const [page, setPage] = useState(0);
   const [error, setError] = useState('');
@@ -35,7 +28,7 @@ export function LiveSubmissions({
     const controller = new AbortController();
     backendApi.sectorFilterOptions(token, controller.signal)
       .then(setSectors)
-      .catch((reason: unknown) => {
+      .catch((reason) => {
         if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
         else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
           setSectorError(reason instanceof Error ? reason.message : 'Could not load sector filters.');
@@ -48,7 +41,7 @@ export function LiveSubmissions({
     const controller = new AbortController();
     backendApi.submissions(token, { page, size: 25, q: search, category: selectedCategory, stage, sector }, controller.signal)
       .then(setResult)
-      .catch((reason: unknown) => {
+      .catch((reason) => {
         if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
         else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
           setError(reason instanceof Error ? reason.message : 'Could not load submissions.');
@@ -58,7 +51,7 @@ export function LiveSubmissions({
     return () => controller.abort();
   }, [token, page, search, selectedCategory, stage, sector, onUnauthorized]);
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
+  function submitSearch(event) {
     event.preventDefault();
     setError('');
     setLoading(true);

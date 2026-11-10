@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CircleAlert, LoaderCircle, Plus, RefreshCw, Save, Trash2, UserPlus } from 'lucide-react';
-import { ApiError, backendApi, type ApiUser, type ApiUserRole, type Sector } from '@/services/backend-api';
+import { ApiError, backendApi } from '@/services/backend-api';
 
-const ROLES: ApiUserRole[] = [
+const ROLES = [
   'ADMINISTRATOR',
   'INNOVATION_COORDINATOR',
   'RECEPTIONIST',
@@ -17,21 +17,18 @@ const ROLES: ApiUserRole[] = [
 export function AdminManagementPage({
   token,
   onUnauthorized,
-}: {
-  token: string;
-  onUnauthorized: () => void;
 }) {
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [sectors, setSectors] = useState([]);
   const [selectedId, setSelectedId] = useState('');
-  const [members, setMembers] = useState<string[]>([]);
+  const [members, setMembers] = useState([]);
   const [memberSubject, setMemberSubject] = useState('');
   const [name, setName] = useState('');
   const [notificationEmail, setNotificationEmail] = useState('');
   const [active, setActive] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<ApiUserRole>('REVIEWER');
-  const [createdUser, setCreatedUser] = useState<ApiUser | null>(null);
+  const [role, setRole] = useState('REVIEWER');
+  const [createdUser, setCreatedUser] = useState(null);
   const [busy, setBusy] = useState(false);
   const [loadingSectors, setLoadingSectors] = useState(true);
   const [sectorCatalogLoaded, setSectorCatalogLoaded] = useState(false);
@@ -58,7 +55,7 @@ export function AdminManagementPage({
     void loadSectors();
   }, [loadSectors]);
 
-  async function selectSector(id: string) {
+  async function selectSector(id) {
     setSelectedId(id);
     setError('');
     setNotice('');
@@ -81,7 +78,7 @@ export function AdminManagementPage({
     }
   }
 
-  async function createUser(event: FormEvent<HTMLFormElement>) {
+  async function createUser(event) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -101,7 +98,7 @@ export function AdminManagementPage({
     }
   }
 
-  async function saveSector(event: FormEvent<HTMLFormElement>) {
+  async function saveSector(event) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -142,7 +139,7 @@ export function AdminManagementPage({
     setNotice('');
   }
 
-  async function addMember(event: FormEvent<HTMLFormElement>) {
+  async function addMember(event) {
     event.preventDefault();
     if (!selectedSector || !memberSubject.trim()) return;
     setBusy(true);
@@ -161,7 +158,7 @@ export function AdminManagementPage({
     }
   }
 
-  async function removeMember(subject: string) {
+  async function removeMember(subject) {
     if (!selectedSector) return;
     setBusy(true);
     setError('');
@@ -194,7 +191,7 @@ export function AdminManagementPage({
         <form className="management-form" onSubmit={createUser}>
           <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
           <label className="form-field">Initial password<input type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><small className="field-note">Use at least 12 characters. Do not reuse your own password.</small></label>
-          <label className="form-field">Role<select value={role} onChange={(event) => setRole(event.target.value as ApiUserRole)}>{ROLES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></label>
+          <label className="form-field">Role<select value={role} onChange={(event) => setRole(event.target.value)}>{ROLES.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></label>
           <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />}Create account</button></div>
         </form>
         {createdUser && <p className="management-success">Created {createdUser.email} as {createdUser.role.replaceAll('_', ' ')}.</p>}

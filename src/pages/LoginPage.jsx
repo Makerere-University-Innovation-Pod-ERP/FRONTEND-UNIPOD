@@ -1,15 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { ArrowRight, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { backendApi } from '@/services/backend-api';
-import { createSession, saveSession, type UserSession } from '@/lib/auth';
+import { createSession, saveSession } from '@/lib/auth';
 
-export function LoginPage({ onLogin }: { onLogin: (session: UserSession) => void }) {
+export function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event) {
     event.preventDefault();
     setError('');
     setBusy(true);
