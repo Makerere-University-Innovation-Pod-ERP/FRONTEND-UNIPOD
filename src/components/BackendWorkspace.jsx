@@ -54,6 +54,7 @@ export function BackendWorkspace({
   session,
   health,
   onLogout,
+  textileOnly = false,
   children,
 }) {
   const { pathname: location } = useLocation();
@@ -69,11 +70,12 @@ export function BackendWorkspace({
   const { theme, toggleTheme } = useTheme();
   const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
-  const canCreate = session.roles.some((userRole) => SUBMISSION_INTAKE_ROLES.includes(userRole));
+  // Textile-only mode (`npm run dev:textile`) shows just the Textile Operations section.
+  const canCreate = !textileOnly && session.roles.some((userRole) => SUBMISSION_INTAKE_ROLES.includes(userRole));
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
   const navigation = buildNavigation(session.roles);
-  const links = [
+  const links = textileOnly ? [] : [
     ...navigation,
     ...(isSubmitter ? [{ label: 'My submissions', href: '/my-submissions', icon: Boxes }] : []),
     { label: 'Student projects', href: '/submissions/student', icon: Boxes },
@@ -144,10 +146,10 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className="live-shell">
+    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
-          <Link to="/" className="live-brand-link" onClick={() => setMobileOpen(false)}>
+          <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
             <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
             <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
           </Link>

@@ -591,3 +591,45 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   .tx-quote-row{grid-template-columns:1fr}
   .tx-actions .btn{flex:1}
 }
+
+/* ── Textile Operations green theme ─────────────────────────────────────────
+   Applied by BackendWorkspace (.live-shell.textile-theme) on every /textile/*
+   screen and throughout `npm run dev:textile`. Palette follows the Textile
+   design (deep green sidebar, green primary actions, lime accents, sage page).
+   Other modules keep the Makerere red/black tokens above. */
+.live-shell.textile-theme{
+  --bg:#eef2ea; --surface:#ffffff; --surface-raised:#f3f6f0; --surface-sunk:#e3eadb;
+  --border:#dbe3d4; --border-soft:#e7ece2; --ink:#16231c; --ink-soft:#3b4a41; --muted:#62716a;
+  --forest:#0f6b46; --forest-dim:#0b5838; --forest-deep:#0d3b28; --forest-700:#0a4a31;
+  --lime:#c6ef5a; --lime-ink:#0d3b28;
+  --green:#1b7a4b; --green-bg:#e2f1e5;
+  --blue:#2f4a3c; --blue-bg:#e6ede4;
+  --sidebar-a:#0f4c33; --sidebar-b:#0a3b27; --sidebar-ink:#eef6ef; --sidebar-muted:#9dbfab;
+  --sidebar-active:#1a5c40; --sidebar-active-ink:#ffffff;
+  --shadow:0 1px 2px rgba(13,40,26,.05), 0 10px 28px rgba(13,40,26,.07);
+}
+.live-shell.textile-theme .live-nav-link{color:#cfe3d5}
+.live-shell.textile-theme .live-nav-link.active svg{color:var(--lime)}
+.live-shell.textile-theme .btn-primary{border-radius:999px;padding:0 18px}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .live-shell.textile-theme{
+    --bg:#0d1511; --surface:#131d17; --surface-raised:#19251e; --surface-sunk:#0a110d;
+    --border:#2c3c33; --border-soft:#203028; --ink:#e7f0ea; --ink-soft:#bccbc2; --muted:#8c9f94;
+    --forest:#23925c; --forest-dim:#2aa86a; --forest-deep:#e7f0ea; --forest-700:#1d6d47;
+    --lime:#c6ef5a; --lime-ink:#0c2618;
+    --green:#5fc98c; --green-bg:#15271c; --blue:#bccbc2; --blue-bg:#1c2a22;
+    --sidebar-a:#07140d; --sidebar-b:#0b2218; --sidebar-ink:#e7f0ea; --sidebar-muted:#86a794;
+    --sidebar-active:#173f2c; --sidebar-active-ink:#d9f59a;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] .live-shell.textile-theme{
+  --bg:#0d1511; --surface:#131d17; --surface-raised:#19251e; --surface-sunk:#0a110d;
+  --border:#2c3c33; --border-soft:#203028; --ink:#e7f0ea; --ink-soft:#bccbc2; --muted:#8c9f94;
+  --forest:#23925c; --forest-dim:#2aa86a; --forest-deep:#e7f0ea; --forest-700:#1d6d47;
+  --lime:#c6ef5a; --lime-ink:#0c2618;
+  --green:#5fc98c; --green-bg:#15271c; --blue:#bccbc2; --blue-bg:#1c2a22;
+  --sidebar-a:#07140d; --sidebar-b:#0b2218; --sidebar-ink:#e7f0ea; --sidebar-muted:#86a794;
+  --sidebar-active:#173f2c; --sidebar-active-ink:#d9f59a;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+}
