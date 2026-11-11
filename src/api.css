@@ -381,3 +381,19 @@
 }
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Training & Mentorship Scoped Styles */
+.training-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:26px}
+.training-metric-card{background:#ffffff;border-radius:16px;border:1px solid #e3e7df;padding:22px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.02);transition:box-shadow .15s ease}
+.training-metric-card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+.training-table-container{background:#ffffff;border-radius:16px;border:1px solid #e3e7df;box-shadow:0 1px 3px rgba(0,0,0,0.02);overflow:hidden}
+
+@media(max-width:900px){
+  .training-overview-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+  .training-metric-card{padding:18px 20px;border-radius:14px}
+}
+
+@media(max-width:640px){
+  .training-overview-grid{grid-template-columns:1fr;gap:12px}
+  .training-table-container{border-radius:14px}
+}
