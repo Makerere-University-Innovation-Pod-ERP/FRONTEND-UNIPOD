@@ -5,7 +5,6 @@ import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
-import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
@@ -17,11 +16,19 @@ import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace'
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
+import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
 
 const queryClient = new QueryClient();
+
+const DEFAULT_COORDINATOR_SESSION = {
+  accessToken: 'mock-coordinator-token',
+  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+  subject: 'Grace Namuli',
+  roles: ['ROLE_DEPARTMENT_COORDINATOR'],
+};
 
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
@@ -40,7 +47,13 @@ function AuthenticatedApp({
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout}>
         <Routes>
-          <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          {/* Multimedia Domain */}
+          <Route path="/" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/operations/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+
+          {/* Submissions & Queues */}
           <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/submissions/student" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
           <Route path="/submissions/general" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" />} />
@@ -63,7 +76,7 @@ function AuthenticatedApp({
 }
 
 function App() {
-  const [session, setSession] = useState(() => loadSession());
+  const [session, setSession] = useState(() => loadSession() || DEFAULT_COORDINATOR_SESSION);
   const [health, setHealth] = useState('checking');
 
   useEffect(() => {
@@ -95,7 +108,7 @@ function App() {
 
   const logout = useCallback(() => {
     clearSession();
-    setSession(null);
+    setSession(DEFAULT_COORDINATOR_SESSION);
   }, []);
 
   const acceptSession = useCallback((nextSession) => {

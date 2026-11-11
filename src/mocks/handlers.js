@@ -5,11 +5,16 @@ import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
+import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
+  'coordinator@unipod.test': { subject: 'Grace Namuli', roles: ['ROLE_DEPARTMENT_COORDINATOR'] },
 };
+
+let trainingSessions = [...initialTrainingSessions];
+let mentorshipFollowUps = [...initialMentorshipFollowUps];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -211,5 +216,28 @@ export const handlers = [
   http.post(`${API_BASE_URL}/notifications/read-all`, () => {
     for (const item of notifications) item.read = true;
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Operations / Multimedia - Training & Mentorship
+  http.get(`${API_BASE_URL}/operations/training/overview`, () => {
+    const upcomingSessions = trainingSessions.filter((s) => s.status === 'Upcoming' || s.status === 'In Progress').length;
+    const seatsFilled = trainingSessions.reduce((acc, s) => acc + s.enrolledCount, 0);
+    const totalSeats = trainingSessions.reduce((acc, s) => acc + s.capacity, 0);
+    const mentorshipFollowUpsCount = mentorshipFollowUps.length;
+
+    return HttpResponse.json({
+      upcomingSessions,
+      seatsFilled,
+      totalSeats,
+      mentorshipFollowUps: mentorshipFollowUpsCount,
+      sessions: trainingSessions,
+      followUps: mentorshipFollowUps,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/training/sessions/:id`, ({ params }) => {
+    const session = trainingSessions.find((s) => s.id === params.id);
+    if (!session) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(session);
   }),
 ];
