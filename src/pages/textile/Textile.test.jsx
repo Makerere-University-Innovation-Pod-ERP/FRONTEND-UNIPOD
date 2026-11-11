@@ -111,7 +111,7 @@ describe('Add or Use Stock', () => {
     renderPage(StockMovementPage);
     await user.selectOptions(await screen.findByRole('combobox', { name: /item/i }), 'stk-zips');
     await user.click(screen.getByRole('radio', { name: 'Correction' }));
-    await user.type(screen.getByRole('spinbutton', { name: /quantity/i }), '-50');
+    fireEvent.change(screen.getByRole('spinbutton', { name: /quantity/i }), { target: { value: '-50' } });
     expect(screen.getByRole('alert')).toHaveTextContent(/never go below zero/);
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });

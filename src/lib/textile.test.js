@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
   BOARD_COLUMNS, SCHEDULE_BLOCKED_REASON, READY_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder,
