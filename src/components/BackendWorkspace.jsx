@@ -1,12 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
-  LayoutDashboard, LogOut, Menu, Moon, Plus, Search, Settings2, ShieldCheck, Sun, Users, Workflow, X,
+  Activity, ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
+  Cog, FileText, LayoutDashboard, LayoutGrid, List, LogOut, Menu, Moon, Plus, Search, Settings2, ShieldCheck, Sun,
+  TriangleAlert, Upload, Users, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
+import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
@@ -25,6 +26,28 @@ function buildNavigation(roles) {
     items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
   }
   return items;
+}
+
+/** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
+function buildTextileNavigation(roles) {
+  if (!isTextileDomainOwner(roles)) return [];
+  return [
+    { label: 'New order', href: '/textile/orders/new', icon: Upload },
+    { label: 'Order review & quote', href: '/textile/review', icon: ClipboardList },
+    { label: 'Order board', href: '/textile/board', icon: LayoutGrid },
+    { label: 'Order page', href: '/textile/orders', icon: FileText },
+    { label: 'Stock list', href: '/textile/stock', icon: List },
+    { label: 'Add/use stock', href: '/textile/stock/movements', icon: ArrowLeftRight },
+    { label: 'Machine list', href: '/textile/machines', icon: Cog },
+    { label: 'Report a fault', href: '/textile/machines/report', icon: TriangleAlert },
+    { label: 'Book the workshop', href: '/textile/bookings', icon: CalendarDays },
+  ];
+}
+
+function isActiveLink(href, location) {
+  if (location === href) return true;
+  // An individual order page (/textile/orders/TXO-…) lights up the "Order page" entry.
+  return href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new';
 }
 
 export function BackendWorkspace({
@@ -58,6 +81,7 @@ export function BackendWorkspace({
     ...(canCreate ? [{ label: 'Reception queue', href: '/reception', icon: Workflow }] : []),
     ...(isAdministrator ? [{ label: 'Management', href: '/management', icon: Settings2 }] : []),
   ];
+  const textileLinks = buildTextileNavigation(session.roles);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -145,7 +169,19 @@ export function BackendWorkspace({
               to={href}
               title={collapsed ? label : undefined}
               onClick={() => setMobileOpen(false)}
-              className={`live-nav-link ${location === href ? 'active' : ''}`}
+              className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+            >
+              <Icon size={17} /><span>{label}</span>
+            </Link>
+          ))}
+          {textileLinks.length > 0 && <p className="live-nav-heading live-nav-subheading">TEXTILE OPERATIONS</p>}
+          {textileLinks.map(({ label, href, icon: Icon }) => (
+            <Link
+              key={href}
+              to={href}
+              title={collapsed ? label : undefined}
+              onClick={() => setMobileOpen(false)}
+              className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
             >
               <Icon size={17} /><span>{label}</span>
             </Link>
@@ -174,7 +210,7 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'MUTIC ERP')}</b></div>
+          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{[...links, ...textileLinks].find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'MUTIC ERP')}</b></div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
               <Search size={14} /><span>Search cases</span><kbd>Ctrl K</kbd>

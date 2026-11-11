@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
+import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -17,6 +17,15 @@ import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace'
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
+import { NewOrderPage } from '@/pages/textile/NewOrderPage';
+import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
+import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
+import { OrderPage, OrdersIndexPage } from '@/pages/textile/OrderPage';
+import { StockListPage } from '@/pages/textile/StockListPage';
+import { StockMovementPage } from '@/pages/textile/StockMovementPage';
+import { MachineListPage } from '@/pages/textile/MachineListPage';
+import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
+import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
@@ -33,6 +42,10 @@ function AuthenticatedApp({
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
+  const canTextile = isTextileDomainOwner(session.roles);
+  const textile = (Page) => (canTextile
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -53,6 +66,16 @@ function AuthenticatedApp({
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+          <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
+          <Route path="/textile/review" element={textile(OrderReviewPage)} />
+          <Route path="/textile/board" element={textile(OrderBoardPage)} />
+          <Route path="/textile/orders" element={textile(OrdersIndexPage)} />
+          <Route path="/textile/orders/:id" element={textile(OrderPage)} />
+          <Route path="/textile/stock" element={textile(StockListPage)} />
+          <Route path="/textile/stock/movements" element={textile(StockMovementPage)} />
+          <Route path="/textile/machines" element={textile(MachineListPage)} />
+          <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
+          <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
           <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />
         </Routes>
       </BackendWorkspace>
