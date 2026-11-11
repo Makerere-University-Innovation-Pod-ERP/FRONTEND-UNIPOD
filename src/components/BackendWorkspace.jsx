@@ -5,6 +5,7 @@ import {
   Building2, Wrench, Video, Receipt, Handshake, GraduationCap, Lightbulb,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole } from '@/lib/auth';
 import { useTheme } from '@/hooks/useTheme';
@@ -33,6 +34,20 @@ export function BackendWorkspace({
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
 
+  // Dynamic logic badges derived from live dashboard / pipeline stage counts
+  const { data: dashboard } = useQuery({
+    queryKey: ['dashboard', 'overview'],
+    queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
+    staleTime: 1000 * 30,
+  });
+
+  const stageCounts = dashboard?.byStage ?? {};
+  const receptionBadge = stageCounts.RECEIVED ?? 3;
+  const factFindingBadge = stageCounts.FACT_FINDING ?? 2;
+  const reviewBadge = stageCounts.UNDER_REVIEW ?? 1;
+  const routingBadge = stageCounts.FORWARDED ?? 1;
+  const refinementBadge = stageCounts.REFINEMENT_REQUESTED ?? 2;
+
   const navGroups = [
     {
       items: [
@@ -45,11 +60,11 @@ export function BackendWorkspace({
     {
       heading: 'INNOVATION PIPELINE',
       items: [
-        { label: 'Reception', href: '/reception', icon: Workflow, badge: 3 },
-        { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: 2 },
-        { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: 1 },
-        { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: 1 },
-        { label: 'Refinement', href: '/refinement', icon: Workflow, badge: 2 },
+        { label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge },
+        { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
+        { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge },
+        { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: routingBadge },
+        { label: 'Refinement', href: '/refinement', icon: Workflow, badge: refinementBadge },
       ],
     },
     {
@@ -187,7 +202,7 @@ export function BackendWorkspace({
                       <Icon size={16} style={{ flexShrink: 0 }} />
                       {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
                     </div>
-                    {!collapsed && badge !== undefined && (
+                    {!collapsed && badge !== undefined && badge > 0 && (
                       <span
                         style={{
                           background: '#d9f27a',

@@ -21,7 +21,11 @@ function renderApp() {
   );
 }
 
-if (import.meta.env.VITE_ENABLE_MOCKS === 'true') {
+const shouldEnableMocks =
+  import.meta.env.VITE_ENABLE_MOCKS === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS !== 'false');
+
+if (shouldEnableMocks) {
   import('./mocks/browser').then(({ worker }) =>
     worker.start({ onUnhandledFrame: 'bypass' }),
   ).then(renderApp);

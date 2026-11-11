@@ -3,7 +3,7 @@ import { GraduationCap, User, Activity, X, Calendar, MapPin, Users } from 'lucid
 import { useTrainingOverview } from '@/hooks/useTraining';
 
 export function TrainingMentorshipPage({ token }) {
-  const { data: overview, isLoading } = useTrainingOverview(token);
+  const { data: overview } = useTrainingOverview(token);
   const [selectedSession, setSelectedSession] = useState(null);
 
   const upcomingCount = overview?.upcomingSessions ?? 4;
@@ -72,14 +72,6 @@ export function TrainingMentorshipPage({ token }) {
       ],
     },
   ];
-
-  if (isLoading) {
-    return (
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px 0' }}>
-        <p style={{ color: '#7a847b', fontSize: '13px' }}>Loading Training & Mentorship…</p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
