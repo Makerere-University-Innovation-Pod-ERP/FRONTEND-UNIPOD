@@ -19,6 +19,7 @@ import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
+import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
@@ -49,8 +50,11 @@ function AuthenticatedApp({
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout}>
         <Routes>
-          {/* Multimedia Domain */}
-          <Route path="/" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
+          <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/operations/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />

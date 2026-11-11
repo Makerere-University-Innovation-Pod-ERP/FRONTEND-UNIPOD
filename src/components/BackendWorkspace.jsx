@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
+  Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, ChevronDown, CircleHelp, ClipboardList,
   LayoutDashboard, LogOut, Menu, Moon, Search, Settings2, Sun, Users, Workflow, X,
   Building2, Wrench, Video, Receipt, Handshake, GraduationCap, Lightbulb,
 } from 'lucide-react';
@@ -29,8 +29,12 @@ export function BackendWorkspace({
   const [searchError, setSearchError] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
-  const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
+  const isFinanceRoute = location.includes('/overview') || location.includes('/finance');
+  const effectiveSubject = isFinanceRoute && session.subject === 'Grace Namuli' ? 'Daniel Kato' : session.subject;
+  const effectiveRoles = isFinanceRoute && session.roles.includes('ROLE_DEPARTMENT_COORDINATOR') ? ['ROLE_FINANCE_OFFICER'] : session.roles;
+
+  const name = effectiveSubject.includes('@') ? effectiveSubject.split('@')[0] : effectiveSubject;
+  const role = effectiveRoles[0] ? displayRole(effectiveRoles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
 
@@ -248,14 +252,19 @@ export function BackendWorkspace({
           </div>
         )}
 
-        <div className="live-profile" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 6px 4px' }}>
-          <span className="avatar" style={{ background: '#176b52', color: '#d7ef67', fontWeight: 800 }}>
-            {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
-          </span>
-          <span className="live-profile-copy">
-            <b style={{ color: '#fff' }}>{name}</b>
-            <small style={{ color: '#9db2a2' }}>{role}</small>
-          </span>
+        <div className="live-profile" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 6px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+            <span className="avatar" style={{ background: '#d7ef67', color: '#17241b', fontWeight: 800 }}>
+              {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+            </span>
+            <span className="live-profile-copy" style={{ minWidth: 0 }}>
+              <b style={{ color: '#fff', fontSize: '13px', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
+              <small style={{ color: '#9db2a2', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                {role}
+                <ChevronDown size={11} style={{ opacity: 0.7 }} />
+              </small>
+            </span>
+          </div>
           <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out" style={{ color: '#c6d4c9' }}>
             <LogOut size={16} />
           </button>
@@ -268,7 +277,7 @@ export function BackendWorkspace({
           <div className="live-breadcrumb">
             <span>Workspace</span>
             <i style={{ fontStyle: 'normal', margin: '0 6px', color: '#889186' }}>‹</i>
-            <b>{allNavItems.find((item) => item.href === location || (item.href !== '/' && item.href !== '/submissions' && location.startsWith(item.href)))?.label ?? (location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <b>{allNavItems.find((item) => item.href === location || (item.href !== '/' && item.href !== '/submissions' && location.startsWith(item.href)))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
