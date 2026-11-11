@@ -6,6 +6,7 @@ import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
+import { initialMediaRequests } from './fixtures/media';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
@@ -15,6 +16,7 @@ const mockUsers = {
 
 let trainingSessions = [...initialTrainingSessions];
 let mentorshipFollowUps = [...initialMentorshipFollowUps];
+let mediaRequests = [...initialMediaRequests];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -239,5 +241,29 @@ export const handlers = [
     const session = trainingSessions.find((s) => s.id === params.id);
     if (!session) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(session);
+  }),
+
+  // Operations / Multimedia - Media Services
+  http.get(`${API_BASE_URL}/operations/media/overview`, () => {
+    return HttpResponse.json({
+      requestedCount: mediaRequests.filter((r) => r.status === 'REQUESTED').length,
+      scheduledCount: mediaRequests.filter((r) => r.status === 'SCHEDULED').length,
+      inProductionCount: mediaRequests.filter((r) => r.status === 'IN_PRODUCTION').length,
+      deliveredCount: mediaRequests.filter((r) => r.status === 'DELIVERED').length,
+      requests: mediaRequests,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/media/requests`, () => {
+    return HttpResponse.json(mediaRequests);
+  }),
+
+  http.patch(`${API_BASE_URL}/operations/media/requests/:id/status`, async ({ params, request }) => {
+    const id = params.id;
+    const body = await request.json();
+    const index = mediaRequests.findIndex((r) => r.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    mediaRequests[index] = { ...mediaRequests[index], status: body.status };
+    return HttpResponse.json(mediaRequests[index]);
   }),
 ];
