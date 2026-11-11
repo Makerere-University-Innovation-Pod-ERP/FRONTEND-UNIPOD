@@ -9,6 +9,7 @@ import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/
 import { initialMediaRequests } from './fixtures/media';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
+import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
@@ -21,6 +22,7 @@ let trainingSessions = [...initialTrainingSessions];
 let mentorshipFollowUps = [...initialMentorshipFollowUps];
 let mediaRequests = [...initialMediaRequests];
 let partners = [...initialPartners];
+let invoices = [...initialInvoices];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -287,5 +289,79 @@ export const handlers = [
   // Finance / Overview (Daniel Kato, Finance Officer)
   http.get(`${API_BASE_URL}/finance/overview`, () => {
     return HttpResponse.json(initialFinanceOverview);
+  }),
+
+  // Finance / Price Lists & Invoices
+  http.get(`${API_BASE_URL}/finance/invoices/overview`, () => {
+    const awaitingCount = invoices.filter(
+      (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
+    ).length;
+    const receiptedCount = invoices.filter((inv) => inv.status === 'Receipted').length;
+
+    return HttpResponse.json({
+      ...initialInvoicesOverview,
+      metrics: [
+        {
+          id: 'income',
+          label: 'INCOME (MTD)',
+          value: 'UGX 1.62M',
+          variant: 'default',
+          icon: 'Receipt',
+        },
+        {
+          id: 'awaiting',
+          label: 'AWAITING VERIFICATION',
+          value: awaitingCount,
+          variant: 'burgundy',
+          icon: 'Clock',
+        },
+        {
+          id: 'receipted',
+          label: 'RECEIPTED',
+          value: receiptedCount,
+          variant: 'default',
+          icon: 'CheckCircle',
+        },
+      ],
+      priceList: initialPriceList,
+      invoices,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/verify`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    invoices[index] = { ...invoices[index], status: 'Verified' };
+    return HttpResponse.json(invoices[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/receipt`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    // Gating check: only verified invoices can release a receipt!
+    if (invoices[index].status !== 'Verified') {
+      return new HttpResponse(
+        JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
+    invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    return HttpResponse.json(invoices[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/evidence`, async ({ params, request }) => {
+    const id = params.id;
+    const body = await request.json();
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Awaiting verification',
+      paymentReference: body.paymentReference || 'BANK-REF-AUTOUPLOAD',
+    };
+    return HttpResponse.json(invoices[index]);
   }),
 ];

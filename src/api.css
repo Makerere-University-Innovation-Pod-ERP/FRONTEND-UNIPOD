@@ -515,3 +515,82 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Price Lists & Invoices Scoped Styles */
+.invoices-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.invoices-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 16px;
+}
+
+.invoices-panel-card {
+  background: #ffffff;
+  border: 1px solid #e3e7df;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.invoice-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f2ed;
+}
+
+.invoice-item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.price-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f2ed;
+}
+
+.price-list-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.btn-verify {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.btn-verify:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+@media(max-width: 1024px) {
+  .invoices-bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media(max-width: 768px) {
+  .invoices-overview-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

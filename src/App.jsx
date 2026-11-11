@@ -20,6 +20,7 @@ import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPag
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
+import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
@@ -65,6 +66,10 @@ function AuthenticatedApp({
           <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/price-lists" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
 
           {/* Submissions & Queues */}
           <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
