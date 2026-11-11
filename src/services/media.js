@@ -47,3 +47,4 @@ export const mediaApi = {
     return mediaRequestSchema.parse(data);
   },
 };
+

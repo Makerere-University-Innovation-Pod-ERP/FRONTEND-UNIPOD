@@ -62,3 +62,4 @@ describe('MediaServicesPage', () => {
     expect(screen.getAllByText('Katia Birungi').length).toBe(3);
   });
 });
+

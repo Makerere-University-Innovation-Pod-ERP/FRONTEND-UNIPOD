@@ -45,3 +45,4 @@ export const initialMediaRequests = [
     description: 'Official video and photo coverage of multilateral UNDP partnership agreement.',
   },
 ];
+

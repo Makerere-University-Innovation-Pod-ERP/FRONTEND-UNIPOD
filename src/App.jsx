@@ -18,6 +18,7 @@ import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
+import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 import './app.css';
@@ -56,6 +57,10 @@ function AuthenticatedApp({
           <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
 
           {/* Submissions & Queues */}
           <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />

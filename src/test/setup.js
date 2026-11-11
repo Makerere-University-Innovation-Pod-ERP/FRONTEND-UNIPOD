@@ -57,9 +57,12 @@ if (!Set.prototype.difference) {
 }
 
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/dom';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from '@/mocks/server';
+
+configure({ asyncUtilTimeout: 3000 });
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {

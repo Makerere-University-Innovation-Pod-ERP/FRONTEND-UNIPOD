@@ -7,6 +7,7 @@ import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
+import { initialPartners } from './fixtures/partners';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
@@ -17,6 +18,7 @@ const mockUsers = {
 let trainingSessions = [...initialTrainingSessions];
 let mentorshipFollowUps = [...initialMentorshipFollowUps];
 let mediaRequests = [...initialMediaRequests];
+let partners = [...initialPartners];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -265,5 +267,18 @@ export const handlers = [
     if (index === -1) return new HttpResponse(null, { status: 404 });
     mediaRequests[index] = { ...mediaRequests[index], status: body.status };
     return HttpResponse.json(mediaRequests[index]);
+  }),
+
+  // Operations / Multimedia - Partners & MOUs
+  http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
+    return HttpResponse.json({
+      totalPartners: partners.length,
+      renewalDueCount: partners.filter((p) => p.status === 'Renewal due' || p.status === 'Expiring soon').length,
+      partners,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/partners`, () => {
+    return HttpResponse.json(partners);
   }),
 ];

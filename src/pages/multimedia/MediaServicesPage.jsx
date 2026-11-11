@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, MapPin, User, FileText, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { X, Calendar, MapPin, User, FileText, ArrowRight } from 'lucide-react';
 import { useMediaOverview, useUpdateMediaStatus } from '@/hooks/useMedia';
 
 const COLUMNS = [
@@ -400,3 +400,4 @@ export function MediaServicesPage({ token }) {
     </div>
   );
 }
+
