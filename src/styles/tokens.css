@@ -1,0 +1,88 @@
+/*
+ * Makerere ERP — shared design tokens.
+ *
+ * Source: colors extracted directly from the official Makerere University
+ * crest (mak.ac.ug, /themes/custom/makunika/logo.svg). Each brand hue below
+ * is offered as a small accessible scale rather than one raw swatch, because
+ * the crest's own tones (e.g. the gold #FDB515, the crest red #ED1C24) do
+ * not clear WCAG 2.2 AA (4.5:1) for normal text on white — see the inline
+ * contrast notes. If MUTIC/UniPod ever publishes an official brand book with
+ * different exact hex values, update ONLY this file — everything else in
+ * the app reads color through these variables (via index.css and api.css),
+ * never a raw hex, so the whole product re-themes from one place.
+ *
+ * Role mapping (per the team assignment's shared standards):
+ *   Mak Red    -> primary emphasis (buttons, links, focus, selection)
+ *   Mak Black  -> text and navigation
+ *   Mak Green  -> positive / success states
+ *   Mak Gold   -> pending / needs-attention states
+ *   Mak Silver -> neutral surfaces and borders
+ * "In-progress" and "error/destructive" are not named in the standards doc;
+ * this file resolves them as a neutral silver tier and a darker red tier
+ * respectively (see --mak-progress-* and --mak-danger-*) rather than
+ * inventing a 6th brand hue.
+ */
+
+:root {
+  /* ---- Mak Red --------------------------------------------------- */
+  --mak-red-500: #ed1c24; /* crest red — decorative/large only, 4.4:1 on white */
+  --mak-red-600: #c81b1d; /* default interactive red — 5.8:1 on white, AA */
+  --mak-red-700: #b11116; /* hover/active — 7.1:1 on white */
+  --mak-red-800: #94070a; /* pressed / high-emphasis text — 9.2:1 on white */
+  --mak-red-tint: #fbe4e3; /* light surface tint for danger badges/alerts */
+
+  /* ---- Mak Black -------------------------------------------------- */
+  --mak-black-900: #231f20; /* primary text, nav ink — 16.3:1 on white */
+  --mak-black-800: #3e3e3f; /* secondary/progress text — 10.7:1 on white */
+
+  /* ---- Mak Green -------------------------------------------------- */
+  --mak-green-500: #00a651; /* decorative/large only, 3.2:1 on white */
+  --mak-green-600: #006e34; /* AA-safe success text/icon — 6.4:1 on white */
+  --mak-green-tint: #e3f3e8; /* success surface tint */
+
+  /* ---- Mak Gold --------------------------------------------------- */
+  --mak-gold-500: #fdb515; /* backgrounds only — pair with dark text */
+  --mak-gold-700: #d26b1c; /* darker gold accent */
+  --mak-gold-tint: #fdecc9; /* pending/attention surface tint */
+
+  /* ---- Mak Silver ------------------------------------------------- */
+  --mak-silver-100: #f1f2f3; /* subtle neutral surface */
+  --mak-silver-300: #dcdee0; /* borders / dividers */
+  --mak-silver-500: #b6b8ba; /* stronger border, decorative only */
+  --mak-silver-700: #67686b; /* muted text — 5.6:1 on white, AA */
+
+  /* ---- Typography --------------------------------------------------
+   * Reuses the existing team fonts (already loaded in index.html):
+   * Newsreader for display/editorial, Manrope for UI, DM Mono for data.
+   */
+  --mak-font-display: 'Newsreader', Georgia, serif;
+  --mak-font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mak-font-mono: 'DM Mono', 'SFMono-Regular', monospace;
+
+  --mak-text-xs: 0.6875rem;  /* 11px — table cells, meta */
+  --mak-text-sm: 0.75rem;    /* 12px — body/UI default */
+  --mak-text-base: 0.8125rem; /* 13px — form copy, intros */
+  --mak-text-lg: 1.0625rem;  /* 17px — card headings */
+  --mak-text-xl: 1.4375rem;  /* 23px — panel headings */
+  --mak-text-2xl: clamp(1.5rem, 4vw, 2.3125rem); /* page H1 */
+
+  /* ---- Spacing (4px base scale) ------------------------------------ */
+  --mak-space-1: 0.25rem;
+  --mak-space-2: 0.5rem;
+  --mak-space-3: 0.75rem;
+  --mak-space-4: 1rem;
+  --mak-space-5: 1.25rem;
+  --mak-space-6: 1.5rem;
+  --mak-space-8: 2rem;
+
+  /* ---- Radius / shadow --------------------------------------------- */
+  --mak-radius-xs: 7px;
+  --mak-radius-sm: 10px;
+  --mak-radius-md: 14px;
+  --mak-radius-lg: 18px;
+  --mak-radius-pill: 999px;
+  --mak-shadow-card: 0 1px 2px rgba(15, 15, 15, 0.05), 0 10px 28px rgba(15, 15, 15, 0.08);
+
+  /* ---- Accessible focus ring (WCAG 2.2 AA: visible focus) ---------- */
+  --mak-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mak-red-600) 30%, transparent);
+}

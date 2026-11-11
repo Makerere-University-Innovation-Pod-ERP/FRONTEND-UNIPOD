@@ -26,42 +26,51 @@ export function LoginPage({ onLogin }) {
 
   return (
     <main className="login-screen">
-      <section className="login-card">
-        <div className="login-brand">
-          <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-          <div><b>INNOVATION HUB</b><small>Makerere University</small></div>
+      <section className="login-panel">
+        <div className="login-card">
+          <div className="login-brand">
+            <img src="/mak-crest.png" alt="Makerere University" className="brand-crest" />
+            <div><b>MUTIC ERP</b><small>Makerere University</small></div>
+          </div>
+          <p className="eyebrow">PROJECT & IDEAS MANAGEMENT</p>
+          <h1>Welcome back.</h1>
+          <p className="login-intro">Sign in with your administrator-provisioned account to manage submissions and case workflows.</p>
+          <form className="api-form" onSubmit={submit}>
+            <label htmlFor="login-email">Email address</label>
+            <input
+              id="login-email"
+              autoComplete="username"
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              autoComplete="current-password"
+              type="password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            {error && <div className="api-error" role="alert">{error}</div>}
+            <button className="btn btn-primary login-submit" type="submit" disabled={busy}>
+              {busy ? <LoaderCircle className="spin" size={16} /> : <LockKeyhole size={15} />}
+              {busy ? 'Signing in…' : 'Sign in'}
+              {!busy && <ArrowRight size={15} />}
+            </button>
+          </form>
+          <p className="login-footnote">Accounts are provisioned by an administrator. Public registration is disabled.</p>
         </div>
-        <p className="eyebrow">PROJECT & IDEAS MANAGEMENT</p>
-        <h1>Welcome back.</h1>
-        <p className="login-intro">Sign in with your administrator-provisioned account to manage submissions and case workflows.</p>
-        <form className="api-form" onSubmit={submit}>
-          <label htmlFor="login-email">Email address</label>
-          <input
-            id="login-email"
-            autoComplete="username"
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <label htmlFor="login-password">Password</label>
-          <input
-            id="login-password"
-            autoComplete="current-password"
-            type="password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          {error && <div className="api-error" role="alert">{error}</div>}
-          <button className="btn btn-primary login-submit" type="submit" disabled={busy}>
-            {busy ? <LoaderCircle className="spin" size={16} /> : <LockKeyhole size={15} />}
-            {busy ? 'Signing in…' : 'Sign in'}
-            {!busy && <ArrowRight size={15} />}
-          </button>
-        </form>
-        <p className="login-footnote">Accounts are provisioned by an administrator. Public registration is disabled.</p>
       </section>
+      <aside className="login-hero" aria-hidden="true">
+        <img src="/login-hero.jpg" alt="" />
+        <div className="login-hero-caption">
+          <p className="eyebrow">MUTIC · UNIPOD</p>
+          <p>Where Makerere innovators turn ideas into working prototypes.</p>
+        </div>
+      </aside>
     </main>
   );
 }

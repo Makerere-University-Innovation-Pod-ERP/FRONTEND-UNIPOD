@@ -19,7 +19,6 @@ import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
-import './app.css';
 
 const queryClient = new QueryClient();
 
