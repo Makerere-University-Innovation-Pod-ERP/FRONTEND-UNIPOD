@@ -1,9 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity, ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
-  Cog, FileText, LayoutDashboard, LayoutGrid, List, LogOut, Menu, Moon, Plus, Search, Settings2, ShieldCheck, Sun,
-  TriangleAlert, Upload, Users, Workflow, X,
+  Cog, Columns2, FileText, Folder, Grid2x2, LayoutDashboard, LayoutGrid, Lightbulb, List, ListChecks, LogOut, Mail, Menu,
+  Moon, Plus, RefreshCcw, Route, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Workflow, X,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
@@ -32,16 +33,40 @@ function buildNavigation(roles) {
 function buildTextileNavigation(roles) {
   if (!isTextileDomainOwner(roles)) return [];
   return [
-    { label: 'New order', href: '/textile/orders/new', icon: Upload },
-    { label: 'Order review & quote', href: '/textile/review', icon: ClipboardList },
-    { label: 'Order board', href: '/textile/board', icon: LayoutGrid },
-    { label: 'Order page', href: '/textile/orders', icon: FileText },
-    { label: 'Stock list', href: '/textile/stock', icon: List },
-    { label: 'Add/use stock', href: '/textile/stock/movements', icon: ArrowLeftRight },
-    { label: 'Machine list', href: '/textile/machines', icon: Cog },
-    { label: 'Report a fault', href: '/textile/machines/report', icon: TriangleAlert },
-    { label: 'Book the workshop', href: '/textile/bookings', icon: CalendarDays },
+    { label: 'New Order', href: '/textile/orders/new', icon: Upload },
+    { label: 'Order Review & Quote', href: '/textile/review', icon: ClipboardList },
+    { label: 'Order Board', href: '/textile/board', icon: LayoutGrid },
+    { label: 'Order Page', href: '/textile/orders', icon: FileText },
+    { label: 'Stock List', href: '/textile/stock', icon: List },
+    { label: 'Add/Use Stock', href: '/textile/stock/movements', icon: ArrowLeftRight },
+    { label: 'Machine List', href: '/textile/machines', icon: Cog },
+    { label: 'Report a Fault', href: '/textile/machines/report', icon: TriangleAlert },
+    { label: 'Book the Workshop', href: '/textile/bookings', icon: CalendarDays },
   ];
+}
+
+/**
+ * Textile-only mode (`npm run dev:textile`) shows the full sidebar from the
+ * Textile design. Links outside Textile Operations open a placeholder page
+ * (see OTHER_MODULE_PAGES in App.jsx); pipeline badges show live stage counts.
+ */
+export const TEXTILE_MODE_WORKSPACE_LINKS = [
+  { label: 'Overview', href: '/overview', icon: Grid2x2 },
+  { label: 'All Submissions', href: '/submissions', icon: Folder },
+  { label: 'Student Projects', href: '/submissions/student', icon: Columns2 },
+  { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
+];
+export const TEXTILE_MODE_PIPELINE_LINKS = [
+  { label: 'Reception', href: '/reception', icon: Mail, stages: ['RECEIVED'] },
+  { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, stages: ['FACT_FINDING'] },
+  { label: 'Reviews', href: '/reviewer/workspace', icon: ListChecks, stages: ['UNDER_REVIEW'] },
+  { label: 'Routing & IP', href: '/routing-ip', icon: Route, stages: ['FORWARDED'] },
+  { label: 'Refinement', href: '/refinement', icon: RefreshCcw, stages: ['REFINEMENT_REQUESTED'] },
+];
+
+function stageCount(overview, stages) {
+  const byStage = overview?.byStage ?? overview?.pipelineAtAGlance ?? {};
+  return stages.reduce((total, stage) => total + (Number(byStage[stage]) || 0), 0);
 }
 
 function isActiveLink(href, location) {
@@ -84,6 +109,26 @@ export function BackendWorkspace({
     ...(isAdministrator ? [{ label: 'Management', href: '/management', icon: Settings2 }] : []),
   ];
   const textileLinks = buildTextileNavigation(session.roles);
+  const overviewQuery = useQuery({
+    queryKey: ['dashboard', 'overview', 'sidebar-counts'],
+    queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
+    enabled: textileOnly,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const navSections = textileOnly
+    ? [
+      { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
+      {
+        heading: 'INNOVATION PIPELINE',
+        links: TEXTILE_MODE_PIPELINE_LINKS.map((link) => ({ ...link, count: stageCount(overviewQuery.data, link.stages) })),
+      },
+      { heading: 'TEXTILE OPERATIONS', links: textileLinks },
+    ]
+    : [
+      { heading: null, links },
+      { heading: textileLinks.length ? 'TEXTILE OPERATIONS' : null, links: textileLinks },
+    ];
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -150,8 +195,17 @@ export function BackendWorkspace({
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
-            <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
-            <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
+            {textileOnly ? (
+              <>
+                <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
+                <span><b>UNIPOD ERP</b><small>Innovation & Operations</small></span>
+              </>
+            ) : (
+              <>
+                <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
+                <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
+              </>
+            )}
           </Link>
           <button
             type="button"
@@ -163,30 +217,26 @@ export function BackendWorkspace({
             <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
           </button>
         </div>
-        <p className="live-nav-heading">WORKSPACE</p>
+        {!textileOnly && <p className="live-nav-heading">WORKSPACE</p>}
         <nav className="live-nav" aria-label="Main navigation">
-          {links.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              to={href}
-              title={collapsed ? label : undefined}
-              onClick={() => setMobileOpen(false)}
-              className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
-            >
-              <Icon size={17} /><span>{label}</span>
-            </Link>
-          ))}
-          {textileLinks.length > 0 && <p className="live-nav-heading live-nav-subheading">TEXTILE OPERATIONS</p>}
-          {textileLinks.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              to={href}
-              title={collapsed ? label : undefined}
-              onClick={() => setMobileOpen(false)}
-              className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
-            >
-              <Icon size={17} /><span>{label}</span>
-            </Link>
+          {navSections.map((section, index) => (
+            <div key={section.heading ?? index} className="live-nav-section">
+              {section.heading && section.links.length > 0 && (
+                <p className={`live-nav-heading ${index > 0 ? 'live-nav-subheading' : ''}`}>{section.heading}</p>
+              )}
+              {section.links.map(({ label, href, icon: Icon, count }) => (
+                <Link
+                  key={href}
+                  to={href}
+                  title={collapsed ? label : undefined}
+                  onClick={() => setMobileOpen(false)}
+                  className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                >
+                  <Icon size={17} /><span>{label}</span>
+                  {count > 0 && <em className="live-nav-count" aria-label={`${count} waiting`}>{count}</em>}
+                </Link>
+              ))}
+            </div>
           ))}
           {canCreate && <Link
             to="/submissions/new"
@@ -197,11 +247,17 @@ export function BackendWorkspace({
             <Plus size={17} /><span>Register submission</span>
           </Link>}
         </nav>
-        <div className="live-connection">
+        {textileOnly ? (
+          <div className="live-connection tx-demo-card">
+            <span className="connection-dot online" />
+            <span>Demonstration workspace</span>
+            <small>Role-based prototype · sample data</small>
+          </div>
+        ) : <div className="live-connection">
           <span className={`connection-dot ${health}`} />
           <span>Backend {health === 'online' ? 'healthy' : health === 'reachable' ? 'reachable' : health === 'checking' ? 'connecting' : 'unavailable'}</span>
           <small>Render API</small>
-        </div>
+        </div>}
         <div className="live-profile">
           <span className="avatar">{name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
           <span className="live-profile-copy"><b>{name}</b><small>{role}</small></span>

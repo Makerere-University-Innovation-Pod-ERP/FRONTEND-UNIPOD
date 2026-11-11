@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BackendWorkspace } from '@/components/BackendWorkspace';
+import { BackendWorkspace, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/components/BackendWorkspace';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
@@ -42,6 +42,20 @@ async function textileMockSession() {
     accessToken: makeMockToken(['ROLE_TEXTILE_DOMAIN_OWNER'], 'Faith Nabwire'),
     expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
   });
+}
+
+/** Textile-only mode: sidebar links that belong to other teams' modules land here. */
+function OtherModulePage({ title }) {
+  return (
+    <div className="live-page page-enter">
+      <div className="live-panel not-found-live">
+        <p className="eyebrow">OTHER MODULE</p>
+        <h1>{title}</h1>
+        <p>This module is built by another team. This workspace runs the Textile Operations screens only.</p>
+        <a className="btn btn-primary" href={TEXTILE_HOME}>Go to the order board</a>
+      </div>
+    </div>
+  );
 }
 
 function AccessRestricted({ label }) {
@@ -91,6 +105,9 @@ function AuthenticatedApp({
           <Route path="/textile/machines" element={textile(MachineListPage)} />
           <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
           <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
+            <Route key={href} path={href} element={<OtherModulePage title={label} />} />
+          ))}
           {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
           {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
         </Routes>

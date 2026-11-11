@@ -633,3 +633,10 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   --sidebar-active:#173f2c; --sidebar-active-ink:#d9f59a;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
 }
+
+/* Textile-mode sidebar: lime brand tile, pipeline count badges, demo card. */
+.tx-brand-mark{width:36px;height:36px;border-radius:10px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;flex:none}
+.live-nav-section{display:grid;gap:3px}
+.live-nav-count{margin-left:auto;min-width:19px;height:19px;padding:0 6px;border-radius:999px;background:var(--lime);color:var(--lime-ink);font:800 10px/19px var(--font-sans);font-style:normal;text-align:center}
+.live-sidebar.collapsed .live-nav-count{position:absolute;top:4px;right:8px;min-width:15px;height:15px;padding:0 4px;font-size:8px;line-height:15px}
+.tx-demo-card .connection-dot.online{background:var(--lime)}
