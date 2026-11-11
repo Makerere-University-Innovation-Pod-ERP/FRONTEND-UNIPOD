@@ -818,3 +818,4 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
     </div>
   );
 }
+

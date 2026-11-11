@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowUpRight, Bell, Boxes, CheckCheck, ChevronLeft, ChevronDown, CircleHelp, ClipboardList,
+  Activity, ArrowUpRight, BarChart3, Bell, Boxes, CheckCheck, ChevronLeft, ChevronDown, CircleHelp, ClipboardList,
   LayoutDashboard, LogOut, Menu, Moon, Search, Settings2, Sun, Users, Workflow, X,
   Building2, Wrench, Video, Receipt, Handshake, GraduationCap, Lightbulb,
 } from 'lucide-react';
@@ -90,7 +90,8 @@ export function BackendWorkspace({
     {
       heading: 'MANAGEMENT',
       items: [
-        { label: 'Reports & Analytics', href: '/reports', icon: LayoutDashboard },
+        { label: 'Overview', href: '/overview', icon: LayoutDashboard },
+        { label: 'Reports & Analytics', href: '/reports', icon: BarChart3 },
         { label: 'Activity History', href: '/activity', icon: Activity },
         ...(isAdministrator ? [{ label: 'Settings', href: '/management', icon: Settings2 }] : []),
       ],
@@ -187,7 +188,7 @@ export function BackendWorkspace({
                 </p>
               )}
               {group.items.map(({ label, href, icon: Icon, badge }) => {
-                const isActive = location === href || (href !== '/' && href !== '/submissions' && location.startsWith(href));
+                const isActive = location === href || (href !== '/' && href !== '/submissions' && location.startsWith(href)) || (href === '/overview' && location === '/');
                 return (
                   <Link
                     key={href}

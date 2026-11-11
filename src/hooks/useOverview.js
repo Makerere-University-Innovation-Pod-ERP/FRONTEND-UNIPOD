@@ -10,3 +10,4 @@ export function useFinanceOverview(token) {
     staleTime: 1000 * 60,
   });
 }
+
