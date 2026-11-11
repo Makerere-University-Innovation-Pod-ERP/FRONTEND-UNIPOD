@@ -1,0 +1,479 @@
+/*
+ * Innovation Coordinator decision pipeline — Assignment 2 (Mulema Blaise Davis).
+ *
+ * Layout, spacing, type scale and component shapes are taken from the Figma
+ * frame "Review Workspace" 159:3582. COLOURS ARE NOT: every colour here is a
+ * var() from the shared Mak token layer (src/styles/tokens.css via the :root
+ * blocks in src/api.css), so light mode, the prefers-colour-scheme dark block
+ * and [data-theme="dark"] all follow automatically. No hex literal appears in
+ * this file by design.
+ *
+ * Accessibility notes kept with the rules they justify:
+ *  - interactive targets are >= 44px (WCAG 2.2 AA 2.5.8), matching Figma's
+ *    44px input height.
+ *  - no state is signalled by border colour alone (1.4.1): selection adds a
+ *    background and a left bar, statuses pair colour with text and an icon.
+ *  - Mak Gold is never used as text. Pending/attention uses --amber on
+ *    --amber-bg (5.07:1); --lime only ever appears as a background.
+ */
+
+/* ---- Queue pane ---------------------------------------------------- */
+
+.coordinator-queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mak-space-2);
+  margin-bottom: var(--mak-space-3);
+}
+
+.coordinator-filter {
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--mak-text-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.coordinator-filter:hover {
+  background: var(--surface-raised);
+}
+
+/* Selected filter: background + weight + ink change, not border alone. */
+.coordinator-filter[aria-pressed='true'] {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--surface);
+}
+
+/* Queue rows are real links (each brief has its own URL), so they get keyboard
+   and middle-click navigation for free. */
+.coordinator-queue-row {
+  position: relative;
+  min-height: 44px;
+  padding-left: var(--mak-space-4);
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Selection marker: a solid left bar in addition to .queue-row.active's
+   background, so selection never depends on border colour alone. */
+.coordinator-queue-row[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: var(--mak-space-2);
+  inset-inline-start: var(--mak-space-1);
+  width: 3px;
+  border-radius: var(--mak-radius-pill);
+  background: var(--forest);
+}
+
+/* ---- Brief panel --------------------------------------------------- */
+
+.coordinator-brief-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mak-space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.coordinator-brief-eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font: var(--mak-text-xs) / 1.5 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coordinator-brief-summary {
+  margin: var(--mak-space-2) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--mak-text-base);
+  line-height: 1.65;
+  max-width: 68ch;
+}
+
+.coordinator-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--mak-space-4);
+  margin-top: var(--mak-space-5);
+  padding-top: var(--mak-space-5);
+  border-top: 1px solid var(--border-soft);
+}
+
+.coordinator-section {
+  margin-top: var(--mak-space-5);
+  padding-top: var(--mak-space-5);
+  border-top: 1px solid var(--border-soft);
+}
+
+.coordinator-section > h3 {
+  margin: 0 0 var(--mak-space-3);
+  color: var(--ink);
+  font-size: var(--mak-text-xs);
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Assignment form ----------------------------------------------- */
+
+.coordinator-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--mak-space-4);
+}
+
+.coordinator-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mak-space-2);
+  min-width: 0;
+}
+
+.coordinator-field > label,
+.coordinator-fieldset > legend {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coordinator-field input,
+.coordinator-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--mak-text-sm);
+}
+
+.coordinator-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.coordinator-reviewer-options {
+  display: grid;
+  gap: var(--mak-space-2);
+  margin-top: var(--mak-space-2);
+  max-height: 232px;
+  overflow-y: auto;
+  padding: var(--mak-space-1);
+}
+
+.coordinator-reviewer-option {
+  display: flex;
+  align-items: center;
+  gap: var(--mak-space-3);
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.coordinator-reviewer-option:hover {
+  background: var(--surface-raised);
+}
+
+.coordinator-reviewer-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--forest);
+  flex: none;
+}
+
+.coordinator-reviewer-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--mak-text-xs);
+  color: var(--ink);
+}
+
+.coordinator-reviewer-option small {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-reviewer-option.is-assigned {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sequential step order list */
+.coordinator-step-order {
+  display: grid;
+  gap: var(--mak-space-2);
+  margin: var(--mak-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coordinator-step-order li {
+  display: flex;
+  align-items: center;
+  gap: var(--mak-space-3);
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface-raised);
+  font-size: var(--mak-text-xs);
+  color: var(--ink);
+}
+
+.coordinator-step-badge {
+  flex: none;
+  padding: var(--mak-space-1) var(--mak-space-2);
+  border-radius: var(--mak-radius-xs);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-step-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--mak-space-1);
+}
+
+.coordinator-icon-button {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.coordinator-icon-button:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.coordinator-icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.coordinator-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-3);
+  margin-top: var(--mak-space-4);
+}
+
+.coordinator-form-actions .btn {
+  min-height: 44px;
+  padding: 0 var(--mak-space-5);
+}
+
+.coordinator-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mak-space-2);
+  color: var(--rose);
+  font-size: var(--mak-text-xs);
+  line-height: 1.5;
+}
+
+.coordinator-success {
+  display: flex;
+  align-items: center;
+  gap: var(--mak-space-2);
+  color: var(--green);
+  font-size: var(--mak-text-xs);
+}
+
+/* ---- Progress line -------------------------------------------------- */
+
+.coordinator-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-2);
+  margin-top: var(--mak-space-4);
+  color: var(--ink);
+  font-size: var(--mak-text-base);
+  line-height: 1.5;
+}
+
+.coordinator-progress b {
+  font-weight: 750;
+}
+
+.coordinator-progress-meta {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-overdue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mak-space-1);
+  padding: var(--mak-space-1) var(--mak-space-2);
+  border-radius: var(--mak-radius-xs);
+  background: var(--amber-bg);
+  color: var(--amber);
+  font-size: var(--mak-text-xs);
+  font-weight: 750;
+}
+
+/* ---- Reviewer assignment rows --------------------------------------- */
+
+.coordinator-assignment-list {
+  display: grid;
+  gap: var(--mak-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coordinator-assignment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-3);
+  padding: var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+}
+
+.coordinator-assignment-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.coordinator-assignment-name b {
+  color: var(--ink);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-assignment-name small {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-assignment .decision-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mak-space-1);
+}
+
+/* ---- Next-step box --------------------------------------------------- */
+
+.coordinator-next-step {
+  margin-top: var(--mak-space-5);
+  padding: var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-md);
+  background: var(--surface-raised);
+}
+
+.coordinator-next-step h3 {
+  margin: 0 0 var(--mak-space-2);
+  color: var(--ink);
+  font-size: var(--mak-text-xs);
+  font-weight: 750;
+}
+
+.coordinator-next-step p {
+  margin: 0 0 var(--mak-space-3);
+  color: var(--ink-soft);
+  font-size: var(--mak-text-xs);
+  line-height: 1.6;
+}
+
+.coordinator-next-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mak-space-2);
+}
+
+.coordinator-next-step-actions .btn {
+  min-height: 44px;
+  padding: 0 var(--mak-space-4);
+}
+
+.coordinator-locked-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mak-space-2);
+  margin-top: var(--mak-space-3);
+  padding: var(--mak-space-2) var(--mak-space-3);
+  border-radius: var(--mak-radius-xs);
+  background: var(--amber-bg);
+  color: var(--amber);
+  font-size: var(--mak-text-xs);
+  line-height: 1.5;
+}
+
+.coordinator-outcome-recorded {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-2);
+  font-size: var(--mak-text-xs);
+  color: var(--ink-soft);
+}
+
+.coordinator-project-code {
+  padding: var(--mak-space-1) var(--mak-space-2);
+  border-radius: var(--mak-radius-xs);
+  background: var(--green-bg);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: var(--mak-text-xs);
+  font-weight: 750;
+}
+
+/* ---- Focus + responsive ---------------------------------------------- */
+
+.coordinator-filter:focus-visible,
+.coordinator-field input:focus-visible,
+.coordinator-field select:focus-visible,
+.coordinator-reviewer-option input:focus-visible,
+.coordinator-icon-button:focus-visible,
+.coordinator-queue-row:focus-visible,
+.coordinator-next-step-actions .btn:focus-visible,
+.coordinator-form-actions .btn:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+  box-shadow: var(--mak-focus-ring);
+}
+
+@media (max-width: 900px) {
+  .coordinator-form-grid,
+  .coordinator-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coordinator-form-actions .btn,
+  .coordinator-next-step-actions .btn {
+    width: 100%;
+  }
+}

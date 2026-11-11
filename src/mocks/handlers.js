@@ -5,10 +5,12 @@ import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
+import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
+  ...coordinatorMockUsers,
 };
 
 export const handlers = [
@@ -212,4 +214,6 @@ export const handlers = [
     for (const item of notifications) item.read = true;
     return new HttpResponse(null, { status: 204 });
   }),
+
+  ...coordinatorHandlers,
 ];

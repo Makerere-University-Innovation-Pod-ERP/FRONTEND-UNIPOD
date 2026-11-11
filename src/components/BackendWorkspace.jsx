@@ -6,7 +6,7 @@ import {
 import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
+import { isFactFindingOfficer, isInnovationCoordinator, isReviewer } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
@@ -23,6 +23,9 @@ function buildNavigation(roles) {
   if (isReviewer(roles)) {
     items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
     items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
+  }
+  if (isInnovationCoordinator(roles)) {
+    items.push({ label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow });
   }
   return items;
 }

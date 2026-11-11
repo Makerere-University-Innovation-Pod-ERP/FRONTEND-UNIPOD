@@ -1,0 +1,248 @@
+/**
+ * Coordinator pipeline fixtures (Assignment 2).
+ *
+ * Case ids, codes and titles are kept identical to src/mocks/fixtures/
+ * submissions.js and fixtures/reviewer.js so the coordinator screens and
+ * Assignment 5's reviewer screens describe the same cases rather than two
+ * parallel universes.
+ *
+ * Every person named here is fictional and comes from the Figma prototype or
+ * the existing fixtures. No real UniPod department head appears in mock data.
+ */
+
+export const reviewerPool = [
+  { id: 'rev-1', name: 'Dr. Miriam Nsubuga', department: 'Technical Assessment' },
+  { id: 'rev-2', name: 'Peter Okello', department: 'Research & Innovation' },
+  { id: 'rev-3', name: 'Amina Ssemanda', department: 'Academic Department' },
+  { id: 'rev-4', name: 'Daniel Kato', department: 'Technical Assessment' },
+  { id: 'rev-5', name: 'Esther Achieng', department: 'Research & Innovation' },
+  { id: 'rev-6', name: 'Grace Namuli', department: 'Academic Department' },
+];
+
+const emptyPanel = {
+  mode: 'parallel',
+  requiredReviews: 0,
+  completedReviews: 0,
+  dueDate: null,
+  assignments: [],
+};
+
+export const coordinatorBriefs = {
+  'IH-26031': {
+    id: 'IH-26031',
+    code: 'STU-2026-001',
+    title: 'Smart Irrigation Monitoring System',
+    category: 'student',
+    stage: 'UNDER_REVIEW',
+    summary:
+      'A low-cost sensor network that helps smallholder farms make more precise watering decisions.',
+    purpose: 'Improve water efficiency for local growers.',
+    problemAddressed: 'Manual irrigation schedules do not account for changing soil moisture.',
+    responsibleOfficer: 'Sarah Kintu',
+    assignedSector: 'Technical Assessment',
+    documentCount: 1,
+    versions: 1,
+    submittedAt: '2026-10-08',
+    updatedAt: '2026-10-17',
+    outcome: null,
+    reviewPanel: {
+      mode: 'parallel',
+      requiredReviews: 2,
+      completedReviews: 1,
+      dueDate: '2026-10-30',
+      assignments: [
+        {
+          reviewerId: 'rev-1',
+          reviewerName: 'Dr. Miriam Nsubuga',
+          mode: 'parallel',
+          step: 1,
+          of: 2,
+          decisionStatus: 'recommended',
+          assignedAt: '2026-10-17',
+          dueDate: '2026-10-30',
+        },
+        {
+          reviewerId: 'rev-2',
+          reviewerName: 'Peter Okello',
+          mode: 'parallel',
+          step: 2,
+          of: 2,
+          decisionStatus: 'pending',
+          assignedAt: '2026-10-17',
+          dueDate: '2026-10-30',
+        },
+      ],
+    },
+  },
+  'IH-26024': {
+    id: 'IH-26024',
+    code: 'STU-2026-005',
+    title: 'Low-cost Water Quality Alert',
+    category: 'student',
+    stage: 'UNDER_REVIEW',
+    summary: 'An early-warning prompt for communities without routine water testing nearby.',
+    purpose: 'Make early water-quality concerns easier to flag.',
+    problemAddressed: 'Routine testing is not always available close to source.',
+    responsibleOfficer: 'Sarah Kintu',
+    assignedSector: 'Research & Innovation',
+    documentCount: 1,
+    versions: 2,
+    submittedAt: '2026-09-24',
+    updatedAt: '2026-10-12',
+    outcome: null,
+    reviewPanel: {
+      mode: 'sequential',
+      requiredReviews: 2,
+      completedReviews: 0,
+      dueDate: '2026-10-26',
+      assignments: [
+        {
+          reviewerId: 'rev-3',
+          reviewerName: 'Amina Ssemanda',
+          mode: 'sequential',
+          step: 1,
+          of: 2,
+          decisionStatus: 'pending',
+          assignedAt: '2026-10-12',
+          dueDate: '2026-10-26',
+        },
+        {
+          reviewerId: 'rev-4',
+          reviewerName: 'Daniel Kato',
+          mode: 'sequential',
+          step: 2,
+          of: 2,
+          decisionStatus: 'pending',
+          assignedAt: '2026-10-12',
+          dueDate: '2026-10-26',
+        },
+      ],
+    },
+  },
+  'IH-26029': {
+    id: 'IH-26029',
+    code: 'STU-2026-002',
+    title: 'Maternal Health Follow-up Platform',
+    category: 'student',
+    stage: 'REFINEMENT_REQUESTED',
+    summary: 'A lightweight follow-up workflow for community health teams supporting new mothers.',
+    purpose: 'Improve continuity of postnatal care.',
+    problemAddressed: 'Follow-up visits can be missed when records are fragmented.',
+    responsibleOfficer: 'Sarah Kintu',
+    assignedSector: 'Academic Department',
+    documentCount: 1,
+    versions: 2,
+    submittedAt: '2026-10-05',
+    updatedAt: '2026-10-16',
+    outcome: null,
+    reviewPanel: {
+      mode: 'parallel',
+      requiredReviews: 1,
+      completedReviews: 1,
+      dueDate: '2026-10-16',
+      assignments: [
+        {
+          reviewerId: 'rev-1',
+          reviewerName: 'Dr. Miriam Nsubuga',
+          mode: 'parallel',
+          step: 1,
+          of: 1,
+          decisionStatus: 'changes_needed',
+          assignedAt: '2026-10-11',
+          dueDate: '2026-10-16',
+        },
+      ],
+    },
+  },
+  'IH-26030': {
+    id: 'IH-26030',
+    code: null,
+    title: 'Community Waste-to-Energy Initiative',
+    category: 'general',
+    stage: 'FACT_FINDING',
+    summary: 'A collection route that turns market organic waste into usable local energy.',
+    purpose: 'Reduce landfill waste and create local energy.',
+    problemAddressed: 'Markets lack a reliable pathway for organic waste.',
+    responsibleOfficer: 'Sarah Kintu',
+    assignedSector: null,
+    documentCount: 0,
+    versions: 1,
+    submittedAt: '2026-10-07',
+    updatedAt: '2026-10-16',
+    outcome: null,
+    reviewPanel: { ...emptyPanel, assignments: [] },
+  },
+  'IH-26026': {
+    id: 'IH-26026',
+    code: 'STU-2026-004',
+    title: 'Digital Heritage Preservation Project',
+    category: 'student',
+    stage: 'COMPLETED',
+    summary: 'A consent-led way to record and share local heritage with the communities it belongs to.',
+    purpose: 'Preserve and respectfully share local heritage.',
+    problemAddressed: 'Valuable histories can be lost without consent-led preservation.',
+    responsibleOfficer: 'Sarah Kintu',
+    assignedSector: 'Research & Innovation',
+    documentCount: 1,
+    versions: 4,
+    submittedAt: '2026-09-29',
+    updatedAt: '2026-10-14',
+    outcome: { status: 'CONFIRMED', reason: null, projectCode: 'STU-2026-004' },
+    reviewPanel: {
+      mode: 'parallel',
+      requiredReviews: 2,
+      completedReviews: 2,
+      dueDate: '2026-10-13',
+      assignments: [
+        {
+          reviewerId: 'rev-5',
+          reviewerName: 'Esther Achieng',
+          mode: 'parallel',
+          step: 1,
+          of: 2,
+          decisionStatus: 'recommended',
+          assignedAt: '2026-10-02',
+          dueDate: '2026-10-13',
+        },
+        {
+          reviewerId: 'rev-6',
+          reviewerName: 'Grace Namuli',
+          mode: 'parallel',
+          step: 2,
+          of: 2,
+          decisionStatus: 'recommended',
+          assignedAt: '2026-10-02',
+          dueDate: '2026-10-13',
+        },
+      ],
+    },
+  },
+};
+
+const pendingActionFor = (brief) => {
+  switch (brief.stage) {
+    case 'FACT_FINDING':
+      return 'Assign reviewers';
+    case 'UNDER_REVIEW':
+      return brief.reviewPanel.completedReviews >= brief.reviewPanel.requiredReviews
+        ? 'Ready for your decision'
+        : `Awaiting ${brief.reviewPanel.requiredReviews - brief.reviewPanel.completedReviews} review(s)`;
+    case 'REFINEMENT_REQUESTED':
+      return 'Waiting on an improved version';
+    case 'COMPLETED':
+      return 'Closed';
+    default:
+      return 'No action needed';
+  }
+};
+
+export const coordinatorQueue = () =>
+  Object.values(coordinatorBriefs).map((brief) => ({
+    id: brief.id,
+    code: brief.code,
+    title: brief.title,
+    category: brief.category,
+    stage: brief.stage,
+    updatedAt: brief.updatedAt,
+    pendingAction: pendingActionFor(brief),
+  }));

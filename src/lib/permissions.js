@@ -1,5 +1,6 @@
 export const ROLE_FACT_FINDING_OFFICER = 'ROLE_FACT_FINDING_OFFICER';
 export const ROLE_REVIEWER = 'ROLE_REVIEWER';
+export const ROLE_INNOVATION_COORDINATOR = 'ROLE_INNOVATION_COORDINATOR';
 
 export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
@@ -8,6 +9,19 @@ export function isFactFindingOfficer(roles) {
 export function isReviewer(roles) {
   return roles.includes(ROLE_REVIEWER);
 }
+
+/**
+ * The Innovation Coordinator owns reviewer assignment and the decision
+ * pipeline (Assignment 2) — the counterpart to REVIEWER_CANNOT_ASSIGN_REASON
+ * below. Frontend gating is a usability affordance, never a security
+ * boundary: the backend remains the authorization authority.
+ */
+export function isInnovationCoordinator(roles) {
+  return roles.includes(ROLE_INNOVATION_COORDINATOR);
+}
+
+export const COORDINATOR_ONLY_REASON =
+  'The coordinator workspace is only available to innovation coordinators.';
 
 /**
  * Reviewers can view and decide on their assigned cases but never assign
