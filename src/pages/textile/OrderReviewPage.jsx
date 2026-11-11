@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, CalendarCheck, LoaderCircle, MessageSquareText, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import {
   REVIEW_STATUSES, SCHEDULE_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder,
-  describeMaterialLine, formatUgx, toIsoDate,
+  describeMaterialLine, formatUgx, todayIso,
 } from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import {
@@ -94,7 +94,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
   const [priceListItemId, setPriceListItemId] = useState(initialPrice?.id ?? '');
   const [priceQuantity, setPriceQuantity] = useState(order.quote?.priceQuantity ?? order.estimate?.priceQuantity ?? 1);
   const [expectedCompletion, setExpectedCompletion] = useState(
-    order.quote?.expectedCompletion ?? (initialPrice ? addDays(toIsoDate(new Date()), initialPrice.leadDays) : ''),
+    order.quote?.expectedCompletion ?? (initialPrice ? addDays(todayIso(), initialPrice.leadDays) : ''),
   );
   const [panel, setPanel] = useState(null);
   const [message, setMessage] = useState('');
@@ -126,7 +126,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
   const choosePrice = (nextId) => {
     setPriceListItemId(nextId);
     const next = priceList.find((item) => item.id === nextId);
-    if (next) setExpectedCompletion(addDays(toIsoDate(new Date()), next.leadDays));
+    if (next) setExpectedCompletion(addDays(todayIso(), next.leadDays));
   };
 
   const busy = sendQuote.isPending || requestDetails.isPending || sendBack.isPending || schedule.isPending;

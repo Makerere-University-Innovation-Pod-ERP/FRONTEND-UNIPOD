@@ -66,6 +66,14 @@ export const REVIEW_STATUSES = ['NEW', 'AWAITING_DETAILS', 'QUOTED'];
 
 export const CUSTOMER_TYPES = ['Public', 'Student', 'Staff', 'Company', 'Internal'];
 
+/** Handling and collection rules the customer accepts on every Textile order. */
+export const TEXTILE_RULES = [
+  'Work starts only after the quote is accepted and payment is confirmed by Finance.',
+  'Customer-supplied fabric is handled with care, but the workshop is not liable for pre-existing defects.',
+  'Orders not collected within 30 days of being marked Ready may be disposed of.',
+  'Changes to size or design after scheduling may change the price and completion date.',
+];
+
 export const SCHEDULE_BLOCKED_REASON = 'An order can only be scheduled once Finance confirms payment.';
 export const READY_BLOCKED_REASON = 'Complete every quality check before marking the order ready.';
 
@@ -273,6 +281,11 @@ export function toIsoDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** Today's local date as YYYY-MM-DD. */
+export function todayIso() {
+  return toIsoDate(new Date());
 }
 
 export function addDays(isoDate, days) {

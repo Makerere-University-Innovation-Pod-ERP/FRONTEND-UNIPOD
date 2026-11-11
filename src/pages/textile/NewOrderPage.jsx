@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Save } from 'lucide-react';
-import { CUSTOMER_TYPES, toIsoDate } from '@/lib/textile';
+import { CUSTOMER_TYPES, TEXTILE_RULES, todayIso } from '@/lib/textile';
 import { useCreateOrder, useTextileOrder, useUpdateDraft } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, PageHeading, PhotoDrop } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
-
-export const TEXTILE_RULES = [
-  'Work starts only after the quote is accepted and payment is confirmed by Finance.',
-  'Customer-supplied fabric is handled with care, but the workshop is not liable for pre-existing defects.',
-  'Orders not collected within 30 days of being marked Ready may be disposed of.',
-  'Changes to size or design after scheduling may change the price and completion date.',
-];
 
 const EMPTY_ORDER = {
   customerName: '',
@@ -98,9 +91,10 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
   };
 
   const onSaveDraft = () => {
+    // A draft only needs the customer name; the browser explains what is missing.
+    const nameInput = document.getElementById('tx-customer-name');
     if (!values.customerName.trim()) {
-      setNotice('');
-      document.getElementById('tx-customer-name')?.focus();
+      nameInput?.reportValidity();
       return;
     }
     void save(false);
@@ -114,7 +108,7 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
         intro="Describe what the customer wants. Reception has already checked and forwarded this request."
       />
       <ErrorBanner error={loadError} fallback="This draft could not be loaded." />
-      <form className="live-panel tx-form" onSubmit={onSubmit} noValidate={false}>
+      <form className="live-panel tx-form" onSubmit={onSubmit}>
         {savedDraft && <p className="tx-inline-note">Editing draft saved {new Date(savedDraft.updatedAt).toLocaleDateString()}.</p>}
         <div className="form-grid">
           <label className="form-field">Customer name*
@@ -136,7 +130,7 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
             <input required maxLength={500} value={values.sizeDesign} onChange={set('sizeDesign')} placeholder="Measurements, colours, fabric, finish" />
           </label>
           <label className="form-field">Date needed
-            <input type="date" min={toIsoDate(new Date())} value={values.dateNeeded} onChange={set('dateNeeded')} />
+            <input type="date" min={todayIso()} value={values.dateNeeded} onChange={set('dateNeeded')} />
           </label>
         </div>
         <PhotoDrop

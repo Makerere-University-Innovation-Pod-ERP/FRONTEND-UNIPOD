@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Lock, TriangleAlert, UserPlus, Users } from 'lucide-react';
 import {
-  MACHINE_UNAVAILABLE_REASON, addDays, findBookingClashes, isMachineBookable, isoWeekday, startOfWeek, toIsoDate,
+  MACHINE_UNAVAILABLE_REASON, addDays, findBookingClashes, isMachineBookable, isoWeekday, startOfWeek, todayIso,
 } from '@/lib/textile';
 import { useAddAttendee, useBookings, useCreateBooking, useMachines, useSetAttendance } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, PageHeading, StatusDot } from './shared';
@@ -14,7 +14,7 @@ function dayLabel(isoDate, options) {
 }
 
 export function WorkshopBookingPage({ token, onUnauthorized }) {
-  const today = toIsoDate(new Date());
+  const today = todayIso();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(today));
   const weekEnd = addDays(weekStart, 6);
   const calendar = useBookings(token, weekStart, weekEnd);
