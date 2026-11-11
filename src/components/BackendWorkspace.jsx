@@ -124,8 +124,8 @@ export function BackendWorkspace({
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to="/" className="live-brand-link" onClick={() => setMobileOpen(false)}>
-            <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-            <span><b>INNOVATION HUB</b><small>Project & Ideas Management</small></span>
+            <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
+            <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
           </Link>
           <button
             type="button"
@@ -174,7 +174,7 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b></div>
+          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{links.find((item) => item.href === location)?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'MUTIC ERP')}</b></div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
               <Search size={14} /><span>Search cases</span><kbd>Ctrl K</kbd>
@@ -234,7 +234,7 @@ export function BackendWorkspace({
           </div>
         </header>
         <main className="live-content">{children}</main>
-        <footer className="live-footer"><span>INNOVATION HUB <i>·</i> MAKERERE UNIVERSITY</span><span><Activity size={12} /> Live data from the backend</span></footer>
+        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span><Activity size={12} /> Live data from the backend</span></footer>
       </div>
       {searchOpen && <div className="case-search-overlay" onMouseDown={(event) => {
         if (event.target === event.currentTarget) {

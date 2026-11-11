@@ -1,6 +1,6 @@
-# Innovation Hub Frontend
+# MUTIC ERP Frontend
 
-The Innovation Hub browser app is imported from `Innovation-Hub-UI` and
+The MUTIC ERP browser app is imported from `Innovation-Hub-UI` and
 integrated with the deployed Spring Boot API. The browser never connects
 directly to PostgreSQL; database access and credentials remain on the backend.
 

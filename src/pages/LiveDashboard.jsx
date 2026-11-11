@@ -43,7 +43,7 @@ export function LiveDashboard({
   return (
     <div className="live-page page-enter">
       <div className="live-page-heading">
-        <div><p className="eyebrow">INNOVATION HUB · OVERVIEW</p><h1>Good work starts here.</h1><p>Your role-scoped view of submissions, workflow and cases needing attention.</p></div>
+        <div><p className="eyebrow">MUTIC ERP · OVERVIEW</p><h1>Good work starts here.</h1><p>Your role-scoped view of submissions, workflow and cases needing attention.</p></div>
         <div className="heading-actions">
           <button className="btn btn-outline" onClick={() => { setLoading(true); setError(''); void load(); }} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''} />Refresh</button>
           {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
