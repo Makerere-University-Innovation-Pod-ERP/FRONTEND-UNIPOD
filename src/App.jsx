@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BackendWorkspace, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/components/BackendWorkspace';
+import { BackendWorkspace } from '@/components/BackendWorkspace';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';

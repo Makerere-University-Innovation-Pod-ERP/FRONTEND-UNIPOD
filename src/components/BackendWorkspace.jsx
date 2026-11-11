@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity, ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
-  Cog, Columns2, FileText, Folder, Grid2x2, LayoutDashboard, LayoutGrid, Lightbulb, List, ListChecks, LogOut, Mail, Menu,
-  Moon, Plus, RefreshCcw, Route, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Workflow, X,
+  Cog, FileText, Grid2x2, LayoutDashboard, LayoutGrid, List, LogOut, Menu,
+  Moon, Plus, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Workflow, X,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
@@ -43,30 +44,6 @@ function buildTextileNavigation(roles) {
     { label: 'Report a Fault', href: '/textile/machines/report', icon: TriangleAlert },
     { label: 'Book the Workshop', href: '/textile/bookings', icon: CalendarDays },
   ];
-}
-
-/**
- * Textile-only mode (`npm run dev:textile`) shows the full sidebar from the
- * Textile design. Links outside Textile Operations open a placeholder page
- * (see OTHER_MODULE_PAGES in App.jsx); pipeline badges show live stage counts.
- */
-export const TEXTILE_MODE_WORKSPACE_LINKS = [
-  { label: 'Overview', href: '/overview', icon: Grid2x2 },
-  { label: 'All Submissions', href: '/submissions', icon: Folder },
-  { label: 'Student Projects', href: '/submissions/student', icon: Columns2 },
-  { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
-];
-export const TEXTILE_MODE_PIPELINE_LINKS = [
-  { label: 'Reception', href: '/reception', icon: Mail, stages: ['RECEIVED'] },
-  { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, stages: ['FACT_FINDING'] },
-  { label: 'Reviews', href: '/reviewer/workspace', icon: ListChecks, stages: ['UNDER_REVIEW'] },
-  { label: 'Routing & IP', href: '/routing-ip', icon: Route, stages: ['FORWARDED'] },
-  { label: 'Refinement', href: '/refinement', icon: RefreshCcw, stages: ['REFINEMENT_REQUESTED'] },
-];
-
-function stageCount(overview, stages) {
-  const byStage = overview?.byStage ?? overview?.pipelineAtAGlance ?? {};
-  return stages.reduce((total, stage) => total + (Number(byStage[stage]) || 0), 0);
 }
 
 function isActiveLink(href, location) {
