@@ -42,6 +42,8 @@ export const reviewerCases = {
     documents: [{ id: 'doc-1', name: 'Project brief', status: 'Verified' }],
     pendingAction: 'Submit your independent decision',
     decisionStatus: 'pending',
+    comment: null,
+    decidedAt: null,
   },
   'IH-26024': {
     id: 'IH-26024',
@@ -53,6 +55,8 @@ export const reviewerCases = {
     documents: [{ id: 'doc-2', name: 'Project brief', status: 'Verified' }],
     pendingAction: 'Awaiting your decision alongside one other reviewer',
     decisionStatus: 'pending',
+    comment: null,
+    decidedAt: null,
   },
   'IH-26029': {
     id: 'IH-26029',
@@ -64,5 +68,7 @@ export const reviewerCases = {
     documents: [{ id: 'doc-3', name: 'Project brief', status: 'Submitted' }],
     pendingAction: 'Changes requested — waiting on resubmission',
     decisionStatus: 'changes_needed',
+    comment: 'The follow-up workflow needs a clearer description of how missed appointments are detected before this can move forward.',
+    decidedAt: '2026-10-02',
   },
 };
