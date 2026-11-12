@@ -26,6 +26,9 @@ const shouldEnableMocks =
   (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS !== 'false');
 
 if (shouldEnableMocks) {
+// `npm run dev:textile` (mode "textile") always serves the mock API, since the
+// /textile/* endpoints aren't on the backend yet.
+if (import.meta.env.VITE_ENABLE_MOCKS === 'true' || import.meta.env.MODE === 'textile') {
   import('./mocks/browser').then(({ worker }) =>
     worker.start({ onUnhandledFrame: 'bypass' }),
   ).then(renderApp);

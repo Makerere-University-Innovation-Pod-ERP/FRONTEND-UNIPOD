@@ -10,12 +10,14 @@ import { initialMediaRequests } from './fixtures/media';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
+import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
   'coordinator@unipod.test': { subject: 'Grace Namuli', roles: ['ROLE_DEPARTMENT_COORDINATOR'] },
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
+  'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
 };
 
 let trainingSessions = [...initialTrainingSessions];
@@ -364,4 +366,5 @@ export const handlers = [
     };
     return HttpResponse.json(invoices[index]);
   }),
+  ...textileHandlers,
 ];

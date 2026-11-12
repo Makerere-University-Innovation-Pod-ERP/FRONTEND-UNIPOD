@@ -54,7 +54,7 @@ export function NewSubmissionPage({
   return (
     <div className="live-page page-enter">
       <Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
-      <div className="live-page-heading compact-heading"><div><p className="eyebrow">INTAKE · NEW CASE</p><h1>Register an idea.</h1><p>Create a draft record in the live Innovation Hub database.</p></div></div>
+      <div className="live-page-heading compact-heading"><div><p className="eyebrow">INTAKE · NEW CASE</p><h1>Register an idea.</h1><p>Create a draft record in the live MUTIC ERP database.</p></div></div>
       <form className="live-panel create-form" onSubmit={submit}>
         <div className="form-section">
           <p className="form-section-title">01 <span>Submission type</span></p>

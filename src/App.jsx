@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer } from '@/lib/permissions';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
+import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
@@ -23,7 +24,6 @@ import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
-import './app.css';
 
 const queryClient = new QueryClient();
 
@@ -45,11 +45,15 @@ function AuthenticatedApp({
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
+  const canTextile = isTextileDomainOwner(session.roles);
+  const textile = (Page) => (canTextile
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-      <BackendWorkspace session={session} health={health} onLogout={onLogout}>
+      <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -85,7 +89,22 @@ function AuthenticatedApp({
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
-          <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />
+          </>}
+          <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
+          <Route path="/textile/review" element={textile(OrderReviewPage)} />
+          <Route path="/textile/board" element={textile(OrderBoardPage)} />
+          <Route path="/textile/orders" element={textile(OrdersIndexPage)} />
+          <Route path="/textile/orders/:id" element={textile(OrderPage)} />
+          <Route path="/textile/stock" element={textile(StockListPage)} />
+          <Route path="/textile/stock/movements" element={textile(StockMovementPage)} />
+          <Route path="/textile/machines" element={textile(MachineListPage)} />
+          <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
+          <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
+            <Route key={href} path={href} element={<OtherModulePage title={label} />} />
+          ))}
+          {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
+          {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
         </Routes>
       </BackendWorkspace>
       </BrowserRouter>
@@ -95,6 +114,12 @@ function AuthenticatedApp({
 
 function App() {
   const [session, setSession] = useState(() => loadSession() || DEFAULT_COORDINATOR_SESSION);
+  const [session, setSession] = useState(() => {
+    const saved = loadSession();
+    // In textile-only mode a saved non-textile session would only ever see
+    // "access restricted", so drop it and sign in as the textile owner instead.
+    return TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles) ? null : saved;
+  });
   const [health, setHealth] = useState('checking');
 
   useEffect(() => {
@@ -134,7 +159,20 @@ function App() {
     setSession(nextSession);
   }, []);
 
-  if (!session) return <LoginPage onLogin={acceptSession} />;
+  // Textile-only mode signs in as the Textile domain owner automatically
+  // (also after "Sign out"), so the login page is never shown.
+  useEffect(() => {
+    if (!TEXTILE_ONLY || session) return;
+    let active = true;
+    void textileMockSession().then((next) => {
+      if (active) acceptSession(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [session, acceptSession]);
+
+  if (!session) return TEXTILE_ONLY ? null : <LoginPage onLogin={acceptSession} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 
