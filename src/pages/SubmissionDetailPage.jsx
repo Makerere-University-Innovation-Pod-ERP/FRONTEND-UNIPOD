@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, MessageCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
@@ -178,6 +178,15 @@ export function SubmissionDetailPage({
       </div>
       {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
+      {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
+        <section className="live-panel capability-notice" aria-label="Open request">
+          <p className="eyebrow">OPEN REQUEST</p>
+          <p className="capability-summary">The reviewer has asked for changes before this brief can continue.</p>
+          <div className="form-actions" style={{ justifyContent: 'flex-start', padding: '10px 0 0' }}>
+            <Link className="btn btn-primary" to={`/submissions/${id}/respond`}><Send size={14} />Respond to this request</Link>
+          </div>
+        </section>
+      )}
       {disabledCapabilities.length > 0 && <section className="live-panel capability-notice" aria-label="Case permissions">
         <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
         {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
@@ -200,6 +209,14 @@ export function SubmissionDetailPage({
             {submission.category === 'student' && <div className="form-grid"><Field label="Student number" value={submission.studentNumber || '—'} /><Field label="Programme" value={submission.programme || '—'} /></div>}
             {submission.category === 'student' && <Field label="Supervisor" value={submission.supervisor || '—'} />}
             <div className="form-grid"><Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} /><Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} /></div>
+            {submission.responsibleSectorWhatsapp && (
+              <p className="live-note">
+                <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
+                  <MessageCircle size={13} style={{ verticalAlign: 'text-bottom', marginRight: 4 }} />
+                  Message {submission.responsibleSectorName} on WhatsApp
+                </a>
+              </p>
+            )}
           </div>
           {canIntake && submission.stage === 'DRAFT' && <div className="case-action">
             <p className="form-section-title">Draft actions</p>
