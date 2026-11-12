@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:textile": "vite --host 0.0.0.0 --mode textile",
     "build": "tsc --noEmit && vite build",
     "lint": "oxlint",
     "preview": "vite preview --host 0.0.0.0",

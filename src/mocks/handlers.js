@@ -6,11 +6,13 @@ import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
+import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
   ...coordinatorMockUsers,
+  'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
 };
 
 export const handlers = [
@@ -216,4 +218,5 @@ export const handlers = [
   }),
 
   ...coordinatorHandlers,
+  ...textileHandlers,
 ];
