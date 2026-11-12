@@ -22,6 +22,7 @@ function buildNavigation(roles) {
   if (isFactFindingOfficer(roles)) {
     items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
     items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
+    items.push({ label: 'Department queue', href: '/fact-finding/department', icon: ClipboardList });
   }
   if (isReviewer(roles)) {
     items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
