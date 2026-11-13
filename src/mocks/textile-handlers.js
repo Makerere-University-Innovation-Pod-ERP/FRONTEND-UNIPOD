@@ -372,6 +372,17 @@ export const textileHandlers = [
     return HttpResponse.json(booking, { status: 201 });
   }),
 
+  http.post(`${base}/bookings/:id/cancel`, async ({ params, request }) => {
+    const booking = bookings.find((candidate) => candidate.id === params.id);
+    if (!booking) return problem(404, 'Booking not found.');
+    if (booking.status === 'CANCELLED') return problem(409, 'This booking is already cancelled.');
+    const { reason } = await request.json();
+    if (!reason?.trim()) return problem(400, 'Give a reason for cancelling.');
+    booking.status = 'CANCELLED';
+    booking.cancellation = { reason: reason.trim(), by: actor(request), at: now() };
+    return HttpResponse.json(booking);
+  }),
+
   http.post(`${base}/bookings/:id/attendees`, async ({ params, request }) => {
     const booking = bookings.find((candidate) => candidate.id === params.id);
     if (!booking) return problem(404, 'Booking not found.');
