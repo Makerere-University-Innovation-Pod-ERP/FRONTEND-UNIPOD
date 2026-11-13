@@ -49,10 +49,10 @@
   --bg:#f8f8f7; --surface:#ffffff; --surface-raised:#f1f2f3; --surface-sunk:#e9eaeb;
   --border:#dcdee0; --border-soft:#e7e8e9; --ink:#231f20; --ink-soft:#4b4849; --muted:#67686b;
   --forest:#c81b1d; --forest-dim:#b11116; --forest-deep:#231f20; --forest-700:#94070a;
-  --lime:#fdb515; --lime-ink:#231f20;
+  --lime:#d7ef67; --lime-ink:#173b2a;
   --green:#006e34; --green-bg:#e3f3e8;
   --amber:#8a5a14; --amber-bg:#fdecc9; --blue:#3e3e3f; --blue-bg:#e7e8e9; --rose:#94070a; --rose-bg:#fbe4e3;
-  --sidebar-a:#1c1818; --sidebar-b:#2c2425; --sidebar-ink:#f5f1ee; --sidebar-muted:#b8adac; --sidebar-active:#3a1414; --sidebar-active-ink:#f5e9c9;
+  --sidebar-a:#0d2f22; --sidebar-b:#103b2b; --sidebar-ink:#ffffff; --sidebar-muted:#8ea998; --sidebar-active:#092419; --sidebar-active-ink:#ffffff;
   --shadow:0 1px 2px rgba(20,16,16,.05), 0 10px 28px rgba(20,16,16,.08);
   --r-xs:7px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px;
   --font-serif:'Newsreader',Georgia,serif; --font-sans:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif; --font-mono:'DM Mono','SFMono-Regular',monospace;
@@ -66,7 +66,7 @@
     --lime:#fdc950; --lime-ink:#1c1817;
     --green:#5fc98c; --green-bg:#1a2b20;
     --amber:#e3b765; --amber-bg:#2e2515; --blue:#c9c0bc; --blue-bg:#282221; --rose:#e38f8a; --rose-bg:#2e1b19;
-    --sidebar-a:#0c0a09; --sidebar-b:#1a1515; --sidebar-ink:#f1ece9; --sidebar-muted:#a69c99; --sidebar-active:#3a1414; --sidebar-active-ink:#fdc950;
+    --sidebar-a:#081f16; --sidebar-b:#0b261b; --sidebar-ink:#ffffff; --sidebar-muted:#7a9c87; --sidebar-active:#05140e; --sidebar-active-ink:#ffffff;
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
     color-scheme:dark;
   }
@@ -78,7 +78,7 @@
   --lime:#fdc950; --lime-ink:#1c1817;
   --green:#5fc98c; --green-bg:#1a2b20;
   --amber:#e3b765; --amber-bg:#2e2515; --blue:#c9c0bc; --blue-bg:#282221; --rose:#e38f8a; --rose-bg:#2e1b19;
-  --sidebar-a:#0c0a09; --sidebar-b:#1a1515; --sidebar-ink:#f1ece9; --sidebar-muted:#a69c99; --sidebar-active:#3a1414; --sidebar-active-ink:#fdc950;
+  --sidebar-a:#081f16; --sidebar-b:#0b261b; --sidebar-ink:#ffffff; --sidebar-muted:#7a9c87; --sidebar-active:#05140e; --sidebar-active-ink:#ffffff;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
   color-scheme:dark;
 }
@@ -127,7 +127,7 @@
 .live-nav-link{height:40px;padding:0 11px;display:flex;align-items:center;gap:12px;border-radius:9px;color:#c6d4c9;text-decoration:none;font-size:12px;font-weight:650;position:relative}
 .live-nav-link:hover{background:rgba(255,255,255,.07);color:#fff}
 .live-nav-link.active{background:var(--sidebar-active);color:var(--sidebar-active-ink);font-weight:750}
-.live-nav-link.active:before{content:"";position:absolute;left:-3px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--lime)}
+.live-nav-link.active:before{display:none}
 .live-connection{margin:auto 5px 12px;padding:12px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-sm);color:var(--sidebar-ink);font-size:10px;font-weight:700;display:grid;grid-template-columns:9px 1fr;align-items:center;column-gap:7px}
 .live-connection small{grid-column:2;color:var(--sidebar-muted);font-size:9px;font-weight:500;margin-top:4px}
 .connection-dot{width:7px;height:7px;border-radius:50%;background:var(--amber)}

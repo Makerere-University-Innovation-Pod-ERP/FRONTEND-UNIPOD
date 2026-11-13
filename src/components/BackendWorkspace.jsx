@@ -199,17 +199,8 @@ export function BackendWorkspace({
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
-            {textileOnly ? (
-              <>
-                <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
-                <span><b>UNIPOD ERP</b><small>Innovation & Operations</small></span>
-              </>
-            ) : (
-              <>
-                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-                <span><b>UNIPOD ERP</b><small style={{ color: '#9db2a2' }}>Innovation & Operations</small></span>
-              </>
-            )}
+            <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
+            <span><b>UNIPOD ERP</b><small style={{ color: 'var(--sidebar-muted)' }}>Innovation & Operations</small></span>
           </Link>
           <button
             type="button"
@@ -217,6 +208,17 @@ export function BackendWorkspace({
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            style={{
+              marginLeft: 'auto',
+              width: 26,
+              height: 26,
+              borderRadius: 7,
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: 'rgba(0, 0, 0, 0.2)',
+              color: '#d6dfd7',
+              display: 'grid',
+              placeItems: 'center',
+            }}
           >
             <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
           </button>

@@ -33,12 +33,12 @@
   --chart-3: 150 100% 33%;
   --chart-4: 210 3% 72%;
   --chart-5: 10 7% 25%;
-  --sidebar: 10 7% 13%;
+  --sidebar: 160 55% 15%;
   --sidebar-foreground: 0 0% 94%;
-  --sidebar-border: 10 6% 22%;
-  --sidebar-primary: 357 75% 40%;
+  --sidebar-border: 160 40% 20%;
+  --sidebar-primary: 160 55% 20%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 10 6% 22%;
+  --sidebar-accent: 160 45% 20%;
   --sidebar-accent-foreground: 0 0% 94%;
   --sidebar-ring: 42 98% 56%;
   --font-sans: var(--mak-font-ui);
