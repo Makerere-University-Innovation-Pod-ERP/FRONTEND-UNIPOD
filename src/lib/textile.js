@@ -180,15 +180,23 @@ export function evaluateMovement(item, { type, quantity, note, orderId }) {
  * Checks each estimated material against stock. A line is `sufficient` when
  * stock covers it, and `lowAfter` when using it would leave the item below its
  * configured minimum (so a reorder should be flagged).
+ *
+ * Lines for the same item are added together first (`requested`), so listing
+ * one fabric twice cannot pass the check when the total exceeds stock.
  */
 export function assessMaterials(materials, stockItems) {
+  const requestedByItem = new Map();
+  for (const line of materials) {
+    requestedByItem.set(line.itemId, roundQuantity((requestedByItem.get(line.itemId) ?? 0) + (Number(line.quantity) || 0)));
+  }
   return materials.map((line) => {
     const item = stockItems.find((candidate) => candidate.id === line.itemId) ?? null;
     const available = item?.quantity ?? 0;
-    const sufficient = Boolean(item) && line.quantity > 0 && line.quantity <= available;
-    const remaining = roundQuantity(available - line.quantity);
+    const requested = requestedByItem.get(line.itemId) ?? 0;
+    const sufficient = Boolean(item) && line.quantity > 0 && requested <= available;
+    const remaining = roundQuantity(available - requested);
     const lowAfter = Boolean(item) && sufficient && remaining < item.minimum;
-    return { ...line, item, available, sufficient, remaining, lowAfter };
+    return { ...line, item, available, requested, sufficient, remaining, lowAfter };
   });
 }
 
