@@ -64,6 +64,9 @@ export function PhotoDrop({ label, hint, file, existingName, onChange }) {
   };
 
   const name = file?.name ?? existingName;
+  // Local preview of the chosen file; the object URL is released when the file changes.
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   return (
     <div className="tx-field">
       <span className="tx-label">{label}</span>
