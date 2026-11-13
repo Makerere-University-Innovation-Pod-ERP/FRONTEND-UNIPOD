@@ -124,10 +124,11 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
                               </StatusDot>
                             </>
                           );
-                          return booking.kind === 'TRAINING' ? (
-                            <button key={booking.id} type="button" className={`tx-slot booking ${selectedId === booking.id ? 'active' : ''}`}
+                          return (
+                            <button key={booking.id} type="button"
+                              className={`tx-slot booking ${selectedId === booking.id ? 'active' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}
                               aria-pressed={selectedId === booking.id} onClick={() => setSelectedId(booking.id)}>{content}</button>
-                          ) : <div key={booking.id} className="tx-slot booking">{content}</div>;
+                          );
                         })}
                         {empty && <div className="tx-slot free"><span><b>Open workshop slot</b><small>Class timetable clear</small></span><StatusDot tone="positive">Free</StatusDot></div>}
                       </div>
