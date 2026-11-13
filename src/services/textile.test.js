@@ -81,6 +81,27 @@ describe('textile API contract', () => {
     expect((await rejection(textileApi.transition(token, quoted.id, 'SCHEDULED'))).status).toBe(409);
   });
 
+  it('lets the demo-only Finance stand-in confirm payment so the order can be scheduled', async () => {
+    const confirmed = await request('/__demo__/finance/confirm-payment', { token, body: { orderId: 'TXO-2026-015' } });
+    expect(confirmed.payment.status).toBe('CONFIRMED');
+    const scheduled = await textileApi.transition(token, 'TXO-2026-015', 'SCHEDULED');
+    expect(scheduled.status).toBe('SCHEDULED');
+  });
+
+  it('refuses a quote whose repeated material lines add up to more than the stock', async () => {
+    const order = await textileApi.createOrder(token, {
+      order: { customerName: 'Grace A', customerType: 'Student', whatIsWanted: 'Banners', quantity: '2', sizeDesign: '2 m', rulesAccepted: true, submit: true },
+    });
+    // 50 m + 50 m of cotton, but only 86 m in stock.
+    const error = await rejection(textileApi.sendQuote(token, order.id, {
+      materials: [{ itemId: 'stk-cotton', quantity: 50 }, { itemId: 'stk-cotton', quantity: 50 }],
+      priceListItemId: 'price-curtain',
+      priceQuantity: 1,
+      expectedCompletion: addDays(todayIso(), 7),
+    }));
+    expect(error.status).toBe(409);
+  });
+
   it('refuses a stock movement below zero and attributes accepted ones', async () => {
     const error = await rejection(textileApi.recordMovement(token, { itemId: 'stk-zips', type: 'USED_ON_ORDER', quantity: 1000, orderId: 'TXO-2026-014', note: '' }));
     expect(error.status).toBe(409);
