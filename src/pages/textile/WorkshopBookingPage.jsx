@@ -10,7 +10,7 @@ import { useUnauthorizedRedirect } from './helpers';
 const BOOKING_STATUS_LABELS = { APPROVED: 'Approved', PENDING: 'Pending', CANCELLED: 'Cancelled' };
 const BOOKING_STATUS_TONE = { APPROVED: 'positive', PENDING: 'attention', CANCELLED: 'neutral' };
 
-const EMPTY_FORM = { kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
+const EMPTY_FORM ={ kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
 
 function dayLabel(isoDate, options) {
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, options);
@@ -109,7 +109,9 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
                                   {booking.kind === 'TRAINING' ? ` · ${booking.attendees.length}${booking.capacity ? `/${booking.capacity}` : ''} signed up` : ''}
                                 </small>
                               </span>
-                              <StatusDot tone={booking.status === 'APPROVED' ? 'positive' : 'attention'}>{booking.kind === 'TRAINING' ? 'Training' : 'Approved'}</StatusDot>
+                              <StatusDot tone={BOOKING_STATUS_TONE[booking.status] ?? 'neutral'}>
+                                {booking.kind === 'TRAINING' ? 'Training · ' : ''}{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
+                              </StatusDot>
                             </>
                           );
                           return booking.kind === 'TRAINING' ? (
