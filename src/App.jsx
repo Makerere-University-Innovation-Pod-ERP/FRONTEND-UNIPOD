@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { COORDINATOR_ONLY_REASON, isFactFindingOfficer, isInnovationCoordinator, isReviewer } from '@/lib/permissions';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
+import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -18,11 +21,46 @@ import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
-import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
+import { NewOrderPage } from '@/pages/textile/NewOrderPage';
+import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
+import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
+import { OrderPage, OrdersIndexPage } from '@/pages/textile/OrderPage';
+import { StockListPage } from '@/pages/textile/StockListPage';
+import { StockMovementPage } from '@/pages/textile/StockMovementPage';
+import { MachineListPage } from '@/pages/textile/MachineListPage';
+import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
+import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
 const queryClient = new QueryClient();
+
+// `npm run dev:textile` runs the app as the Textile Operations screens only:
+// no login, no dashboard, every other route redirects to the order board.
+const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
+const TEXTILE_HOME = '/textile/board';
+
+async function textileMockSession() {
+  const { makeMockToken } = await import('@/mocks/jwt');
+  return createSession({
+    accessToken: makeMockToken(['ROLE_TEXTILE_DOMAIN_OWNER'], 'Faith Nabwire'),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
+  });
+}
+
+/** Textile-only mode: sidebar links that belong to other teams' modules land here. */
+function OtherModulePage({ title }) {
+  return (
+    <div className="live-page page-enter">
+      <div className="live-panel not-found-live">
+        <p className="eyebrow">OTHER MODULE</p>
+        <h1>{title}</h1>
+        <p>This module is built by another team. This workspace runs the Textile Operations screens only.</p>
+        <a className="btn btn-primary" href={TEXTILE_HOME}>Go to the order board</a>
+      </div>
+    </div>
+  );
+}
 
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
@@ -36,12 +74,17 @@ function AuthenticatedApp({
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
   const canCoordinate = isInnovationCoordinator(session.roles);
+  const canTextile = isTextileDomainOwner(session.roles);
+  const textile = (Page) => (canTextile
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-      <BackendWorkspace session={session} health={health} onLogout={onLogout}>
+      <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
+          {TEXTILE_ONLY ? null : <>
           <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/submissions/student" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
@@ -60,6 +103,22 @@ function AuthenticatedApp({
           <Route path="/coordinator/briefs/:id" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />
+          </>}
+          <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
+          <Route path="/textile/review" element={textile(OrderReviewPage)} />
+          <Route path="/textile/board" element={textile(OrderBoardPage)} />
+          <Route path="/textile/orders" element={textile(OrdersIndexPage)} />
+          <Route path="/textile/orders/:id" element={textile(OrderPage)} />
+          <Route path="/textile/stock" element={textile(StockListPage)} />
+          <Route path="/textile/stock/movements" element={textile(StockMovementPage)} />
+          <Route path="/textile/machines" element={textile(MachineListPage)} />
+          <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
+          <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
+            <Route key={href} path={href} element={<OtherModulePage title={label} />} />
+          ))}
+          {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
+          {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
         </Routes>
       </BackendWorkspace>
       </BrowserRouter>
@@ -68,7 +127,12 @@ function AuthenticatedApp({
 }
 
 function App() {
-  const [session, setSession] = useState(() => loadSession());
+  const [session, setSession] = useState(() => {
+    const saved = loadSession();
+    // In textile-only mode a saved non-textile session would only ever see
+    // "access restricted", so drop it and sign in as the textile owner instead.
+    return TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles) ? null : saved;
+  });
   const [health, setHealth] = useState('checking');
 
   useEffect(() => {
@@ -108,7 +172,20 @@ function App() {
     setSession(nextSession);
   }, []);
 
-  if (!session) return <LoginPage onLogin={acceptSession} />;
+  // Textile-only mode signs in as the Textile domain owner automatically
+  // (also after "Sign out"), so the login page is never shown.
+  useEffect(() => {
+    if (!TEXTILE_ONLY || session) return;
+    let active = true;
+    void textileMockSession().then((next) => {
+      if (active) acceptSession(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [session, acceptSession]);
+
+  if (!session) return TEXTILE_ONLY ? null : <LoginPage onLogin={acceptSession} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 
