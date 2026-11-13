@@ -244,7 +244,7 @@ export function OrdersIndexPage({ token, onUnauthorized }) {
             <table className="live-table">
               <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Date needed</th><th>Updated</th></tr></thead>
               <tbody>
-                {(orders.data ?? []).map((order) => (
+                {[...(orders.data ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((order) => (
                   <tr key={order.id}>
                     <td><Link className="case-title" to={`/textile/orders/${encodeURIComponent(order.id)}`}><b>{order.whatIsWanted || 'Untitled order'}</b><small>{order.code ?? 'Draft'}</small></Link></td>
                     <td>{order.customerName} · {order.customerType}</td>
