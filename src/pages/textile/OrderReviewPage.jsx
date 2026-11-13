@@ -116,7 +116,9 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
       ? 'Enter a quantity to price.'
       : !expectedCompletion
         ? 'Set an expected completion date.'
-        : materials.length === 0
+        : expectedCompletion < todayIso()
+          ? 'The expected completion date cannot be in the past.'
+          : materials.length === 0
           ? 'Add at least one estimated material.'
           : shortfall
             ? 'Not enough stock for every material — receive stock or ask the customer first.'
