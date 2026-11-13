@@ -6,6 +6,22 @@ import { useTextileOrders } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
+/** Overdue flag for unfinished work, and the collection countdown for Ready orders. */
+function DeadlineTags({ order, today }) {
+  const collection = collectionDeadline(order, today);
+  if (isOrderOverdue(order, today)) return <span className="tx-card-tags"><StatusDot tone="danger">Overdue</StatusDot></span>;
+  if (collection?.warn) {
+    return (
+      <span className="tx-card-tags">
+        <StatusDot tone={collection.daysLeft < 0 ? 'danger' : 'attention'}>
+          {collection.daysLeft < 0 ? 'Collection limit passed' : `Collect by ${formatDate(collection.deadline)}`}
+        </StatusDot>
+      </span>
+    );
+  }
+  return null;
+}
+
 export function OrderBoardPage({ token, onUnauthorized }) {
   const orders = useTextileOrders(token);
   useUnauthorizedRedirect(onUnauthorized, orders.error);
