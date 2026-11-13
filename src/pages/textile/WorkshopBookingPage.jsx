@@ -7,6 +7,9 @@ import { useAddAttendee, useBookings, useCreateBooking, useMachines, useSetAtten
 import { ErrorBanner, Loading, PageHeading, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
+const BOOKING_STATUS_LABELS = { APPROVED: 'Approved', PENDING: 'Pending', CANCELLED: 'Cancelled' };
+const BOOKING_STATUS_TONE = { APPROVED: 'positive', PENDING: 'attention', CANCELLED: 'neutral' };
+
 const EMPTY_FORM = { kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
 
 function dayLabel(isoDate, options) {
