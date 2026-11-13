@@ -60,9 +60,9 @@ function OrderView({ token, order, machines, onUnauthorized }) {
 
       <div className="detail-grid">
         <div className="tx-stack">
-          {inProduction
-            ? <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />
-            : <OrderSummary order={order} />}
+          {/* Always visible: the maker needs the size/design and date while producing. */}
+          <OrderSummary order={order} />
+          {inProduction && <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />}
           {inProduction && <QualityPanel token={token} order={order} onUnauthorized={onUnauthorized} />}
         </div>
         <div className="tx-stack">
