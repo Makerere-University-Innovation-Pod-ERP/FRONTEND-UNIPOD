@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, LoaderCircle, Lock, TriangleAlert, UserPlus,
 import {
   MACHINE_UNAVAILABLE_REASON, addDays, findBookingClashes, isMachineBookable, isoWeekday, startOfWeek, todayIso,
 } from '@/lib/textile';
-import { useAddAttendee, useBookings, useCreateBooking, useMachines, useSetAttendance } from '@/hooks/useTextile';
+import { useAddAttendee, useBookings, useCancelBooking, useCreateBooking, useMachines, useSetAttendance } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, PageHeading, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
