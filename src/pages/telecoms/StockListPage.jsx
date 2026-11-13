@@ -63,12 +63,15 @@ export function StockListPage({ token, onUnauthorized }) {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id}>
-                      <td><b className="tx-strong">{item.name}</b></td>
-                      <td className="tx-mono"><b>{item.quantity}</b> {item.unit}</td>
+                      <td><b style={{ fontSize: '14.5px', color: '#0f172a' }}>{item.name}</b></td>
+                      <td className="tx-mono">
+                        <b style={{ fontSize: '14px', color: '#0f172a' }}>{item.quantity}</b>{' '}
+                        <span style={{ color: '#475569', fontSize: '13px' }}>{item.unit}</span>
+                      </td>
                       <td>
                         <MinimumCell token={token} item={item} onUnauthorized={onUnauthorized} />
                       </td>
-                      <td>{item.location}</td>
+                      <td style={{ fontSize: '13.5px', color: '#334155' }}>{item.location}</td>
                       <td>
                         {isLowStock(item) ? (
                           <StatusDot tone="danger">Low Stock</StatusDot>
@@ -173,16 +176,16 @@ export function MovementTable({ movements }) {
             const positive = delta > 0;
             return (
               <tr key={mov.id}>
-                <td>{formatDateTime(mov.at)}</td>
-                <td><b>{mov.itemName}</b></td>
+                <td style={{ fontSize: '12.5px', color: '#334155', whiteSpace: 'nowrap' }}>{formatDateTime(mov.at)}</td>
+                <td><b style={{ fontSize: '14px', color: '#0f172a' }}>{mov.itemName}</b></td>
                 <td><StatusDot tone="neutral">{MOVEMENT_TYPE_LABELS[mov.type] ?? mov.type}</StatusDot></td>
                 <td className={`tx-mono ${positive ? 'tx-positive' : 'tx-negative'}`}>
-                  {positive ? `+${delta}` : delta}
+                  <b>{positive ? `+${delta}` : delta}</b>
                 </td>
-                <td className="tx-mono">{mov.balance}</td>
-                <td>{mov.by}</td>
-                <td>
-                  {mov.requestId && <span className="tx-mono" style={{ marginRight: 6 }}>{mov.requestId}</span>}
+                <td className="tx-mono"><b>{mov.balance}</b></td>
+                <td style={{ fontSize: '13px', color: '#1e293b' }}>{mov.by}</td>
+                <td style={{ fontSize: '13px', color: '#475569' }}>
+                  {mov.requestId && <span className="tx-mono" style={{ marginRight: 6, color: '#176b52' }}>{mov.requestId}</span>}
                   {mov.note || '—'}
                 </td>
               </tr>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, CheckCircle, Clock, LoaderCircle, ShieldAlert, Undo2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, CheckCircle, Clock, LoaderCircle, ShieldAlert, Undo2, X } from 'lucide-react';
 import { isLoanOverdue, todayIso } from '@/lib/telecoms';
 import { formatDate } from '@/lib/presentation';
 import {
@@ -141,12 +141,12 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                 <table className="live-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '110px' }}>Loan Ref</th>
+                      <th style={{ width: '120px' }}>Loan Ref</th>
                       <th>Equipment</th>
                       <th>Borrower</th>
                       <th>Loan Period</th>
                       <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
+                      <th style={{ textAlign: 'right', minWidth: '150px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -160,19 +160,28 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                         return (
                           <tr key={loan.id} className={overdue ? 'tx-attention' : ''}>
                             <td className="tx-mono"><b>{loan.id}</b></td>
-                            <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>
-                              <b>{loan.equipmentName}</b> <small style={{ color: 'var(--ink-soft)' }}>(Qty: {loan.quantity})</small>
+                            <td style={{ minWidth: '180px', maxWidth: '260px', whiteSpace: 'normal' }}>
+                              <b style={{ fontSize: '14px', color: '#0f172a' }}>{loan.equipmentName}</b>
+                              <span style={{ display: 'inline-block', marginLeft: '6px', fontSize: '11px', fontWeight: 700, color: '#176b52', background: '#e4efe6', padding: '1px 7px', borderRadius: '4px' }}>
+                                Qty: {loan.quantity}
+                              </span>
                             </td>
-                            <td style={{ minWidth: '160px', maxWidth: '220px', whiteSpace: 'normal' }}>
-                              <b>{loan.borrowerName}</b> <small style={{ color: 'var(--ink-soft)' }}>({loan.borrowerType})</small>
+                            <td style={{ minWidth: '170px', maxWidth: '240px', whiteSpace: 'normal' }}>
+                              <b style={{ fontSize: '14px', color: '#0f172a' }}>{loan.borrowerName}</b>{' '}
+                              <small style={{ color: '#475569', fontWeight: 600 }}>({loan.borrowerType})</small>
                               <br />
-                              <small className="tx-muted">{loan.borrowerContact}</small>
+                              <small style={{ color: '#64748b', fontSize: '12px' }}>{loan.borrowerContact}</small>
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              <span>{formatDate(loan.dateOut)} → <b>{formatDate(loan.dateBack)}</b></span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: '#1e293b' }}>
+                                <CalendarDays size={14} style={{ color: '#176b52', flexShrink: 0 }} />
+                                <span>{formatDate(loan.dateOut)}</span>
+                                <span style={{ color: '#94a3b8', fontWeight: 700 }}>→</span>
+                                <b style={{ color: '#0f172a' }}>{formatDate(loan.dateBack)}</b>
+                              </div>
                               {overdue && (
-                                <div style={{ color: 'var(--rose)', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
-                                  <ShieldAlert size={12} />OVERDUE
+                                <div style={{ color: '#991b1b', fontSize: '11px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
+                                  <ShieldAlert size={13} />OVERDUE
                                 </div>
                               )}
                             </td>
@@ -181,22 +190,24 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {loan.status === 'PENDING_APPROVAL' && (
-                                <div className="tx-actions" style={{ justifyContent: 'flex-end' }}>
+                                <div className="tx-actions" style={{ justifyContent: 'flex-end', gap: '6px' }}>
                                   <button
                                     type="button"
                                     className="btn btn-sm btn-primary"
+                                    style={{ background: '#176b52', color: '#ffffff', fontWeight: 700, padding: '6px 12px', fontSize: '12.5px' }}
                                     title="Approve loan as Manager"
                                     onClick={() => onApprove(loan.id)}
                                   >
-                                    <Check size={13} />Approve
+                                    <Check size={14} />Approve
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-sm"
+                                    className="btn btn-sm btn-outline"
+                                    style={{ padding: '6px 10px', fontSize: '12px' }}
                                     title="Decline loan"
                                     onClick={() => onDecline(loan.id)}
                                   >
-                                    <X size={13} />Decline
+                                    <X size={14} />Decline
                                   </button>
                                 </div>
                               )}
@@ -205,18 +216,19 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                                 <button
                                   type="button"
                                   className="btn btn-sm btn-outline"
+                                  style={{ padding: '6px 12px', fontSize: '12.5px', fontWeight: 700, color: '#176b52', borderColor: '#176b52' }}
                                   onClick={() => setReturnDialogId(loan.id)}
                                 >
-                                  <CheckCircle size={13} />Mark Returned
+                                  <CheckCircle size={14} />Mark Returned
                                 </button>
                               )}
 
                               {loan.status === 'RETURNED' && (
-                                <small className="tx-muted">Closed</small>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>Closed</span>
                               )}
 
                               {loan.status === 'DECLINED' && (
-                                <small className="tx-muted">Declined</small>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#991b1b' }}>Declined</span>
                               )}
                             </td>
                           </tr>
@@ -255,21 +267,22 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                 />
               </div>
 
-              <div className="tx-quote-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '14px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-qty">Quantity *</label>
+                  <label htmlFor="tl-loan-qty" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Quantity *</label>
                   <input
                     id="tl-loan-qty"
                     type="number"
                     min="1"
                     max="10"
                     required
+                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
                     value={form.quantity}
                     onChange={onFormChange('quantity')}
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-type">Borrower Type</label>
+                  <label htmlFor="tl-loan-type" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Borrower Type</label>
                   <CurvedSelect
                     id="tl-loan-type"
                     value={form.borrowerType}
@@ -284,11 +297,12 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               </div>
 
               <div className="form-field">
-                <label htmlFor="tl-loan-borrower">Borrower Name & ID *</label>
+                <label htmlFor="tl-loan-borrower" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Borrower Name & ID *</label>
                 <input
                   id="tl-loan-borrower"
                   type="text"
                   required
+                  style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
                   placeholder="e.g. Peter Okello (S24/1048)"
                   value={form.borrowerName}
                   onChange={onFormChange('borrowerName')}
@@ -296,35 +310,38 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               </div>
 
               <div className="form-field">
-                <label htmlFor="tl-loan-contact">Contact Phone / Email *</label>
+                <label htmlFor="tl-loan-contact" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Contact Phone / Email *</label>
                 <input
                   id="tl-loan-contact"
                   type="text"
                   required
+                  style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
                   placeholder="0772-XXXXXX or student@mak.ac.ug"
                   value={form.borrowerContact}
                   onChange={onFormChange('borrowerContact')}
                 />
               </div>
 
-              <div className="tx-quote-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-out">Date Out *</label>
+                  <label htmlFor="tl-loan-out" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Date Out *</label>
                   <input
                     id="tl-loan-out"
                     type="date"
                     required
+                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
                     value={form.dateOut}
                     onChange={onFormChange('dateOut')}
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-back">Expected Return Date *</label>
+                  <label htmlFor="tl-loan-back" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Expected Return Date *</label>
                   <input
                     id="tl-loan-back"
                     type="date"
                     required
                     min={form.dateOut || todayIso()}
+                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
                     value={form.dateBack}
                     onChange={onFormChange('dateBack')}
                   />
@@ -332,10 +349,11 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               </div>
 
               <div className="form-field">
-                <label htmlFor="tl-loan-cond">Outgoing Condition Notes</label>
+                <label htmlFor="tl-loan-cond" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Outgoing Condition Notes</label>
                 <textarea
                   id="tl-loan-cond"
                   rows={2}
+                  style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', width: '100%' }}
                   value={form.outgoingCondition}
                   onChange={onFormChange('outgoingCondition')}
                 />
@@ -344,9 +362,24 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               <button
                 type="submit"
                 className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  minHeight: '46px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  background: '#176b52',
+                  borderColor: '#176b52',
+                  color: '#ffffff',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '12px',
+                }}
                 disabled={requestLoan.isPending || !form.equipmentId || !form.dateBack}
               >
-                {requestLoan.isPending ? <LoaderCircle className="spin" size={15} /> : <Clock size={15} />}
+                {requestLoan.isPending ? <LoaderCircle className="spin" size={16} /> : <Clock size={16} />}
                 Submit Loan for Approval
               </button>
             </form>

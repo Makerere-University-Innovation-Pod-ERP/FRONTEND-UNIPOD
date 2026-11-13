@@ -86,6 +86,8 @@ function isActiveLink(href, location) {
   if (href === '/overview' && location === '/') return true;
   if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
   if (href === '/telecoms/requests' && location.startsWith('/telecoms/requests/') && location !== '/telecoms/requests/new') return true;
+  if (href === '/telecoms/equipment') return location === '/telecoms/equipment';
+  if (href === '/telecoms/stock') return location === '/telecoms/stock';
   if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
   return false;
 }
@@ -284,7 +286,7 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
+    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
@@ -438,7 +440,7 @@ export function BackendWorkspace({
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
-            <i style={{ fontStyle: 'normal', margin: '0 6px', color: '#889186' }}>‹</i>
+            <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
@@ -502,15 +504,17 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
-            <Link
-              to="/submissions/new"
-              className="top-register"
-              style={{ borderRadius: '9999px' }}
-              data-testid="link-register-top"
-            >
-              <span>Register submission</span>
-              <span className="register-plus">+</span>
-            </Link>
+            {!isTelecoms && (
+              <Link
+                to="/submissions/new"
+                className="top-register"
+                style={{ borderRadius: '9999px' }}
+                data-testid="link-register-top"
+              >
+                <span>Register submission</span>
+                <span className="register-plus">+</span>
+              </Link>
+            )}
           </div>
         </header>
         <main className="live-content">{children}</main>

@@ -67,25 +67,28 @@ export function EquipmentListPage({ token, onUnauthorized }) {
             <tbody>
               {items.map((eq) => (
                 <tr key={eq.id}>
-                  <td className="tx-mono"><b>{eq.assetTag}</b></td>
-                  <td><b>{eq.name}</b></td>
+                  <td className="tx-mono"><b style={{ fontSize: '13px', color: '#0f172a' }}>{eq.assetTag}</b></td>
+                  <td><b style={{ fontSize: '14.5px', color: '#0f172a' }}>{eq.name}</b></td>
                   <td>
-                    <b>{eq.availableQuantity}</b> of {eq.totalQuantity} units
+                    <b style={{ fontSize: '14px', color: '#0f172a' }}>{eq.availableQuantity}</b> <span style={{ color: '#475569', fontSize: '13px' }}>of {eq.totalQuantity} units</span>
                   </td>
                   <td><EquipmentStateBadge state={eq.state} /></td>
-                  <td>{eq.location}</td>
-                  <td>{eq.note || '—'}</td>
+                  <td style={{ fontSize: '13.5px', color: '#334155' }}>{eq.location}</td>
+                  <td style={{ fontSize: '13px', color: '#475569', maxWidth: '280px', whiteSpace: 'normal' }}>{eq.note || '—'}</td>
                   <td>
                     {eq.state !== 'FAULTY' ? (
                       <button
                         type="button"
                         className="btn btn-sm btn-outline"
+                        style={{ fontSize: '12.5px', fontWeight: 600, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         onClick={() => { setSelectedEqId(eq.id); setFaultDescription(''); }}
                       >
-                        <TriangleAlert size={13} />Report Fault
+                        <TriangleAlert size={14} style={{ color: '#b91c1c' }} />Report Fault
                       </button>
                     ) : (
-                      <span className="tx-muted" style={{ fontSize: 11 }}>Fault Flagged</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b', background: '#fee2e2', padding: '3px 8px', borderRadius: '4px' }}>
+                        Fault Flagged
+                      </span>
                     )}
                   </td>
                 </tr>

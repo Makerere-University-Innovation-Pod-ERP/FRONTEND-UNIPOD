@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, LoaderCircle, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, LoaderCircle, Save } from 'lucide-react';
 import { formatUgx, nextRequestStep } from '@/lib/telecoms';
 import { formatDate } from '@/lib/presentation';
 import {
@@ -242,20 +242,58 @@ function RequestDetailView({ token, request, onUnauthorized }) {
           </section>
 
           {/* Audit History */}
-          <section className="live-panel">
-            <h3 className="tx-panel-title">Activity & State History</h3>
-            <ul className="live-activity-list">
+          <section className="live-panel telecoms-history-panel" style={{ marginTop: '20px' }}>
+            <h3 className="tx-panel-title" style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>
+              Activity & State History
+            </h3>
+            <div className="telecoms-history-list" style={{ display: 'grid', gap: '12px' }}>
               {request.history.map((entry, idx) => (
-                <li key={idx} className="live-activity-item">
-                  <span className="dot" />
-                  <div>
-                    <b>{entry.status}</b> · <small>{entry.by}</small>
-                    <time>{formatDateTime(entry.at)}</time>
-                    {entry.note && <p>{entry.note}</p>}
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '14px',
+                    padding: '14px 16px',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: '#176b52',
+                      marginTop: '5px',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#176b52', background: '#e4efe6', padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                          {entry.status}
+                        </span>
+                        <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
+                          by <strong style={{ color: '#0f172a' }}>{entry.by}</strong>
+                        </span>
+                      </div>
+                      <time style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: '#1e293b', background: '#ffffff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                        <Clock size={13} style={{ color: '#176b52' }} />
+                        {formatDateTime(entry.at)}
+                      </time>
+                    </div>
+                    {entry.note && (
+                      <p style={{ margin: '6px 0 0', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.55 }}>
+                        {entry.note}
+                      </p>
+                    )}
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </section>
         </div>
 

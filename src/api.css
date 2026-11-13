@@ -2522,3 +2522,288 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
     grid-template-columns: repeat(4, minmax(240px, 75vw));
   }
 }
+
+/* =====================================================================
+ * Telecoms Domain Theme & Typography Overhauls (Clear & High Contrast)
+ * ===================================================================== */
+.telecoms-theme {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-raised: #f1f5f9;
+  --surface-sunk: #e2e8f0;
+  --border: #cbd5e1;
+  --border-soft: #e2e8f0;
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --muted: #64748b;
+  --forest: #176b52;
+  --forest-dim: #11563f;
+  --forest-deep: #0b3426;
+  --forest-700: #0a2e22;
+  --green: #15803d;
+  --green-bg: #dcfce7;
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --blue: #1d4ed8;
+  --blue-bg: #dbeafe;
+  --rose: #b91c1c;
+  --rose-bg: #fee2e2;
+  font-family: var(--font-sans, 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif);
+}
+
+/* Page Spacing & Title */
+.telecoms-theme .live-content {
+  padding-top: 24px !important;
+  max-width: 1440px !important;
+}
+
+.telecoms-theme .live-page-heading {
+  margin-bottom: 24px !important;
+}
+
+.telecoms-theme .live-page-heading h1 {
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+}
+
+.telecoms-theme .live-page-heading p:not(.eyebrow) {
+  font-size: 14.5px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  max-width: 850px;
+}
+
+.telecoms-theme .live-page-heading .eyebrow {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: #176b52 !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Primary and Outline Buttons */
+.telecoms-theme .btn-primary,
+.telecoms-theme .topbar-action-btn {
+  background: #176b52 !important;
+  border-color: #176b52 !important;
+  color: #ffffff !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  padding: 8px 18px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(23, 107, 82, 0.2);
+  transition: all 0.18s ease-in-out !important;
+}
+
+.telecoms-theme .btn-primary:hover:not(:disabled),
+.telecoms-theme .topbar-action-btn:hover:not(:disabled) {
+  background: #11563f !important;
+  border-color: #11563f !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(23, 107, 82, 0.25);
+}
+
+.telecoms-theme .btn-outline {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+}
+
+.telecoms-theme .btn-outline:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* Tables (Equipment, Stock, Lending, Requests) */
+.telecoms-theme .live-table-wrap {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+.telecoms-theme .live-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.telecoms-theme .live-table th {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 14px 16px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  white-space: nowrap;
+}
+
+.telecoms-theme .live-table td {
+  padding: 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-size: 14px !important;
+  color: #1e293b !important;
+  line-height: 1.55 !important;
+  vertical-align: middle !important;
+}
+
+.telecoms-theme .live-table tbody tr:hover td {
+  background: #f8fafc !important;
+}
+
+.telecoms-theme .live-table td b {
+  color: #0f172a !important;
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+}
+
+.telecoms-theme .tx-mono b {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 13px !important;
+  background: #f1f5f9;
+  color: #0f172a !important;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Metric Summary Cards */
+.telecoms-theme .live-metric {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 20px 22px !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+.telecoms-theme .live-metric p {
+  color: #475569 !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+.telecoms-theme .live-metric strong {
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  line-height: 1.1 !important;
+}
+
+.telecoms-theme .live-metric small {
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  margin-top: 8px;
+  display: block;
+}
+
+/* Status Badges */
+.telecoms-theme .tx-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 12.5px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.telecoms-theme .tx-status.tx-positive {
+  background: #dcfce7 !important;
+  color: #14532d !important;
+  border: 1.5px solid #86efac !important;
+}
+.telecoms-theme .tx-status.tx-positive i { background: #16a34a !important; }
+
+.telecoms-theme .tx-status.tx-attention {
+  background: #fef3c7 !important;
+  color: #78350f !important;
+  border: 1.5px solid #fde68a !important;
+}
+.telecoms-theme .tx-status.tx-attention i { background: #d97706 !important; }
+
+.telecoms-theme .tx-status.tx-danger {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+  border: 1.5px solid #fca5a5 !important;
+}
+.telecoms-theme .tx-status.tx-danger i { background: #dc2626 !important; }
+
+.telecoms-theme .tx-status.tx-progress {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+  border: 1.5px solid #93c5fd !important;
+}
+.telecoms-theme .tx-status.tx-progress i { background: #2563eb !important; }
+
+.telecoms-theme .tx-status.tx-neutral {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+.telecoms-theme .tx-status.tx-neutral i { background: #64748b !important; }
+
+/* Panels and Form Fields */
+.telecoms-theme .live-panel {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+.telecoms-theme .tx-panel-title {
+  font-size: 19px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px !important;
+}
+
+.telecoms-theme .form-field label,
+.telecoms-theme .tx-form label {
+  color: #0f172a !important;
+  font-size: 13.5px !important;
+  font-weight: 750 !important;
+  margin-bottom: 7px !important;
+  display: block !important;
+}
+
+.telecoms-theme .form-field input,
+.telecoms-theme .form-field select,
+.telecoms-theme .form-field textarea,
+.telecoms-theme .tx-form input,
+.telecoms-theme .tx-form textarea {
+  width: 100% !important;
+  border: 1.5px solid #94a3b8 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  padding: 10px 14px !important;
+  color: #0f172a !important;
+  font-size: 14px !important;
+  min-height: 42px !important;
+}
+
+.telecoms-theme .form-field input:focus,
+.telecoms-theme .form-field select:focus,
+.telecoms-theme .form-field textarea:focus,
+.telecoms-theme .tx-form input:focus,
+.telecoms-theme .tx-form textarea:focus {
+  border-color: #176b52 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(23, 107, 82, 0.2) !important;
+}
