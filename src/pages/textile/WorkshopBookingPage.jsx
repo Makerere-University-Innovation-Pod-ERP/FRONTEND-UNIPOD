@@ -268,7 +268,7 @@ function AttendancePanel({ token, booking, onUnauthorized }) {
         {booking.attendees.map((attendee) => (
           <li key={attendee.id}>
             <label className="tx-check">
-              <input type="checkbox" checked={attendee.attended} disabled={setAttendance.isPending}
+              <input type="checkbox" checked={attendee.attended} disabled={notStarted || setAttendance.isPending}
                 onChange={(event) => setAttendance.mutateAsync({ bookingId: booking.id, attendeeId: attendee.id, attended: event.target.checked }).catch(() => {})} />
               <span>{attendee.name}</span>
             </label>
