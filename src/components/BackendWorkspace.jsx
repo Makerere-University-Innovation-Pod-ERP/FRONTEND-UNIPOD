@@ -9,8 +9,12 @@ import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS }
 import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isInnovationCoordinator, isReviewer } from '@/lib/permissions';
-import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
+import {
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';

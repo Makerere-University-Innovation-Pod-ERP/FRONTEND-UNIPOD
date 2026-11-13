@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { clearSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { COORDINATOR_ONLY_REASON, isFactFindingOfficer, isInnovationCoordinator, isReviewer } from '@/lib/permissions';
-import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
+import {
+  COORDINATOR_ONLY_REASON,
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -21,6 +25,7 @@ import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
+import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
 import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
@@ -102,7 +107,6 @@ function AuthenticatedApp({
           <Route path="/coordinator" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/coordinator/briefs/:id" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
-          <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />
           </>}
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />
