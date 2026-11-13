@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { textileApi } from './textile';
-import { ApiError } from './api-client';
+import { ApiError, request } from './api-client';
 import { makeMockToken } from '@/mocks/jwt';
 import { addDays, startOfWeek, todayIso } from '@/lib/textile';
 
@@ -81,6 +81,27 @@ describe('textile API contract', () => {
     expect((await rejection(textileApi.transition(token, quoted.id, 'SCHEDULED'))).status).toBe(409);
   });
 
+  it('lets the demo-only Finance stand-in confirm payment so the order can be scheduled', async () => {
+    const confirmed = await request('/__demo__/finance/confirm-payment', { token, body: { orderId: 'TXO-2026-015' } });
+    expect(confirmed.payment.status).toBe('CONFIRMED');
+    const scheduled = await textileApi.transition(token, 'TXO-2026-015', 'SCHEDULED');
+    expect(scheduled.status).toBe('SCHEDULED');
+  });
+
+  it('refuses a quote whose repeated material lines add up to more than the stock', async () => {
+    const order = await textileApi.createOrder(token, {
+      order: { customerName: 'Grace A', customerType: 'Student', whatIsWanted: 'Banners', quantity: '2', sizeDesign: '2 m', rulesAccepted: true, submit: true },
+    });
+    // 50 m + 50 m of cotton, but only 86 m in stock.
+    const error = await rejection(textileApi.sendQuote(token, order.id, {
+      materials: [{ itemId: 'stk-cotton', quantity: 50 }, { itemId: 'stk-cotton', quantity: 50 }],
+      priceListItemId: 'price-curtain',
+      priceQuantity: 1,
+      expectedCompletion: addDays(todayIso(), 7),
+    }));
+    expect(error.status).toBe(409);
+  });
+
   it('refuses a stock movement below zero and attributes accepted ones', async () => {
     const error = await rejection(textileApi.recordMovement(token, { itemId: 'stk-zips', type: 'USED_ON_ORDER', quantity: 1000, orderId: 'TXO-2026-014', note: '' }));
     expect(error.status).toBe(409);
@@ -103,6 +124,17 @@ describe('textile API contract', () => {
     const created = await textileApi.createBooking(token, booking);
     expect(created.bookedBy).toBe('Faith Nabwire');
     expect((await rejection(textileApi.createBooking(token, booking))).message).toMatch(/Clashes with/);
+  });
+
+  it('cancels a booking with a reason, which frees the slot', async () => {
+    const date = addDays(startOfWeek(todayIso()), 19); // a Saturday two weeks out
+    const booking = { kind: 'WORKSHOP', date, start: '13:00', end: '14:00', purpose: 'Sample run', machineId: null, capacity: null };
+    const created = await textileApi.createBooking(token, booking);
+    expect((await rejection(textileApi.cancelBooking(token, created.id, ' '))).status).toBe(400);
+    const cancelled = await textileApi.cancelBooking(token, created.id, 'Customer postponed');
+    expect(cancelled.status).toBe('CANCELLED');
+    expect((await rejection(textileApi.cancelBooking(token, created.id, 'Again'))).status).toBe(409);
+    expect((await textileApi.createBooking(token, booking)).status).toBe('APPROVED');
   });
 
   it('refuses a booking that clashes with the class timetable', async () => {

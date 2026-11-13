@@ -36,6 +36,11 @@ export function MachineListPage({ token, onUnauthorized }) {
                     <td className="tx-wrap">{machine.note || '—'}</td>
                     <td>{formatDate(machine.updatedAt)}</td>
                     <td className="tx-row-actions">
+                      {isMachineBookable(machine) && (
+                        <Link className="btn tx-ghost" to={`/textile/machines/report?machine=${encodeURIComponent(machine.id)}`}>
+                          <TriangleAlert size={13} />Report
+                        </Link>
+                      )}
                       {!isMachineBookable(machine) && confirming !== machine.id && (
                         <button type="button" className="btn" onClick={() => { setConfirming(machine.id); setNote(''); }}>
                           <Wrench size={13} />Mark working

@@ -731,6 +731,9 @@ td.tx-negative{color:var(--rose)}
 .tx-payment{display:grid;gap:6px}
 .tx-payment .tx-status{justify-self:start}
 .tx-payment p{margin:0;font-size:11px;line-height:1.55;color:var(--sidebar-muted)}
+.tx-demo-payment{display:grid;gap:5px;margin-top:10px;padding-top:10px;border-top:1px dashed currentColor;border-color:color-mix(in srgb,currentColor 25%,transparent)}
+.tx-demo-payment .btn{justify-self:start}
+.tx-demo-payment small{font-size:10px;opacity:.75}
 .tx-payment b{color:var(--sidebar-ink)}
 .tx-quote-card .api-error{margin:0}
 
@@ -811,6 +814,9 @@ button.partner-status{cursor:pointer}
 .tx-min{display:inline-flex;align-items:center;gap:6px}
 .tx-icon-sm{width:26px;height:26px}
 .tx-min-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tx-stock-filters{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.tx-stock-filters input[type=search]{flex:1 1 220px;min-width:0;height:36px;padding:0 11px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--surface);color:var(--ink);font:12px var(--font-sans)}
+.tx-stock-filters input[type=search]:focus{outline:2px solid var(--forest);outline-offset:1px}
 .tx-min-form input{width:120px;border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;font-size:11px;background:var(--surface);color:var(--ink)}
 .tx-min-form .btn{min-height:30px;padding:0 10px}
 .tx-row-actions{text-align:right}
@@ -835,6 +841,11 @@ button.partner-status{cursor:pointer}
 .tx-slot b{font-size:11px;color:var(--ink)}
 .tx-slot small{font-size:10px;color:var(--muted)}
 .tx-slot.class{background:var(--surface-raised)}
+.tx-slot.cancelled{opacity:.6;border-style:dashed}
+.tx-photo-thumb{display:block;width:72px;height:72px;object-fit:cover;border-radius:var(--r-xs);border:1px solid var(--border-soft)}
+.tx-drop .tx-photo-thumb{width:96px;height:96px}
+.tx-photo-link{display:inline-flex;align-items:center;gap:9px;color:inherit}
+.tx-slot.cancelled b{text-decoration:line-through}
 .tx-slot.free{border-style:dashed}
 button.tx-slot{cursor:pointer}
 button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
