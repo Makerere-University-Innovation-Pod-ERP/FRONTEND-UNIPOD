@@ -10,7 +10,6 @@ import {
   CircleDashed,
   CircleSlash,
   LoaderCircle,
-  Lock,
   RotateCw,
   Save,
 } from 'lucide-react';
@@ -134,6 +133,11 @@ export function CoordinatorDecisionPage({ token, onUnauthorized }) {
 
 function DecisionView({ token, id, view, preselected }) {
   const { brief, reviews, canRecordDecision, lockedReason } = view;
+  // Lifted above DecisionForm: once the mutation succeeds, `view.brief`
+  // refetches with `outcome` set, which swaps this component straight to
+  // the `brief.outcome` branch below — DecisionForm's own local state would
+  // never get a chance to render its "just saved" variant first.
+  const [justSaved, setJustSaved] = useState(false);
 
   return (
     <>
@@ -203,7 +207,7 @@ function DecisionView({ token, id, view, preselected }) {
       </section>
 
       {brief.outcome ? (
-        <RecordedOutcome brief={brief} />
+        <RecordedOutcome brief={brief} justSaved={justSaved} />
       ) : (
         <DecisionForm
           token={token}
@@ -212,15 +216,15 @@ function DecisionView({ token, id, view, preselected }) {
           canRecordDecision={canRecordDecision}
           lockedReason={lockedReason}
           preselected={preselected}
+          onSaved={() => setJustSaved(true)}
         />
       )}
     </>
   );
 }
 
-function DecisionForm({ token, id, brief, canRecordDecision, lockedReason, preselected }) {
+function DecisionForm({ token, id, brief, canRecordDecision, lockedReason, preselected, onSaved }) {
   const recordDecision = useRecordDecision(token, id);
-  const [saved, setSaved] = useState(null);
 
   const {
     register,
@@ -241,13 +245,11 @@ function DecisionForm({ token, id, brief, canRecordDecision, lockedReason, prese
   const onSubmit = (values) =>
     recordDecision
       .mutateAsync({ outcome: values.outcome, reason: values.reason })
-      .then((updated) => setSaved(updated))
+      .then(() => onSaved())
       .catch(() => {
         // Surfaced through recordDecision.error below; the form keeps its
         // values so the coordinator can correct and resubmit.
       });
-
-  if (saved) return <RecordedOutcome brief={saved} justSaved />;
 
   return (
     <form className="live-panel" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -257,13 +259,6 @@ function DecisionForm({ token, id, brief, canRecordDecision, lockedReason, prese
           <h2>Coordinator decision</h2>
         </div>
       </div>
-
-      {!canRecordDecision && (
-        <p className="coordinator-locked-reason" role="note">
-          <Lock size={14} aria-hidden="true" />
-          {lockedReason}
-        </p>
-      )}
 
       <fieldset
         className="coordinator-fieldset"

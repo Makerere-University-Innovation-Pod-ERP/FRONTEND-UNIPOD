@@ -12,12 +12,22 @@
  * no-overwrite rule and the full decide -> write-request loop all run there.
  * What remains unverified here is the rendering and the form wiring.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CoordinatorChangesPage } from './CoordinatorChangesPage';
+import { coordinatorBriefs } from '@/mocks/fixtures/coordinator';
+
+// If the fake-timers test below fails before reaching its own
+// `vi.useRealTimers()` call, every test after it in this file would run
+// under frozen timers — breaking Testing Library's `findBy*` polling and
+// causing unrelated tests to time out. Guarantee real timers regardless of
+// how that one test ends.
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function renderChanges(id = 'IH-26029') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -59,11 +69,15 @@ describe('CoordinatorChangesPage — recorded request', () => {
   });
 
   it('shows the deadline with an overdue indicator', async () => {
-    vi.useFakeTimers();
+    // `shouldAdvanceTime` lets real wall-clock time keep driving async
+    // polling (Testing Library's `findBy*`/`waitFor`) while `Date`/`now()`
+    // still report the pinned system time — plain `useFakeTimers()` freezes
+    // timers outright and `findByText` below would hang until this test's
+    // own timeout, never actually failing on the real assertion.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 10, 13));
     renderChanges();
     expect(await screen.findByText('Overdue by 14 days')).toBeInTheDocument();
-    vi.useRealTimers();
   });
 
   it('does not offer the form when a request already exists', async () => {
@@ -76,12 +90,15 @@ describe('CoordinatorChangesPage — recorded request', () => {
 
   it('offers all three actions', async () => {
     renderChanges();
+    // "Back to Ideas Being Improved" lives in the page header and renders
+    // immediately; the other two are inside the brief panel, which is still
+    // behind its own loading state at this point — wait for each.
     expect(
       await screen.findByRole('link', { name: /back to ideas being improved/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /view submission/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /view submission/i })).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /record the improved version/i }),
+      await screen.findByRole('link', { name: /record the improved version/i }),
     ).toBeInTheDocument();
   });
 });
@@ -113,6 +130,19 @@ describe('CoordinatorChangesPage — blocked', () => {
 });
 
 describe('CoordinatorChangesPage — writing a request', () => {
+  // Every test in this block decides IH-26028 for real (a genuine POST
+  // against the mock handler, which mutates the shared, module-level
+  // `coordinatorBriefs` fixture in place). Snapshot and restore it around
+  // each test so they don't see each other's decisions — the handler
+  // refuses to re-decide a brief that's already been decided.
+  const pristineBrief = structuredClone(coordinatorBriefs['IH-26028']);
+  beforeEach(() => {
+    coordinatorBriefs['IH-26028'] = structuredClone(pristineBrief);
+  });
+  afterEach(() => {
+    coordinatorBriefs['IH-26028'] = structuredClone(pristineBrief);
+  });
+
   /** IH-26028 is under review; deciding it into refinement opens the form. */
   async function openForm() {
     const { coordinatorApi } = await import('@/services/coordinator');
