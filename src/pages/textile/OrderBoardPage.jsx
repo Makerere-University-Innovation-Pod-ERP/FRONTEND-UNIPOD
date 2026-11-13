@@ -51,6 +51,8 @@ export function OrderBoardPage({ token, onUnauthorized }) {
                   <b>{order.whatIsWanted}</b>
                   <small className="tx-mono">{order.code}</small>
                   <small>{order.customerName} · {order.customerType}</small>
+                  {order.dateNeeded && <small>Needed {formatDate(order.dateNeeded)}</small>}
+                  <DeadlineTags order={order} today={today} />
                   {column.id === 'new' && order.status !== 'NEW' && (
                     <span className="tx-card-tags">
                       {order.status === 'QUOTED' ? <PaymentStatus status={order.payment.status} /> : <OrderStatus status={order.status} />}
