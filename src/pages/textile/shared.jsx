@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CircleAlert, ImageUp, LoaderCircle, X } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
