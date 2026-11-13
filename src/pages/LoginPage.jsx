@@ -29,8 +29,8 @@ export function LoginPage({ onLogin, onCreateAccount }) {
       <section className="login-panel">
         <div className="login-card">
           <div className="login-brand">
-            <img src="/mak-crest.png" alt="Makerere University" className="brand-crest" />
-            <div><b>MUTIC ERP</b><small>Makerere University</small></div>
+            <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
+            <div><b>MUTIC ERP</b><small>Makerere Innovation Center</small></div>
           </div>
           <p className="eyebrow">PROJECT & IDEAS MANAGEMENT</p>
           <h1>Welcome back.</h1>

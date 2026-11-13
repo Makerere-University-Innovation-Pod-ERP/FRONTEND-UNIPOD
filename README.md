@@ -13,6 +13,23 @@ npm install
 npm run dev
 ```
 
+### Mock testing logins
+
+The local mock API is disabled by default. To use the test accounts, set
+`VITE_ENABLE_MOCKS=true` in `.env.local`, then start or restart the dev server.
+Use any non-empty password for these mock-only accounts:
+
+| Email | Role |
+| --- | --- |
+| `admin@unipod.test` | Administrator |
+| `factfinding@unipod.test` | Fact-finding officer |
+| `reviewer@unipod.test` | Reviewer |
+
+These accounts work only with the local mock API; they are not provisioned on
+the deployed backend. The admin account is for testing role-gated UI; some
+administrator management actions require backend endpoints and may not work
+with mock data. For live testing, use credentials supplied by an administrator.
+
 By default, both local development and production builds call
 `https://backend-unipod.onrender.com/api` directly. The backend must allow the
 frontend's exact browser origin in `CORS_ALLOWED_ORIGINS`. Override the API

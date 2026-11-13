@@ -241,8 +241,8 @@ export function BackendWorkspace({
               </>
             ) : (
               <>
-                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-                <span><b>UNIPOD ERP</b><small style={{ color: '#9db2a2' }}>Innovation & Operations</small></span>
+                <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
+                <span><b>MUTIC ERP</b><small>Makerere Innovation Center</small></span>
               </>
             )}
           </Link>

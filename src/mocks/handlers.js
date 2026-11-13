@@ -17,6 +17,7 @@ import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtu
 import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
+  'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
   ...coordinatorMockUsers,

@@ -15,7 +15,7 @@ import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
-import { AdminManagementPage } from '@/pages/AdminManagementPage';
+import { AdminManagementPage } from '@/pages/admin/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
