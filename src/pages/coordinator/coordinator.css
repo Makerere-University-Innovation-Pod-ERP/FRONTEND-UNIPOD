@@ -804,6 +804,79 @@
   gap: var(--mak-space-3);
 }
 
+/* ---- Ask for changes (page 4) ---------------------------------------- */
+
+.coordinator-request-byline {
+  margin: 0 0 var(--mak-space-4);
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-change-list {
+  display: grid;
+  gap: var(--mak-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coordinator-change-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mak-space-3);
+  padding: var(--mak-space-3) var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: var(--mak-text-sm);
+  line-height: 1.5;
+}
+
+.coordinator-change-list svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--green);
+}
+
+.coordinator-deadline-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--mak-space-4);
+}
+
+.coordinator-add-change {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mak-space-2);
+  margin-top: var(--mak-space-3);
+}
+
+.coordinator-add-change input {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--mak-text-sm);
+}
+
+.coordinator-add-change .btn {
+  min-height: 44px;
+  padding: 0 var(--mak-space-4);
+}
+
+.coordinator-remove-change {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
 /* ---- Focus + responsive ---------------------------------------------- */
 
 .coordinator-filter:focus-visible,
@@ -815,6 +888,8 @@
 .coordinator-icon-button:focus-visible,
 .coordinator-queue-row:focus-visible,
 .coordinator-search-clear:focus-visible,
+.coordinator-add-change input:focus-visible,
+.coordinator-add-change .btn:focus-visible,
 .coordinator-improvement-side .btn:focus-visible,
 .coordinator-empty-block .btn:focus-visible,
 .coordinator-next-step-actions .btn:focus-visible,

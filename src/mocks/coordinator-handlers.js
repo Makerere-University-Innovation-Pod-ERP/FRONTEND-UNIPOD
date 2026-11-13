@@ -6,6 +6,7 @@ import {
   projectCodeSequence,
   reviewComments,
   reviewerPool,
+  suggestedChanges,
 } from './fixtures/coordinator';
 import { areReviewsComplete, decisionLockedReason, findOutcome, projectCodePrefix } from '@/lib/case-status';
 
@@ -15,6 +16,25 @@ import { areReviewsComplete, decisionLockedReason, findOutcome, projectCodePrefi
  * spread, and so this role's mocks can move to the real backend
  * independently of the other roles'.
  */
+
+/**
+ * Recorded reviews with their written comments. Shared by the decision screen
+ * and the ask-for-changes screen; the plain brief endpoint never calls it, so
+ * comments stay off page 1.
+ */
+const reviewsFor = (brief) =>
+  brief.reviewPanel.assignments.map((assignment) => {
+    const recorded = reviewComments[`${brief.id}:${assignment.reviewerId}`] ?? null;
+    return {
+      reviewerId: assignment.reviewerId,
+      reviewerName: assignment.reviewerName,
+      step: assignment.step,
+      of: assignment.of,
+      decisionStatus: assignment.decisionStatus,
+      comment: recorded?.comment ?? null,
+      decidedAt: recorded?.decidedAt ?? null,
+    };
+  });
 
 export const coordinatorMockUsers = {
   'coordinator@unipod.test': {
@@ -105,37 +125,111 @@ export const coordinatorHandlers = [
    */
   http.get(`${API_BASE_URL}/coordinator/improvements`, () => {
     const items = Object.values(coordinatorBriefs)
-      .filter((brief) => brief.stage === 'REFINEMENT_REQUESTED' && brief.refinement)
+      // A brief enters refinement the moment the coordinator decides "Needs
+      // more improvement"; the request itself is written afterwards on page 4.
+      // Both states belong in this queue, so a brief awaiting its request is
+      // not lost — its dates are simply null until it is written.
+      .filter((brief) => brief.stage === 'REFINEMENT_REQUESTED')
       .map((brief) => ({
         id: brief.id,
         code: brief.code,
         title: brief.title,
         submitterName: brief.submitterName,
-        requestedAt: brief.refinement.requestedAt,
-        dueDate: brief.refinement.dueDate,
+        requestedAt: brief.refinement?.requestedAt ?? null,
+        dueDate: brief.refinement?.dueDate ?? null,
         versions: brief.versions,
         stage: brief.stage,
       }))
-      .sort((a, b) => String(a.dueDate ?? '').localeCompare(String(b.dueDate ?? '')));
+      // Soonest deadline first; cases with no deadline yet sort to the top,
+      // since writing the request is the outstanding action.
+      .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
     return HttpResponse.json({ items });
+  }),
+
+  http.get(`${API_BASE_URL}/coordinator/briefs/:id/changes`, ({ params }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    const inRefinement = brief.stage === 'REFINEMENT_REQUESTED';
+    return HttpResponse.json({
+      brief,
+      reviews: reviewsFor(brief),
+      refinement: brief.refinement ?? null,
+      suggestedChanges,
+      canRequestChanges: inRefinement && !brief.refinement,
+      blockedReason: inRefinement
+        ? null
+        : `Changes can only be requested once the brief is awaiting improvement (currently ${brief.stage
+            .replaceAll('_', ' ')
+            .toLowerCase()}).`,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/coordinator/briefs/:id/changes`, async ({ params, request }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    // A written request is never silently replaced — the applicant may already
+    // be working to it.
+    if (brief.refinement) {
+      return HttpResponse.json(
+        { detail: 'An improvement request has already been written for this brief.' },
+        { status: 409 },
+      );
+    }
+    if (brief.stage !== 'REFINEMENT_REQUESTED') {
+      return HttpResponse.json(
+        { detail: 'This brief is not awaiting improvement.' },
+        { status: 409 },
+      );
+    }
+
+    const body = await request.json();
+    const changes = Array.isArray(body.changes)
+      ? body.changes.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    const guidance = typeof body.guidance === 'string' ? body.guidance.trim() : '';
+    const dueDate = typeof body.dueDate === 'string' ? body.dueDate : '';
+
+    if (!changes.length) {
+      return HttpResponse.json({ detail: 'List at least one change.' }, { status: 400 });
+    }
+    if (guidance.length < 10) {
+      return HttpResponse.json(
+        { detail: 'Write instructions for the applicant.' },
+        { status: 400 },
+      );
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+      return HttpResponse.json({ detail: 'Set a due date.' }, { status: 400 });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    brief.refinement = {
+      requestedAt: today,
+      dueDate,
+      requestedBy: 'Sarah Kintu',
+      changes,
+      guidance,
+      status: 'open',
+    };
+    brief.updatedAt = today;
+
+    return HttpResponse.json({
+      brief,
+      reviews: reviewsFor(brief),
+      refinement: brief.refinement,
+      suggestedChanges,
+      canRequestChanges: false,
+      blockedReason: null,
+    });
   }),
 
   http.get(`${API_BASE_URL}/coordinator/briefs/:id/decision`, ({ params }) => {
     const brief = coordinatorBriefs[params.id];
     if (!brief) return new HttpResponse(null, { status: 404 });
 
-    const reviews = brief.reviewPanel.assignments.map((assignment) => {
-      const recorded = reviewComments[`${brief.id}:${assignment.reviewerId}`] ?? null;
-      return {
-        reviewerId: assignment.reviewerId,
-        reviewerName: assignment.reviewerName,
-        step: assignment.step,
-        of: assignment.of,
-        decisionStatus: assignment.decisionStatus,
-        comment: recorded?.comment ?? null,
-        decidedAt: recorded?.decidedAt ?? null,
-      };
-    });
+    const reviews = reviewsFor(brief);
 
     const complete = areReviewsComplete(brief.reviewPanel);
     const decidable = brief.stage === 'UNDER_REVIEW' && complete;

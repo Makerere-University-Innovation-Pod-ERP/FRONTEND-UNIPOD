@@ -144,6 +144,14 @@ export const coordinatorBriefs = {
       requestedAt: '2026-10-16',
       dueDate: '2026-10-30',
       requestedBy: 'Sarah Kintu',
+      changes: [
+        'Clarify the intended user group',
+        'Attach supporting evidence',
+        'Add a short implementation timeline',
+      ],
+      guidance:
+        'Good direction. Please strengthen the brief with the items above before resubmission. In particular, say which health teams this is for and how the follow-up register avoids duplicating the one already in use.',
+      status: 'open',
     },
     reviewPanel: {
       mode: 'parallel',
@@ -189,6 +197,13 @@ export const coordinatorBriefs = {
       requestedAt: '2026-11-09',
       dueDate: '2026-11-20',
       requestedBy: 'Sarah Kintu',
+      changes: [
+        'Say who records and checks the audio summaries',
+        'Explain how the idea will be evaluated',
+      ],
+      guidance:
+        'The idea is worth pursuing. Before it goes back to review, set out who produces the recordings, how their accuracy is checked, and how you will know whether students actually find them useful.',
+      status: 'open',
     },
     reviewPanel: {
       mode: 'parallel',
@@ -205,6 +220,44 @@ export const coordinatorBriefs = {
           decisionStatus: 'changes_needed',
           assignedAt: '2026-11-02',
           dueDate: '2026-11-09',
+        },
+      ],
+    },
+  },
+  // Reviews complete and still under review: the brief used to walk the whole
+  // improvement loop (decide "needs more improvement" -> write the request).
+  'IH-26028': {
+    id: 'IH-26028',
+    code: null,
+    title: 'Accessible Market Price Bulletin',
+    category: 'general',
+    stage: 'UNDER_REVIEW',
+    summary: 'A plain-language price bulletin for traders who cannot rely on a daily newspaper.',
+    purpose: 'Support more informed selling decisions.',
+    problemAddressed: 'Price updates are often delayed or inaccessible.',
+    responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Juliet Nakayima',
+    assignedSector: 'Research & Innovation',
+    documentCount: 1,
+    versions: 1,
+    submittedAt: '2026-09-27',
+    updatedAt: '2026-11-06',
+    outcome: null,
+    reviewPanel: {
+      mode: 'parallel',
+      requiredReviews: 1,
+      completedReviews: 1,
+      dueDate: '2026-11-06',
+      assignments: [
+        {
+          reviewerId: 'rev-2',
+          reviewerName: 'Peter Okello',
+          mode: 'parallel',
+          step: 1,
+          of: 1,
+          decisionStatus: 'changes_needed',
+          assignedAt: '2026-10-30',
+          dueDate: '2026-11-06',
         },
       ],
     },
@@ -319,6 +372,11 @@ export const reviewComments = {
       'Agreed. The archival format choice is sensible and the storage costs are accounted for.',
     decidedAt: '2026-10-13',
   },
+  'IH-26028:rev-2': {
+    comment:
+      'The need is real but the brief does not say where the prices come from or how often they are refreshed. Without a source it cannot be assessed.',
+    decidedAt: '2026-11-06',
+  },
   'IH-26027:rev-5': {
     comment:
       'The idea is sound but the brief does not say who records the summaries or how quality is checked. Please set that out before this goes any further.',
@@ -332,6 +390,18 @@ export const reviewComments = {
  * newly confirmed brief does not collide with one of them.
  */
 export const projectCodeSequence = { 'STU-2026': 7, 'GEN-2026': 1 };
+
+/**
+ * Starting checklist offered on the ask-for-changes form (page 4), taken from
+ * the Figma Refinement Workspace frame. They are suggestions the coordinator
+ * can tick, not a fixed list — custom items can be added alongside them.
+ */
+export const suggestedChanges = [
+  'Clarify the intended user group',
+  'Attach supporting evidence',
+  'Add a short implementation timeline',
+  'Explain how the idea will be evaluated',
+];
 
 const pendingActionFor = (brief) => {
   switch (brief.stage) {

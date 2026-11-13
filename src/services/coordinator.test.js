@@ -74,6 +74,139 @@ describe('ideas being improved', () => {
   });
 });
 
+describe('ask for changes', () => {
+  it('returns the written request with its changes, instructions and deadline', async () => {
+    const view = await coordinatorApi.changesView(token, 'IH-26029');
+    expect(view.refinement).toMatchObject({
+      requestedBy: 'Sarah Kintu',
+      requestedAt: '2026-10-16',
+      dueDate: '2026-10-30',
+      status: 'open',
+    });
+    expect(view.refinement.changes).toContain('Clarify the intended user group');
+    expect(view.refinement.guidance).toContain('before resubmission');
+    expect(view.canRequestChanges).toBe(false);
+  });
+
+  it('carries the review feedback alongside the request', async () => {
+    const view = await coordinatorApi.changesView(token, 'IH-26029');
+    expect(view.reviews).toHaveLength(1);
+    expect(view.reviews[0]).toMatchObject({
+      reviewerName: 'Dr. Miriam Nsubuga',
+      decisionStatus: 'changes_needed',
+    });
+    expect(view.reviews[0].comment).toContain('duplicates the existing register');
+  });
+
+  it('offers the suggested checklist from the design', async () => {
+    const view = await coordinatorApi.changesView(token, 'IH-26029');
+    expect(view.suggestedChanges).toContain('Explain how the idea will be evaluated');
+  });
+
+  it('blocks writing a request on a brief that is not awaiting improvement', async () => {
+    const view = await coordinatorApi.changesView(token, 'IH-26031');
+    expect(view.refinement).toBeNull();
+    expect(view.canRequestChanges).toBe(false);
+    expect(view.blockedReason).toContain('once the brief is awaiting improvement');
+
+    await expect(
+      coordinatorApi.saveChangeRequest(token, 'IH-26031', {
+        changes: ['Something'],
+        guidance: 'Please improve this brief.',
+        dueDate: '2026-12-01',
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('refuses to overwrite a request already written', async () => {
+    await expect(
+      coordinatorApi.saveChangeRequest(token, 'IH-26029', {
+        changes: ['Something else'],
+        guidance: 'A different instruction entirely.',
+        dueDate: '2026-12-01',
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('404s on an unknown brief', async () => {
+    await expect(coordinatorApi.changesView(token, 'IH-00000')).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});
+
+describe('writing a change request', () => {
+  /**
+   * Drives the whole loop on a brief that starts under review: decide "needs
+   * more improvement", which moves it into refinement with no request, then
+   * write the request. Uses IH-26028, which exists for exactly this flow so
+   * the mutation does not disturb the decision tests below.
+   */
+  it('validates and then records the request, leaving reviews untouched', async () => {
+    await coordinatorApi.recordDecision(token, 'IH-26028', {
+      outcome: 'needs_improvement',
+      reason: '',
+    });
+
+    const before = await coordinatorApi.changesView(token, 'IH-26028');
+    expect(before.brief.stage).toBe('REFINEMENT_REQUESTED');
+    expect(before.refinement).toBeNull();
+    expect(before.canRequestChanges).toBe(true);
+
+    // It appears in the improvement queue immediately, with no dates yet.
+    const queued = await coordinatorApi.improvements(token);
+    expect(queued.find((item) => item.id === 'IH-26028')).toMatchObject({
+      requestedAt: null,
+      dueDate: null,
+    });
+
+    await expect(
+      coordinatorApi.saveChangeRequest(token, 'IH-26028', {
+        changes: [],
+        guidance: 'Please narrow the scope to one site.',
+        dueDate: '2026-12-01',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    await expect(
+      coordinatorApi.saveChangeRequest(token, 'IH-26028', {
+        changes: ['Narrow the scope to one site'],
+        guidance: 'too short',
+        dueDate: '2026-12-01',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    await expect(
+      coordinatorApi.saveChangeRequest(token, 'IH-26028', {
+        changes: ['Narrow the scope to one site'],
+        guidance: 'Please narrow the scope to one site and prove the alert works there first.',
+        dueDate: '',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    const saved = await coordinatorApi.saveChangeRequest(token, 'IH-26028', {
+      changes: ['Narrow the scope to one site', 'Cite a recognised water-quality standard'],
+      guidance: 'Please narrow the scope to one site and prove the alert works there first.',
+      dueDate: '2026-12-01',
+    });
+
+    expect(saved.refinement).toMatchObject({
+      dueDate: '2026-12-01',
+      requestedBy: 'Sarah Kintu',
+      status: 'open',
+    });
+    expect(saved.refinement.changes).toHaveLength(2);
+    expect(saved.canRequestChanges).toBe(false);
+    expect(saved.reviews).toEqual(before.reviews);
+    expect(saved.brief.versions).toBe(before.brief.versions);
+
+    const afterQueue = await coordinatorApi.improvements(token);
+    expect(afterQueue.find((item) => item.id === 'IH-26028')).toMatchObject({
+      dueDate: '2026-12-01',
+    });
+  });
+});
+
 describe('decision view', () => {
   it('summarises every reviewer choice with its written comment', async () => {
     const view = await coordinatorApi.decisionView(token, 'IH-26024');

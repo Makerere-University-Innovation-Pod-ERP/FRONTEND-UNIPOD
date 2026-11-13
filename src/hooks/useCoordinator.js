@@ -7,7 +7,29 @@ export const coordinatorKeys = {
   reviewerPool: (token) => ['coordinator', 'reviewer-pool', token],
   decision: (token, id) => ['coordinator', 'decision', token, id],
   improvements: (token) => ['coordinator', 'improvements', token],
+  changes: (token, id) => ['coordinator', 'changes', token, id],
 };
+
+export function useChangesView(token, id) {
+  return useQuery({
+    queryKey: coordinatorKeys.changes(token, id),
+    queryFn: ({ signal }) => coordinatorApi.changesView(token, id, signal),
+    enabled: Boolean(token && id),
+  });
+}
+
+export function useSaveChangeRequest(token, id) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => coordinatorApi.saveChangeRequest(token, id, body),
+    onSuccess: (view) => {
+      queryClient.setQueryData(coordinatorKeys.changes(token, id), view);
+      void queryClient.invalidateQueries({ queryKey: coordinatorKeys.improvements(token) });
+      void queryClient.invalidateQueries({ queryKey: coordinatorKeys.brief(token, id) });
+      void queryClient.invalidateQueries({ queryKey: coordinatorKeys.briefs(token) });
+    },
+  });
+}
 
 export function useImprovementQueue(token) {
   return useQuery({

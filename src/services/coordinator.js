@@ -61,6 +61,11 @@ export const refinementRequestSchema = z.object({
   requestedAt: z.string(),
   dueDate: z.string().nullable(),
   requestedBy: z.string().nullable(),
+  /** The specific changes asked for, in the order the coordinator listed them. */
+  changes: z.array(z.string()).default([]),
+  /** The coordinator's written instructions to the applicant. */
+  guidance: z.string().nullable().default(null),
+  status: z.enum(['open', 'resolved']).default('open'),
 });
 
 export const coordinatorBriefSchema = z.object({
@@ -119,7 +124,8 @@ export const improvementCaseSchema = z.object({
   code: z.string().nullable(),
   title: z.string(),
   submitterName: z.string().nullable(),
-  requestedAt: z.string(),
+  /** Null while the brief is in refinement but the request is not yet written. */
+  requestedAt: z.string().nullable(),
   dueDate: z.string().nullable(),
   versions: z.number().int().min(1),
   stage: stageSchema,
@@ -127,6 +133,20 @@ export const improvementCaseSchema = z.object({
 
 export const improvementListSchema = z.object({
   items: z.array(improvementCaseSchema),
+});
+
+/**
+ * Everything the ask-for-changes screen (page 4) needs: the brief, what the
+ * reviewers said, the refinement request if one has been written, and the
+ * suggested changes offered as a starting checklist.
+ */
+export const changesViewSchema = z.object({
+  brief: coordinatorBriefSchema,
+  reviews: z.array(reviewerDecisionSchema),
+  refinement: refinementRequestSchema.nullable(),
+  suggestedChanges: z.array(z.string()),
+  canRequestChanges: z.boolean(),
+  blockedReason: z.string().nullable(),
 });
 
 export const reviewerOptionSchema = z.object({
@@ -167,6 +187,22 @@ export const coordinatorApi = {
   improvements: async (token, signal) => {
     const payload = await request('/coordinator/improvements', { token, signal });
     return improvementListSchema.parse(payload).items;
+  },
+  changesView: async (token, id, signal) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/changes`, {
+      token,
+      signal,
+    });
+    return changesViewSchema.parse(payload);
+  },
+  /** body: { changes: string[], guidance: string, dueDate: string } */
+  saveChangeRequest: async (token, id, body) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/changes`, {
+      token,
+      body,
+      method: 'POST',
+    });
+    return changesViewSchema.parse(payload);
   },
   decisionView: async (token, id, signal) => {
     const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/decision`, {
