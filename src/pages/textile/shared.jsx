@@ -46,6 +46,18 @@ export function MachineState({ state }) {
   return <StatusDot tone={MACHINE_TONE[state] ?? 'neutral'}>{MACHINE_STATE_LABELS[state] ?? state}</StatusDot>;
 }
 
+/** A stored photo: the image when the server gives a URL, otherwise just its file name. */
+export function PhotoView({ photo }) {
+  if (!photo) return 'None';
+  if (!photo.url) return photo.name;
+  return (
+    <a className="tx-photo-link" href={photo.url} target="_blank" rel="noreferrer">
+      <img className="tx-photo-thumb" src={photo.url} alt={photo.name} />
+      <span>{photo.name}</span>
+    </a>
+  );
+}
+
 /**
  * Drop zone / file picker for an optional reference photo. `existingName`
  * shows a photo already stored on the server (e.g. when resuming a draft).
