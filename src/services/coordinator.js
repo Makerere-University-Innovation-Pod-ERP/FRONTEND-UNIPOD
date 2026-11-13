@@ -118,6 +118,45 @@ export const decisionViewSchema = z.object({
   lockedReason: z.string().nullable(),
 });
 
+/** One submitted version of a brief. Versions are appended, never replaced. */
+export const briefVersionSchema = z.object({
+  version: z.number().int().min(1),
+  submittedAt: z.string(),
+  submittedBy: z.string().nullable(),
+  /** What changed in this version, as recorded when it was received. */
+  summaryOfChanges: z.string().nullable(),
+  /** Which of the requested changes this version addresses. */
+  addressedChanges: z.array(z.string()).default([]),
+  title: z.string(),
+  summary: z.string(),
+  purpose: z.string(),
+  problemAddressed: z.string(),
+  documents: z.array(z.string()).default([]),
+});
+
+/**
+ * A completed round of review, archived against the version it judged. Kept
+ * forever: a new version starts a new round rather than resetting this one.
+ */
+export const reviewRoundSchema = z.object({
+  round: z.number().int().min(1),
+  version: z.number().int().min(1),
+  mode: reviewModeSchema,
+  requiredReviews: z.number().int().min(0),
+  completedReviews: z.number().int().min(0),
+  closedAt: z.string(),
+  reviews: z.array(reviewerDecisionSchema),
+});
+
+export const versionsViewSchema = z.object({
+  brief: coordinatorBriefSchema,
+  versions: z.array(briefVersionSchema),
+  rounds: z.array(reviewRoundSchema),
+  refinement: refinementRequestSchema.nullable(),
+  canRecordVersion: z.boolean(),
+  blockedReason: z.string().nullable(),
+});
+
 /** One row of the "Ideas being improved" queue (page 3). Read-only. */
 export const improvementCaseSchema = z.object({
   id: z.string(),
@@ -187,6 +226,27 @@ export const coordinatorApi = {
   improvements: async (token, signal) => {
     const payload = await request('/coordinator/improvements', { token, signal });
     return improvementListSchema.parse(payload).items;
+  },
+  versionsView: async (token, id, signal) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/versions`, {
+      token,
+      signal,
+    });
+    return versionsViewSchema.parse(payload);
+  },
+  /**
+   * body: { summaryOfChanges, addressedChanges: string[], revisedSummary?,
+   *         resolvesRequest: boolean }
+   * Appends a version, archives the current review round against the previous
+   * version, and returns the brief to UNDER_REVIEW with an empty panel.
+   */
+  recordVersion: async (token, id, body) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/versions`, {
+      token,
+      body,
+      method: 'POST',
+    });
+    return versionsViewSchema.parse(payload);
   },
   changesView: async (token, id, signal) => {
     const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/changes`, {

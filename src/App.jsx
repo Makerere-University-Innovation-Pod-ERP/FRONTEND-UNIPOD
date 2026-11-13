@@ -28,6 +28,7 @@ import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
 import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
 import { CoordinatorImprovementsPage } from '@/pages/coordinator/CoordinatorImprovementsPage';
 import { CoordinatorChangesPage } from '@/pages/coordinator/CoordinatorChangesPage';
+import { CoordinatorVersionsPage } from '@/pages/coordinator/CoordinatorVersionsPage';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
 import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
@@ -111,6 +112,7 @@ function AuthenticatedApp({
           <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/coordinator/improvements" element={canCoordinate ? <CoordinatorImprovementsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/coordinator/briefs/:id/changes" element={canCoordinate ? <CoordinatorChangesPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/versions" element={canCoordinate ? <CoordinatorVersionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           </>}
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />

@@ -207,6 +207,133 @@ describe('writing a change request', () => {
   });
 });
 
+describe('version history', () => {
+  it('returns every version oldest first, with what changed', async () => {
+    const view = await coordinatorApi.versionsView(token, 'IH-26029');
+    expect(view.versions.map((item) => item.version)).toEqual([1, 2]);
+    expect(view.versions[0].summaryOfChanges).toBeNull();
+    expect(view.versions[1].summaryOfChanges).toContain('two health centres');
+    expect(view.versions[1].addressedChanges).toContain('Clarify the intended user group');
+  });
+
+  it('gives the two versions genuinely different content to compare', async () => {
+    const [v1, v2] = (await coordinatorApi.versionsView(token, 'IH-26029')).versions;
+    expect(v1.summary).not.toBe(v2.summary);
+    expect(v1.problemAddressed).not.toBe(v2.problemAddressed);
+    expect(v1.purpose).toBe(v2.purpose);
+    expect(v2.documents.length).toBeGreaterThan(v1.documents.length);
+  });
+
+  it('has nothing to compare on a single-version brief', async () => {
+    const view = await coordinatorApi.versionsView(token, 'IH-26027');
+    expect(view.versions).toHaveLength(1);
+    expect(view.canRecordVersion).toBe(true);
+  });
+
+  it('blocks recording on a brief that is not awaiting improvement', async () => {
+    const view = await coordinatorApi.versionsView(token, 'IH-26031');
+    expect(view.canRecordVersion).toBe(false);
+    expect(view.blockedReason).toContain('only be recorded while the brief is awaiting improvement');
+    await expect(
+      coordinatorApi.recordVersion(token, 'IH-26031', {
+        summaryOfChanges: 'They rewrote the whole brief.',
+        addressedChanges: ['Something'],
+        resolvesRequest: true,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('404s on an unknown brief', async () => {
+    await expect(coordinatorApi.versionsView(token, 'IH-00000')).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});
+
+describe('recording an improved version', () => {
+  it('validates, appends, archives the old round and returns to review', async () => {
+    const before = await coordinatorApi.versionsView(token, 'IH-26029');
+    const previousReviews = (await coordinatorApi.changesView(token, 'IH-26029')).reviews;
+    expect(before.brief.stage).toBe('REFINEMENT_REQUESTED');
+    expect(before.rounds).toHaveLength(0);
+
+    await expect(
+      coordinatorApi.recordVersion(token, 'IH-26029', {
+        summaryOfChanges: 'short',
+        addressedChanges: ['Clarify the intended user group'],
+        resolvesRequest: true,
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    await expect(
+      coordinatorApi.recordVersion(token, 'IH-26029', {
+        summaryOfChanges: 'Named the health centres and attached the timeline.',
+        addressedChanges: [],
+        resolvesRequest: true,
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    const after = await coordinatorApi.recordVersion(token, 'IH-26029', {
+      summaryOfChanges: 'Named the health centres, attached the timeline and the evidence.',
+      addressedChanges: ['Attach supporting evidence', 'Add a short implementation timeline'],
+      revisedSummary: 'A follow-up workflow piloted with two named community health teams.',
+      resolvesRequest: true,
+    });
+
+    // Appended, not replaced.
+    expect(after.versions.map((item) => item.version)).toEqual([1, 2, 3]);
+    expect(after.versions[0]).toEqual(before.versions[0]);
+    expect(after.versions[1]).toEqual(before.versions[1]);
+    expect(after.brief.versions).toBe(3);
+
+    // The round that judged v2 is archived against v2, intact.
+    expect(after.rounds).toHaveLength(1);
+    expect(after.rounds[0]).toMatchObject({ round: 1, version: 2, requiredReviews: 1 });
+    expect(after.rounds[0].reviews).toEqual(previousReviews);
+    expect(after.rounds[0].reviews[0].comment).toContain('duplicates the existing register');
+
+    // Fresh round: progress starts at zero for the new version.
+    expect(after.brief.stage).toBe('UNDER_REVIEW');
+    expect(after.brief.reviewPanel.requiredReviews).toBe(0);
+    expect(after.brief.reviewPanel.completedReviews).toBe(0);
+    expect(after.brief.reviewPanel.assignments).toEqual([]);
+
+    // The request is resolved but its text is kept.
+    expect(after.refinement.status).toBe('resolved');
+    expect(after.refinement.changes).toEqual(before.refinement.changes);
+    expect(after.refinement.guidance).toBe(before.refinement.guidance);
+
+    // It has left the improvement queue and reads as awaiting assignment.
+    const queue = await coordinatorApi.improvements(token);
+    expect(queue.find((item) => item.id === 'IH-26029')).toBeUndefined();
+    const briefs = await coordinatorApi.briefs(token);
+    expect(briefs.find((item) => item.id === 'IH-26029').pendingAction).toBe('Assign reviewers');
+
+    // And it cannot be recorded twice.
+    await expect(
+      coordinatorApi.recordVersion(token, 'IH-26029', {
+        summaryOfChanges: 'Trying to record the same thing again.',
+        addressedChanges: ['Attach supporting evidence'],
+        resolvesRequest: true,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('leaves the request open when the coordinator does not tick resolve', async () => {
+    const after = await coordinatorApi.recordVersion(token, 'IH-26027', {
+      summaryOfChanges: 'Added a first draft of the quality-check process.',
+      addressedChanges: ['Say who records and checks the audio summaries'],
+      resolvesRequest: false,
+    });
+    expect(after.refinement.status).toBe('open');
+    expect(after.brief.stage).toBe('UNDER_REVIEW');
+    expect(after.versions.map((item) => item.version)).toEqual([1, 2]);
+    // No reviews had been recorded against v1 here, so there is a round to
+    // archive only because the panel had an assignment.
+    expect(after.rounds[0]).toMatchObject({ version: 1 });
+  });
+});
+
 describe('decision view', () => {
   it('summarises every reviewer choice with its written comment', async () => {
     const view = await coordinatorApi.decisionView(token, 'IH-26024');
@@ -231,7 +358,10 @@ describe('decision view', () => {
       'Save decision is locked until all 2 required reviews are in (1 recorded).',
     );
 
-    const wrongStage = await coordinatorApi.decisionView(token, 'IH-26029');
+    // IH-26026 is COMPLETED and no test mutates it, so it is a stable example
+    // of the "wrong stage" lock. (IH-26029 would work too until the version
+    // tests above move it back into review.)
+    const wrongStage = await coordinatorApi.decisionView(token, 'IH-26026');
     expect(wrongStage.canRecordDecision).toBe(false);
     expect(wrongStage.lockedReason).toContain('only be recorded while the brief is under review');
   });

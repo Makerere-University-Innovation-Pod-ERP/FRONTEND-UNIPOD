@@ -396,6 +396,63 @@ export const projectCodeSequence = { 'STU-2026': 7, 'GEN-2026': 1 };
  * the Figma Refinement Workspace frame. They are suggestions the coordinator
  * can tick, not a fixed list — custom items can be added alongside them.
  */
+/**
+ * Submitted versions per brief, oldest first. Append-only: recording an
+ * improved version pushes a new entry and never edits an existing one, which
+ * is what makes the side-by-side comparison on page 5 meaningful.
+ */
+export const versionHistory = {
+  'IH-26029': [
+    {
+      version: 1,
+      submittedAt: '2026-10-05',
+      submittedBy: 'Brian Ssekandi',
+      summaryOfChanges: null,
+      addressedChanges: [],
+      title: 'Maternal Health Follow-up Platform',
+      summary: 'A tool to help health workers keep track of mothers after delivery.',
+      purpose: 'Improve continuity of postnatal care.',
+      problemAddressed: 'Mothers sometimes miss their follow-up visits.',
+      documents: ['Project brief'],
+    },
+    {
+      version: 2,
+      submittedAt: '2026-10-14',
+      submittedBy: 'Brian Ssekandi',
+      summaryOfChanges:
+        'Named the two health centres taking part and added the postnatal visit schedule.',
+      addressedChanges: ['Clarify the intended user group'],
+      title: 'Maternal Health Follow-up Platform',
+      summary:
+        'A lightweight follow-up workflow for community health teams supporting new mothers.',
+      purpose: 'Improve continuity of postnatal care.',
+      problemAddressed: 'Follow-up visits can be missed when records are fragmented.',
+      documents: ['Project brief', 'Visit schedule'],
+    },
+  ],
+  'IH-26027': [
+    {
+      version: 1,
+      submittedAt: '2026-10-28',
+      submittedBy: 'Patience Amongin',
+      summaryOfChanges: null,
+      addressedChanges: [],
+      title: 'Inclusive Learning Audio Notes',
+      summary:
+        'Recorded lecture summaries for students who find dense written notes hard to work from.',
+      purpose: 'Make course material easier to revise from.',
+      problemAddressed: 'Written notes alone exclude students with reading difficulties.',
+      documents: ['Project brief'],
+    },
+  ],
+};
+
+/**
+ * Review rounds already closed against an earlier version. A new version
+ * archives the current panel into here; nothing is ever deleted.
+ */
+export const reviewRounds = {};
+
 export const suggestedChanges = [
   'Clarify the intended user group',
   'Attach supporting evidence',
@@ -408,6 +465,9 @@ const pendingActionFor = (brief) => {
     case 'FACT_FINDING':
       return 'Assign reviewers';
     case 'UNDER_REVIEW':
+      // An empty panel means a new version is waiting to be assigned out,
+      // not that the brief is ready for a decision.
+      if (!brief.reviewPanel.requiredReviews) return 'Assign reviewers';
       return brief.reviewPanel.completedReviews >= brief.reviewPanel.requiredReviews
         ? 'Ready for your decision'
         : `Awaiting ${brief.reviewPanel.requiredReviews - brief.reviewPanel.completedReviews} review(s)`;

@@ -187,6 +187,18 @@ export function coordinatorNextStep(stage, panel) {
         toStage: 'UNDER_REVIEW',
       };
     case 'UNDER_REVIEW': {
+      // A brief sits at UNDER_REVIEW with an empty panel in two cases: it has
+      // just been moved here, or an improved version was received and the
+      // previous round was archived. Either way the outstanding action is
+      // assignment, not a decision — showing three disabled decision buttons
+      // would misread as "nearly done".
+      if (!panel || Number(panel.requiredReviews ?? 0) === 0) {
+        return {
+          kind: 'assign',
+          note: 'This version is awaiting reviewer assignment.',
+          toStage: 'UNDER_REVIEW',
+        };
+      }
       const unlocked = areReviewsComplete(panel);
       return {
         kind: 'decision',

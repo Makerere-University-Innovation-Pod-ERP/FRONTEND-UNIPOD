@@ -6,7 +6,9 @@ import {
   projectCodeSequence,
   reviewComments,
   reviewerPool,
+  reviewRounds,
   suggestedChanges,
+  versionHistory,
 } from './fixtures/coordinator';
 import { areReviewsComplete, decisionLockedReason, findOutcome, projectCodePrefix } from '@/lib/case-status';
 
@@ -144,6 +146,119 @@ export const coordinatorHandlers = [
       // since writing the request is the outstanding action.
       .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
     return HttpResponse.json({ items });
+  }),
+
+  http.get(`${API_BASE_URL}/coordinator/briefs/:id/versions`, ({ params }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    const open = brief.stage === 'REFINEMENT_REQUESTED';
+    return HttpResponse.json({
+      brief,
+      versions: versionHistory[brief.id] ?? [],
+      rounds: reviewRounds[brief.id] ?? [],
+      refinement: brief.refinement ?? null,
+      canRecordVersion: open && Boolean(brief.refinement),
+      blockedReason: open
+        ? brief.refinement
+          ? null
+          : 'Write the improvement request before recording a new version.'
+        : `An improved version can only be recorded while the brief is awaiting improvement (currently ${brief.stage
+            .replaceAll('_', ' ')
+            .toLowerCase()}).`,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/coordinator/briefs/:id/versions`, async ({ params, request }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    if (brief.stage !== 'REFINEMENT_REQUESTED' || !brief.refinement) {
+      return HttpResponse.json(
+        { detail: 'This brief is not awaiting an improved version.' },
+        { status: 409 },
+      );
+    }
+
+    const body = await request.json();
+    const summaryOfChanges =
+      typeof body.summaryOfChanges === 'string' ? body.summaryOfChanges.trim() : '';
+    const addressedChanges = Array.isArray(body.addressedChanges)
+      ? body.addressedChanges.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    const revisedSummary =
+      typeof body.revisedSummary === 'string' ? body.revisedSummary.trim() : '';
+
+    if (summaryOfChanges.length < 10) {
+      return HttpResponse.json(
+        { detail: 'Say what changed in this version.' },
+        { status: 400 },
+      );
+    }
+    if (!addressedChanges.length) {
+      return HttpResponse.json(
+        { detail: 'Tick at least one change this version addresses.' },
+        { status: 400 },
+      );
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const history = (versionHistory[brief.id] ??= []);
+    const previous = history[history.length - 1] ?? null;
+
+    // 1. Archive the round that judged the PREVIOUS version. Every decision,
+    //    comment and date is carried over untouched and tied to that version.
+    if (brief.reviewPanel.assignments.length) {
+      const rounds = (reviewRounds[brief.id] ??= []);
+      rounds.push({
+        round: rounds.length + 1,
+        version: previous?.version ?? brief.versions,
+        mode: brief.reviewPanel.mode,
+        requiredReviews: brief.reviewPanel.requiredReviews,
+        completedReviews: brief.reviewPanel.completedReviews,
+        closedAt: today,
+        reviews: reviewsFor(brief),
+      });
+    }
+
+    // 2. Append the new version — nothing earlier is rewritten.
+    const nextVersion = (previous?.version ?? brief.versions) + 1;
+    history.push({
+      version: nextVersion,
+      submittedAt: today,
+      submittedBy: brief.submitterName,
+      summaryOfChanges,
+      addressedChanges,
+      title: brief.title,
+      summary: revisedSummary || previous?.summary || brief.summary,
+      purpose: previous?.purpose ?? brief.purpose,
+      problemAddressed: previous?.problemAddressed ?? brief.problemAddressed,
+      documents: previous?.documents ?? [],
+    });
+
+    // 3. Return to review with a FRESH panel: progress starts at 0 for the
+    //    new version, and the coordinator reassigns on page 1.
+    brief.versions = nextVersion;
+    brief.stage = 'UNDER_REVIEW';
+    brief.updatedAt = today;
+    if (revisedSummary) brief.summary = revisedSummary;
+    brief.reviewPanel = {
+      mode: brief.reviewPanel.mode,
+      requiredReviews: 0,
+      completedReviews: 0,
+      dueDate: null,
+      assignments: [],
+    };
+    if (body.resolvesRequest) brief.refinement = { ...brief.refinement, status: 'resolved' };
+
+    return HttpResponse.json({
+      brief,
+      versions: history,
+      rounds: reviewRounds[brief.id] ?? [],
+      refinement: brief.refinement,
+      canRecordVersion: false,
+      blockedReason: null,
+    });
   }),
 
   http.get(`${API_BASE_URL}/coordinator/briefs/:id/changes`, ({ params }) => {
