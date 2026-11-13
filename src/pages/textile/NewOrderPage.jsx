@@ -54,6 +54,15 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
   const createOrder = useCreateOrder(token);
   const updateDraft = useUpdateDraft(token, savedDraft?.id ?? '');
   const mutation = savedDraft ? updateDraft : createOrder;
+  const unsaved = Boolean(photo) || JSON.stringify(values) !== JSON.stringify(savedValues);
+
+  // Ask before closing or reloading the tab with unsaved changes.
+  useEffect(() => {
+    if (!unsaved) return undefined;
+    const warn = (event) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
   useUnauthorizedRedirect(onUnauthorized, createOrder.error, updateDraft.error);
 
   const set = (field) => (event) => {
