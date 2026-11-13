@@ -150,7 +150,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
           <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
           <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
           <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-          <div><dt>Reference photo</dt><dd>{order.photo?.name ?? 'None'}</dd></div>
+          <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
         </dl>
         {order.status === 'AWAITING_DETAILS' && (
           <p className="tx-inline-note">Waiting for the customer: {order.history.at(-1)?.note}</p>
