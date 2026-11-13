@@ -170,6 +170,10 @@ export function useCreateBooking(token) {
   return useBookingMutation((body) => textileApi.createBooking(token, body));
 }
 
+export function useCancelBooking(token) {
+  return useBookingMutation(({ bookingId, reason }) => textileApi.cancelBooking(token, bookingId, reason));
+}
+
 export function useAddAttendee(token) {
   return useBookingMutation(({ bookingId, name }) => textileApi.addAttendee(token, bookingId, name));
 }
