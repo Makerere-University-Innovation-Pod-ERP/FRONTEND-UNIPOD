@@ -6,7 +6,7 @@ import { textileKeys } from '@/hooks/useTextile';
 import { ErrorBanner } from './shared';
 
 /** True only when the app runs against the MSW mock API (never against the real backend). */
-export const MOCK_API_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true' || import.meta.env.MODE === 'textile';
+const MOCK_API_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true' || import.meta.env.MODE === 'textile';
 
 /**
  * DEMO ONLY. In mock mode there are no Finance screens to confirm payment, so
