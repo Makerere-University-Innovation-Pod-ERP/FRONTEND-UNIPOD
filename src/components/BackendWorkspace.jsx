@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   isFactFindingOfficer,
   isInnovationCoordinator,
@@ -31,6 +32,11 @@ function buildNavigation(roles) {
     items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
     items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
     items.push({ label: 'Department queue', href: '/fact-finding/department', icon: ClipboardList });
+  }
+  if (isReceptionist(roles)) {
+    items.push({ label: 'Reception Home', href: '/reception/home', icon: ClipboardList });
+    items.push({ label: 'Missing Documents', href: '/reception/missing-documents', icon: FileText });
+    items.push({ label: 'Walk-in Submission', href: '/reception/walk-in', icon: Plus });
   }
   if (isReviewer(roles)) {
     items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });

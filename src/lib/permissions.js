@@ -2,6 +2,7 @@ export const ROLE_FACT_FINDING_OFFICER = 'ROLE_FACT_FINDING_OFFICER';
 export const ROLE_REVIEWER = 'ROLE_REVIEWER';
 export const ROLE_INNOVATION_COORDINATOR = 'ROLE_INNOVATION_COORDINATOR';
 export const ROLE_TEXTILE_DOMAIN_OWNER = 'ROLE_TEXTILE_DOMAIN_OWNER';
+export const ROLE_RECEPTIONIST = 'ROLE_RECEPTIONIST';
 
 export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
@@ -37,3 +38,8 @@ export const COORDINATOR_ONLY_REASON =
  * engineering standard for restricted actions.
  */
 export const REVIEWER_CANNOT_ASSIGN_REASON = 'Reviewers cannot assign reviewers to a case.';
+
+/** Reception screens (Assignment 3): home, check & forward, missing documents. */
+export function isReceptionist(roles) {
+  return roles.includes(ROLE_RECEPTIONIST);
+}

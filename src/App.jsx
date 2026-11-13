@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
@@ -47,6 +48,12 @@ import { StockMovementPage } from '@/pages/textile/StockMovementPage';
 import { MachineListPage } from '@/pages/textile/MachineListPage';
 import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
 import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
+import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
+import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
+import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
+import { SignUpPage } from '@/pages/reception/SignUpPage';
+import { WalkInSubmissionPage } from '@/pages/reception/WalkInSubmissionPage';
+import { WalkInSubmittedPage } from '@/pages/reception/WalkInSubmittedPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
@@ -56,6 +63,10 @@ const queryClient = new QueryClient();
 // no login, no dashboard, every other route redirects to the order board.
 const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
 const TEXTILE_HOME = '/textile/board';
+
+// Sign up is mock-only for now: the real backend has public registration
+// disabled (Reception QUESTIONS.md, Question 1).
+const SIGN_UP_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true';
 
 async function textileMockSession() {
   const { makeMockToken } = await import('@/mocks/jwt');
@@ -99,6 +110,10 @@ function AuthenticatedApp({
   const canReview = isReviewer(session.roles);
   const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
+  const canReception = isReceptionist(session.roles);
+  const reception = (Page) => (canReception
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="The Reception screens are only available to reception staff." />);
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
@@ -140,6 +155,12 @@ function AuthenticatedApp({
           <Route path="/submissions/new/confirmation" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <BriefSubmittedPage /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
           <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
+          {/* Reception (Assignment 3 - Peter Arnold Mukasa) */}
+          <Route path="/reception/home" element={reception(ReceptionHomePage)} />
+          <Route path="/reception/briefs/:id" element={reception(BriefCheckPage)} />
+          <Route path="/reception/missing-documents" element={reception(MissingDocumentsPage)} />
+          <Route path="/reception/walk-in" element={reception(WalkInSubmissionPage)} />
+          <Route path="/reception/walk-in/confirmation" element={canReception ? <WalkInSubmittedPage staffName={session.subject} /> : <AccessRestricted label="The Reception screens are only available to reception staff." />} />
           <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
@@ -186,6 +207,7 @@ function App() {
     return saved || DEFAULT_COORDINATOR_SESSION;
   });
   const [health, setHealth] = useState('checking');
+  const [showSignUp, setShowSignUp] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -237,7 +259,9 @@ function App() {
     };
   }, [session, acceptSession]);
 
-  if (!session) return TEXTILE_ONLY ? null : <LoginPage onLogin={acceptSession} />;
+  if (!session && TEXTILE_ONLY) return null;
+  if (!session && SIGN_UP_ENABLED && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} />;
+  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={SIGN_UP_ENABLED ? () => setShowSignUp(true) : undefined} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 

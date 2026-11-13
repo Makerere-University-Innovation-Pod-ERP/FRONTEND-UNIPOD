@@ -5,6 +5,7 @@ import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
+import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
 import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
@@ -31,6 +32,7 @@ let partners = [...initialPartners];
 let invoices = [...initialInvoices];
   'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
   'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
+  ...receptionMockUsers,
 };
 
 // In-memory stores for admin/reception endpoints that aren't part of the
@@ -42,7 +44,7 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     const body = await request.json();
-    const account = (body.email && mockUsers[body.email]) || mockUsers['factfinding@unipod.test'];
+    const account = (body.email && (mockUsers[body.email] ?? registeredMockUsers[body.email.toLowerCase()])) || mockUsers['factfinding@unipod.test'];
     return HttpResponse.json({
       tokenType: 'Bearer',
       accessToken: makeMockToken(account.roles, account.subject),
@@ -429,6 +431,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  ...receptionHandlers,
   ...coordinatorHandlers,
   // Operations / Multimedia - Training & Mentorship
   http.get(`${API_BASE_URL}/operations/training/overview`, () => {
