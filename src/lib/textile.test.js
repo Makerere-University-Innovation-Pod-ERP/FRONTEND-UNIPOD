@@ -104,13 +104,19 @@ describe('estimated materials against stock', () => {
   ];
 
   it('marks lines as available, low after use, or short', () => {
-    const [cotton, thread, short] = assessMaterials(
-      [{ itemId: 'cotton', quantity: 9 }, { itemId: 'thread', quantity: 1 }, { itemId: 'cotton', quantity: 100 }],
-      stock,
-    );
+    const [cotton, thread] = assessMaterials([{ itemId: 'cotton', quantity: 9 }, { itemId: 'thread', quantity: 1 }], stock);
     expect(cotton).toMatchObject({ sufficient: true, lowAfter: false, remaining: 77 });
     expect(thread).toMatchObject({ sufficient: true, lowAfter: true });
+    const [short] = assessMaterials([{ itemId: 'cotton', quantity: 100 }], stock);
     expect(short).toMatchObject({ sufficient: false });
+  });
+
+  it('adds up repeated lines for the same item before checking stock', () => {
+    // 50 + 50 = 100 m of cotton, but only 86 m exist: both lines must be short.
+    const lines = assessMaterials([{ itemId: 'cotton', quantity: 50 }, { itemId: 'cotton', quantity: 50 }], stock);
+    expect(lines.map((line) => line.sufficient)).toEqual([false, false]);
+    expect(lines[0]).toMatchObject({ requested: 100, remaining: -14 });
+    expect(describeMaterialLine(lines[0])).toBe('not enough — only 86 in stock for 100 across these lines');
   });
 });
 
