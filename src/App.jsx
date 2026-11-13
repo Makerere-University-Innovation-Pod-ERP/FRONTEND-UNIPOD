@@ -3,16 +3,17 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
   isInnovationCoordinator,
+  isReceptionist,
   isReviewer,
   isTextileDomainOwner,
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
+import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
@@ -90,13 +91,6 @@ function OtherModulePage({ title }) {
   );
 }
 
-const DEFAULT_COORDINATOR_SESSION = {
-  accessToken: 'mock-coordinator-token',
-  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-  subject: 'Grace Namuli',
-  roles: ['ROLE_DEPARTMENT_COORDINATOR'],
-};
-
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
 }
@@ -124,9 +118,8 @@ function AuthenticatedApp({
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
           {TEXTILE_ONLY ? null : <>
+          <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
-          <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
