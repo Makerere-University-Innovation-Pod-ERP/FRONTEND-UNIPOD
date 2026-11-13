@@ -79,6 +79,7 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
         navigate(`/textile/review?order=${encodeURIComponent(saved.id)}`);
       } else {
         setSavedDraft(saved);
+        setSavedValues(values);
         setPhoto(null);
         setNotice('Draft saved. You can come back to it from Order Review & Quote.');
       }
