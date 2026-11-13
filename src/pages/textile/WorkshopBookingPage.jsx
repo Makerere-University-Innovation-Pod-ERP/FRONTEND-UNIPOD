@@ -41,6 +41,10 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
   const clashes = proposalInView && !calendar.isFetching
     ? findBookingClashes({ ...form, machineId: form.machineId || null }, { bookings, timetable, machines: machineList })
     : [];
+  // A booking for today cannot start at a time that has already passed.
+  if (form.date === today && form.start && form.start < currentTime()) {
+    clashes.unshift({ kind: 'time', message: 'That start time has already passed today.' });
+  }
   const ready = form.date && form.start && form.end && form.purpose.trim() && proposalInView && !calendar.isFetching;
   const selected = bookings.find((booking) => booking.id === selectedId && booking.kind === 'TRAINING');
 
