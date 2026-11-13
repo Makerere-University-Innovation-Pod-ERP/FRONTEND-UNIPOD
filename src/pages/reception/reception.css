@@ -1,0 +1,42 @@
+/*
+ * Reception (Assignment 3) - small layout fixes only; colours come from the shared tokens.
+ *
+ * The shared `.api-form input { width: 100% }` rule in api.css also stretches radio
+ * buttons and tick-boxes, which pushes their label text out of the card.
+ * `.reception-choice` keeps them at their normal size, next to their text.
+ */
+.reception-choice input[type='radio'],
+.reception-choice input[type='checkbox'] {
+  width: auto;
+  flex: none;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--forest);
+}
+
+.reception-choice .checklist-item-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.reception-choice small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* A plain group box: no browser border, and allowed to shrink inside the card. */
+.reception-fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reception-fieldset legend {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
