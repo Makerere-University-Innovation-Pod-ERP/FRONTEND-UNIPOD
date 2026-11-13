@@ -10,15 +10,13 @@ import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   isFactFindingOfficer,
+  isReceptionist,
   isInnovationCoordinator,
   isReviewer,
   isTextileDomainOwner,
 } from '@/lib/permissions';
-import { displayRole } from '@/lib/auth';
-import { isTextileDomainOwner } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';

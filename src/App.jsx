@@ -3,10 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
+  isReceptionist,
   isInnovationCoordinator,
   isReviewer,
   isTextileDomainOwner,

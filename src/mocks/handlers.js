@@ -7,13 +7,11 @@ import { notifications } from './fixtures/notifications';
 import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
-import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
-import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
@@ -24,6 +22,8 @@ const mockUsers = {
   'coordinator@unipod.test': { subject: 'Grace Namuli', roles: ['ROLE_DEPARTMENT_COORDINATOR'] },
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
   'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
+  'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
+  ...receptionMockUsers,
 };
 
 let trainingSessions = [...initialTrainingSessions];
@@ -31,10 +31,6 @@ let mentorshipFollowUps = [...initialMentorshipFollowUps];
 let mediaRequests = [...initialMediaRequests];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
-  'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
-  'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
-  ...receptionMockUsers,
-};
 
 // In-memory stores for admin/reception endpoints that aren't part of the
 // submissions fixture — mock-only state, reset on page reload.
