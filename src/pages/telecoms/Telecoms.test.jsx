@@ -10,6 +10,7 @@ import { EquipmentListPage } from './EquipmentListPage';
 import { EquipmentLendingPage } from './EquipmentLendingPage';
 import { BootcampSessionsPage } from './BootcampSessionsPage';
 import { StockMovementPage } from './StockMovementPage';
+import { BackendWorkspace } from '@/components/BackendWorkspace';
 
 const token = makeMockToken(['ROLE_TELECOMS_DOMAIN_OWNER'], 'Eng. Kaddu');
 
@@ -115,5 +116,49 @@ describe('Telecoms Stock Inventory (TL9)', () => {
 
     expect(screen.getByText(/can never go below zero/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /record stock movement/i })).toBeDisabled();
+  });
+});
+
+describe('Telecoms Role Scoping (Assignment 11)', () => {
+  it('renders only Telecoms navigation and hides all foreign domain pages for Telecoms owner', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const telecomsSession = {
+      accessToken: token,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
+      subject: 'Eng. Kaddu',
+      roles: ['ROLE_TELECOMS_DOMAIN_OWNER'],
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/telecoms/requests']}>
+          <BackendWorkspace session={telecomsSession} health="online" onLogout={vi.fn()}>
+            <p>Telecoms Desk</p>
+          </BackendWorkspace>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Verify Telecoms links exist
+    expect(screen.getByText('TELECOMS ERP')).toBeInTheDocument();
+    expect(screen.getAllByText('All Requests').length).toBeGreaterThan(0);
+    expect(screen.getByText('New Request')).toBeInTheDocument();
+    expect(screen.getByText('Review & Quote')).toBeInTheDocument();
+    expect(screen.getByText('Request Board')).toBeInTheDocument();
+    expect(screen.getByText('Lab Booking')).toBeInTheDocument();
+    expect(screen.getByText('Bootcamps & Training')).toBeInTheDocument();
+    expect(screen.getByText('Equipment Register')).toBeInTheDocument();
+    expect(screen.getByText('Equipment Lending')).toBeInTheDocument();
+    expect(screen.getByText('Stock Inventory')).toBeInTheDocument();
+    expect(screen.getByText('Add / Use Stock')).toBeInTheDocument();
+
+    // Verify foreign domain screens are NOT in navigation
+    expect(screen.queryByText('All Submissions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Student Projects')).not.toBeInTheDocument();
+    expect(screen.queryByText('INNOVATION PIPELINE')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reception')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fact-Finding')).not.toBeInTheDocument();
+    expect(screen.queryByText('TEXTILE OPERATIONS')).not.toBeInTheDocument();
+    expect(screen.queryByText('FINANCE & PARTNERS')).not.toBeInTheDocument();
   });
 });

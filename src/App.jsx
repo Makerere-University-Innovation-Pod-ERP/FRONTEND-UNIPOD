@@ -101,6 +101,13 @@ function OtherModulePage({ title }) {
   );
 }
 
+const DEFAULT_TELECOMS_SESSION = {
+  accessToken: 'mock-telecoms-token',
+  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+  subject: 'Eng. Kaddu',
+  roles: ['ROLE_TELECOMS_DOMAIN_OWNER'],
+};
+
 const DEFAULT_COORDINATOR_SESSION = {
   accessToken: 'mock-coordinator-token',
   expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
@@ -133,13 +140,36 @@ function AuthenticatedApp({
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
 
+  const isTelecoms = isTelecomsDomainOwner(session.roles);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
-          {TEXTILE_ONLY ? null : <>
-          {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
+          {isTelecoms ? (
+            <>
+              {/* Telecoms Operations (Domain 6: Assignment 11) - Only Telecoms screens */}
+              <Route path="/" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/overview" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+              <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+              <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+              <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+              <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+              <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+              <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+              <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+              <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+              <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+              <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
+              <Route path="*" element={<Navigate to="/telecoms/requests" replace />} />
+            </>
+          ) : (
+            <>
+              {TEXTILE_ONLY ? null : <>
+              {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -218,6 +248,8 @@ function AuthenticatedApp({
           ))}
           {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
           {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
+            </>
+          )}
         </Routes>
       </BackendWorkspace>
       </BrowserRouter>
@@ -228,10 +260,7 @@ function AuthenticatedApp({
 function App() {
   const [session, setSession] = useState(() => {
     const saved = loadSession();
-    // In textile-only mode a saved non-textile session would only ever see
-    // "access restricted", so drop it and sign in as the textile owner instead.
-    if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
-    return saved || DEFAULT_COORDINATOR_SESSION;
+    return saved || DEFAULT_TELECOMS_SESSION;
   });
   const [health, setHealth] = useState('checking');
   const [showSignUp, setShowSignUp] = useState(false);
@@ -265,7 +294,7 @@ function App() {
 
   const logout = useCallback(() => {
     clearSession();
-    setSession(DEFAULT_COORDINATOR_SESSION);
+    setSession(null);
   }, []);
 
   const acceptSession = useCallback((nextSession) => {
