@@ -200,7 +200,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
                 <input type="number" min="1" step="1" value={priceQuantity} onChange={(event) => setPriceQuantity(Number(event.target.value))} />
               </label>
               <label>Expected completion
-                <input type="date" value={expectedCompletion} onChange={(event) => setExpectedCompletion(event.target.value)} />
+                <input type="date" min={todayIso()} value={expectedCompletion} onChange={(event) => setExpectedCompletion(event.target.value)} />
               </label>
             </div>
             {lateForCustomer && <p className="tx-quote-warn">Completes after the customer’s date needed ({formatDate(order.dateNeeded)}).</p>}
