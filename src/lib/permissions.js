@@ -2,6 +2,7 @@ export const ROLE_FACT_FINDING_OFFICER = 'ROLE_FACT_FINDING_OFFICER';
 export const ROLE_REVIEWER = 'ROLE_REVIEWER';
 export const ROLE_INNOVATION_COORDINATOR = 'ROLE_INNOVATION_COORDINATOR';
 export const ROLE_TEXTILE_DOMAIN_OWNER = 'ROLE_TEXTILE_DOMAIN_OWNER';
+export const ROLE_TELECOMS_DOMAIN_OWNER = 'ROLE_TELECOMS_DOMAIN_OWNER';
 export const ROLE_RECEPTIONIST = 'ROLE_RECEPTIONIST';
 
 export function isFactFindingOfficer(roles) {
@@ -15,6 +16,11 @@ export function isReviewer(roles) {
 /** Textile Operations (customer orders, stock, machines, workshop bookings). */
 export function isTextileDomainOwner(roles) {
   return roles.includes(ROLE_TEXTILE_DOMAIN_OWNER);
+}
+
+/** Telecoms Operations (service requests, lab booking, equipment lending, bootcamps, stock). */
+export function isTelecomsDomainOwner(roles) {
+  return roles.includes(ROLE_TELECOMS_DOMAIN_OWNER);
 }
 
 /**

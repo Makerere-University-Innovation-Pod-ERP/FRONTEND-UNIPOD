@@ -3,12 +3,13 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
   isInnovationCoordinator,
+  isReceptionist,
   isReviewer,
+  isTelecomsDomainOwner,
   isTextileDomainOwner,
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
@@ -48,6 +49,16 @@ import { StockMovementPage } from '@/pages/textile/StockMovementPage';
 import { MachineListPage } from '@/pages/textile/MachineListPage';
 import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
 import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
+import { NewRequestPage } from '@/pages/telecoms/NewRequestPage';
+import { RequestReviewPage } from '@/pages/telecoms/RequestReviewPage';
+import { RequestBoardPage } from '@/pages/telecoms/RequestBoardPage';
+import { RequestPage, RequestsIndexPage } from '@/pages/telecoms/RequestPage';
+import { LabBookingPage } from '@/pages/telecoms/LabBookingPage';
+import { EquipmentListPage } from '@/pages/telecoms/EquipmentListPage';
+import { EquipmentLendingPage } from '@/pages/telecoms/EquipmentLendingPage';
+import { BootcampSessionsPage } from '@/pages/telecoms/BootcampSessionsPage';
+import { StockListPage as TelecomsStockListPage } from '@/pages/telecoms/StockListPage';
+import { StockMovementPage as TelecomsStockMovementPage } from '@/pages/telecoms/StockMovementPage';
 import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
 import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
 import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
@@ -117,6 +128,10 @@ function AuthenticatedApp({
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
+  const canTelecoms = isTelecomsDomainOwner(session.roles) || session.roles.includes('ROLE_ADMINISTRATOR');
+  const telecoms = (Page) => (canTelecoms
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -186,6 +201,18 @@ function AuthenticatedApp({
           <Route path="/textile/machines" element={textile(MachineListPage)} />
           <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
           <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {/* Telecoms Operations (Domain 6: Assignment 11) */}
+          <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+          <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+          <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+          <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+          <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+          <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+          <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+          <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+          <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+          <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+          <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
           {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
             <Route key={href} path={href} element={<OtherModulePage title={label} />} />
           ))}
