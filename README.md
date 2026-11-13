@@ -127,4 +127,5 @@ is not deployed yet. Run with `VITE_ENABLE_MOCKS=true` and sign in as
 Tests: `src/lib/textile.test.js` (rules) and `src/services/textile.test.js`
 (API contract through MSW) run in Vitest's node environment.
 `src/pages/textile/Textile.test.jsx` (screens) needs jsdom, which needs
-Node ≥ 22.18 under the installed Vitest 5 / undici.
+Node ≥ 22.22.2 (or ≥ 24.15). On older Node it fails to start with
+"Cannot read properties of undefined (reading 'bind')" in undici.
