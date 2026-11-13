@@ -93,7 +93,7 @@ export const coordinatorBriefs = {
     reviewPanel: {
       mode: 'sequential',
       requiredReviews: 2,
-      completedReviews: 0,
+      completedReviews: 2,
       dueDate: '2026-10-26',
       assignments: [
         {
@@ -102,7 +102,7 @@ export const coordinatorBriefs = {
           mode: 'sequential',
           step: 1,
           of: 2,
-          decisionStatus: 'pending',
+          decisionStatus: 'recommended',
           assignedAt: '2026-10-12',
           dueDate: '2026-10-26',
         },
@@ -112,7 +112,7 @@ export const coordinatorBriefs = {
           mode: 'sequential',
           step: 2,
           of: 2,
-          decisionStatus: 'pending',
+          decisionStatus: 'changes_needed',
           assignedAt: '2026-10-12',
           dueDate: '2026-10-26',
         },
@@ -218,6 +218,58 @@ export const coordinatorBriefs = {
     },
   },
 };
+
+/**
+ * Written reviewer comments, kept in a SEPARATE map from the briefs above.
+ *
+ * The coordinator brief page (page 1) shows reviewer STATUS only; the decision
+ * page (page 2) is the screen that summarises what each reviewer wrote. Holding
+ * the text here rather than on the assignment objects means the
+ * GET /coordinator/briefs/:id response physically cannot carry a comment, so
+ * page 1 cannot leak one even by accident.
+ *
+ * Keyed `${briefId}:${reviewerId}`. Only recorded (non-pending) reviews have
+ * an entry.
+ */
+export const reviewComments = {
+  'IH-26031:rev-1': {
+    comment:
+      'Clear problem statement and the sensor choice is realistic for the budget. I would like to see the calibration plan before field deployment, but that is a project-stage concern, not a reason to hold the brief.',
+    decidedAt: '2026-10-21',
+  },
+  'IH-26024:rev-3': {
+    comment:
+      'Worth taking forward. The alert thresholds need to cite a recognised water-quality standard rather than the team’s own figures, and the community hand-over plan is thin.',
+    decidedAt: '2026-10-20',
+  },
+  'IH-26024:rev-4': {
+    comment:
+      'I support the direction but not the current scope. The brief covers three districts with one prototype; narrow it to one site, prove the alert works, then expand. Resubmit with a revised scope and I would recommend it.',
+    decidedAt: '2026-10-23',
+  },
+  'IH-26029:rev-1': {
+    comment:
+      'The follow-up workflow duplicates the existing register in two places. Please clarify the intended user group and attach the implementation timeline before this goes further.',
+    decidedAt: '2026-10-16',
+  },
+  'IH-26026:rev-5': {
+    comment:
+      'Strong consent process and the community partnership is already in place. Recommended without reservation.',
+    decidedAt: '2026-10-11',
+  },
+  'IH-26026:rev-6': {
+    comment:
+      'Agreed. The archival format choice is sensible and the storage costs are accounted for.',
+    decidedAt: '2026-10-13',
+  },
+};
+
+/**
+ * Next project-code sequence number per prefix and year. Mirrors the codes
+ * already issued in the fixtures above (STU-2026-001, -002, -004, -005) so a
+ * newly confirmed brief does not collide with one of them.
+ */
+export const projectCodeSequence = { 'STU-2026': 7, 'GEN-2026': 1 };
 
 const pendingActionFor = (brief) => {
   switch (brief.stage) {

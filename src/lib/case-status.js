@@ -101,6 +101,23 @@ export function reviewProgressLabel(panel) {
   return `${completed} of ${required} ${required === 1 ? 'review' : 'reviews'} done`;
 }
 
+/**
+ * Project-code prefix by submission category.
+ *
+ * ASSUMPTION — pending Innovation Coordinator confirmation (assignment doc,
+ * Section 9 item 5). Assumed format PREFIX-YYYY-NNN, e.g. STU-2026-001. The
+ * code itself is generated server-side (mocked in coordinator-handlers.js);
+ * the frontend only displays what the API returns.
+ */
+export function projectCodePrefix(category) {
+  return category === 'student' ? 'STU' : 'GEN';
+}
+
+/** Looks up one of the three coordinator outcomes by id. */
+export function findOutcome(outcomeId) {
+  return COORDINATOR_OUTCOMES.find((outcome) => outcome.id === outcomeId) ?? null;
+}
+
 /** The reason shown on the disabled decision controls. */
 export function decisionLockedReason(panel) {
   const required = Number(panel?.requiredReviews ?? 0);

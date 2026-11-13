@@ -78,6 +78,28 @@ export const coordinatorBriefSchema = z.object({
   reviewPanel: reviewPanelSchema,
 });
 
+/**
+ * A recorded review WITH its written comment — served only by the decision
+ * endpoint. Page 1 uses reviewAssignmentSchema above, which has no comment
+ * field, so reviewer feedback appears on the decision page and nowhere else.
+ */
+export const reviewerDecisionSchema = z.object({
+  reviewerId: z.string(),
+  reviewerName: z.string(),
+  step: z.number().int().min(1),
+  of: z.number().int().min(1),
+  decisionStatus: decisionStatusSchema,
+  comment: z.string().nullable(),
+  decidedAt: z.string().nullable(),
+});
+
+export const decisionViewSchema = z.object({
+  brief: coordinatorBriefSchema,
+  reviews: z.array(reviewerDecisionSchema),
+  canRecordDecision: z.boolean(),
+  lockedReason: z.string().nullable(),
+});
+
 export const reviewerOptionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -107,6 +129,26 @@ export const coordinatorApi = {
    */
   assignReviewers: async (token, id, body) => {
     const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/reviewers`, {
+      token,
+      body,
+      method: 'POST',
+    });
+    return coordinatorBriefSchema.parse(payload);
+  },
+  decisionView: async (token, id, signal) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/decision`, {
+      token,
+      signal,
+    });
+    return decisionViewSchema.parse(payload);
+  },
+  /**
+   * body: { outcome: 'confirmed'|'needs_improvement'|'closed', reason: string }
+   * The backend decides the resulting stage and generates the project code for
+   * a confirmed outcome; the frontend only displays what comes back.
+   */
+  recordDecision: async (token, id, body) => {
+    const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/decision`, {
       token,
       body,
       method: 'POST',

@@ -1,6 +1,13 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
-import { coordinatorBriefs, coordinatorQueue, reviewerPool } from './fixtures/coordinator';
+import {
+  coordinatorBriefs,
+  coordinatorQueue,
+  projectCodeSequence,
+  reviewComments,
+  reviewerPool,
+} from './fixtures/coordinator';
+import { areReviewsComplete, decisionLockedReason, findOutcome, projectCodePrefix } from '@/lib/case-status';
 
 /**
  * Mock network layer for the Innovation Coordinator pipeline (Assignment 2).
@@ -87,6 +94,96 @@ export const coordinatorHandlers = [
     };
     if (brief.stage === 'FACT_FINDING') brief.stage = 'UNDER_REVIEW';
     brief.updatedAt = assignedAt;
+
+    return HttpResponse.json(brief);
+  }),
+
+  http.get(`${API_BASE_URL}/coordinator/briefs/:id/decision`, ({ params }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    const reviews = brief.reviewPanel.assignments.map((assignment) => {
+      const recorded = reviewComments[`${brief.id}:${assignment.reviewerId}`] ?? null;
+      return {
+        reviewerId: assignment.reviewerId,
+        reviewerName: assignment.reviewerName,
+        step: assignment.step,
+        of: assignment.of,
+        decisionStatus: assignment.decisionStatus,
+        comment: recorded?.comment ?? null,
+        decidedAt: recorded?.decidedAt ?? null,
+      };
+    });
+
+    const complete = areReviewsComplete(brief.reviewPanel);
+    const decidable = brief.stage === 'UNDER_REVIEW' && complete;
+    const lockedReason = decidable
+      ? null
+      : brief.stage !== 'UNDER_REVIEW'
+        ? `A decision can only be recorded while the brief is under review (currently ${brief.stage.replaceAll('_', ' ').toLowerCase()}).`
+        : decisionLockedReason(brief.reviewPanel);
+
+    return HttpResponse.json({
+      brief,
+      reviews,
+      canRecordDecision: decidable,
+      lockedReason,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/coordinator/briefs/:id/decision`, async ({ params, request }) => {
+    const brief = coordinatorBriefs[params.id];
+    if (!brief) return new HttpResponse(null, { status: 404 });
+
+    // A recorded decision is never overwritten — re-deciding is a conflict,
+    // not an update.
+    if (brief.outcome) {
+      return HttpResponse.json(
+        { detail: 'A decision has already been recorded for this brief.' },
+        { status: 409 },
+      );
+    }
+    if (brief.stage !== 'UNDER_REVIEW' || !areReviewsComplete(brief.reviewPanel)) {
+      return HttpResponse.json(
+        { detail: decisionLockedReason(brief.reviewPanel) },
+        { status: 409 },
+      );
+    }
+
+    const body = await request.json();
+    const outcome = findOutcome(body.outcome);
+    if (!outcome) {
+      return HttpResponse.json({ detail: 'Unknown decision outcome.' }, { status: 400 });
+    }
+
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (outcome.requiresReason && reason.length < 10) {
+      return HttpResponse.json(
+        { detail: 'A closed decision needs a written reason.' },
+        { status: 400 },
+      );
+    }
+
+    let projectCode = null;
+    if (outcome.generatesProjectCode) {
+      const prefix = projectCodePrefix(brief.category);
+      const year = new Date().getFullYear();
+      const sequenceKey = `${prefix}-${year}`;
+      const next = projectCodeSequence[sequenceKey] ?? 1;
+      projectCodeSequence[sequenceKey] = next + 1;
+      projectCode = `${sequenceKey}-${String(next).padStart(3, '0')}`;
+      brief.code = projectCode;
+    }
+
+    // Reviews and version history are untouched: only the outcome and stage
+    // move forward.
+    brief.stage = outcome.toStage;
+    brief.outcome = {
+      status: outcome.outcomeStatus,
+      reason: reason || null,
+      projectCode,
+    };
+    brief.updatedAt = new Date().toISOString().slice(0, 10);
 
     return HttpResponse.json(brief);
   }),

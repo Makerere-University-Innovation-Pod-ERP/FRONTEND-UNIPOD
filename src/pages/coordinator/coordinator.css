@@ -451,12 +451,175 @@
   font-weight: 750;
 }
 
+/* ---- Decision page (page 2) ------------------------------------------ */
+
+.coordinator-review-list {
+  display: grid;
+  gap: var(--mak-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coordinator-review {
+  padding: var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+}
+
+.coordinator-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-3);
+}
+
+.coordinator-review-comment {
+  margin: var(--mak-space-3) 0 0;
+  padding: var(--mak-space-3) var(--mak-space-4);
+  border-inline-start: 3px solid var(--border);
+  border-radius: 0 var(--mak-radius-xs) var(--mak-radius-xs) 0;
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  font-size: var(--mak-text-base);
+  line-height: 1.65;
+}
+
+.coordinator-review-pending {
+  margin: var(--mak-space-3) 0 0;
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  font-style: italic;
+}
+
+.coordinator-outcome-options {
+  display: grid;
+  gap: var(--mak-space-2);
+  margin-top: var(--mak-space-3);
+}
+
+.coordinator-outcome-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mak-space-3);
+  min-height: 44px;
+  padding: var(--mak-space-3) var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.coordinator-outcome-option:hover {
+  background: var(--surface-raised);
+}
+
+/* Selection changes background AND text weight, never border colour alone. */
+.coordinator-outcome-option:has(input:checked) {
+  background: color-mix(in srgb, var(--forest) 8%, var(--surface));
+  border-color: var(--forest);
+}
+
+.coordinator-outcome-option:has(input:checked) span {
+  font-weight: 750;
+}
+
+.coordinator-outcome-option input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--forest);
+  flex: none;
+}
+
+.coordinator-outcome-option span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mak-space-1);
+  font-size: var(--mak-text-sm);
+  color: var(--ink);
+}
+
+.coordinator-outcome-option small {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.coordinator-fieldset:disabled .coordinator-outcome-option {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.coordinator-field textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--mak-text-sm);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.coordinator-field textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.coordinator-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  line-height: 1.5;
+}
+
+.coordinator-code-preview {
+  margin-top: var(--mak-space-4);
+}
+
+.coordinator-decision-recorded {
+  margin-top: var(--mak-space-4);
+}
+
+.coordinator-code-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mak-space-3);
+  margin-top: var(--mak-space-4);
+  padding: var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-md);
+  background: var(--green-bg);
+}
+
+.coordinator-code-panel > span {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coordinator-code-panel .coordinator-project-code {
+  font-size: var(--mak-text-lg);
+  letter-spacing: 0.04em;
+}
+
 /* ---- Focus + responsive ---------------------------------------------- */
 
 .coordinator-filter:focus-visible,
 .coordinator-field input:focus-visible,
 .coordinator-field select:focus-visible,
 .coordinator-reviewer-option input:focus-visible,
+.coordinator-outcome-option input:focus-visible,
+.coordinator-field textarea:focus-visible,
 .coordinator-icon-button:focus-visible,
 .coordinator-queue-row:focus-visible,
 .coordinator-next-step-actions .btn:focus-visible,
