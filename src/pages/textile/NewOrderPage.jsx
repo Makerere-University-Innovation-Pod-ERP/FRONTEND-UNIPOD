@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Save } from 'lucide-react';
 import { CUSTOMER_TYPES, TEXTILE_RULES, todayIso } from '@/lib/textile';
