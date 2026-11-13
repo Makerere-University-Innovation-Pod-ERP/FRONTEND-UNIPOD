@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { textileApi } from './textile';
-import { ApiError } from './api-client';
+import { ApiError, request } from './api-client';
 import { makeMockToken } from '@/mocks/jwt';
 import { addDays, startOfWeek, todayIso } from '@/lib/textile';
 
