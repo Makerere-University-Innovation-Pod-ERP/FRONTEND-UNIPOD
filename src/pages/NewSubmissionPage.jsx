@@ -16,9 +16,18 @@ function documentRequirementsFor(category, recommendationLetterStatus) {
   return requirements;
 }
 
+/**
+ * Optional props for Reception's assisted (walk-in) submission (Assignment 3).
+ * Without them this page behaves exactly as before.
+ * - onBehalfOf: { submitterId, name, email } - shows a banner, fills in and locks Submitter ID
+ * - confirmationPath / cancelPath: where to go after submitting / on cancel
+ */
 export function NewSubmissionPage({
   token,
   onUnauthorized,
+  onBehalfOf = null,
+  confirmationPath = '/submissions/new/confirmation',
+  cancelPath = '/submissions',
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -26,7 +35,7 @@ export function NewSubmissionPage({
   const [title, setTitle] = useState('');
   const [purpose, setPurpose] = useState('');
   const [problemAddressed, setProblemAddressed] = useState('');
-  const [submitterId, setSubmitterId] = useState('');
+  const [submitterId, setSubmitterId] = useState(onBehalfOf?.submitterId ?? '');
   const [studentNumber, setStudentNumber] = useState('');
   const [programme, setProgramme] = useState('');
   const [supervisor, setSupervisor] = useState('');
@@ -104,7 +113,7 @@ export function NewSubmissionPage({
             }).catch(() => null),
           ),
       );
-      navigate('/submissions/new/confirmation', { state: { submission: created } });
+      navigate(confirmationPath, { state: { submission: created, onBehalfOf } });
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
       else setError(reason instanceof Error ? reason.message : 'Could not create the submission.');
@@ -115,8 +124,14 @@ export function NewSubmissionPage({
 
   return (
     <div className="live-page page-enter">
-      <Link to="/submissions" className="back-link"><ArrowLeft size={15} />Back to submissions</Link>
+      <Link to={cancelPath} className="back-link"><ArrowLeft size={15} />{onBehalfOf ? 'Back to reception home' : 'Back to submissions'}</Link>
       <div className="live-page-heading compact-heading"><div><p className="eyebrow">INTAKE · NEW CASE</p><h1>Register an idea.</h1><p>Create a draft record in the live MUTIC ERP database.</p></div></div>
+      {onBehalfOf && (
+        <section className="live-panel" role="status" aria-label="Submitting on behalf of">
+          <p className="eyebrow">ASSISTED SUBMISSION</p>
+          <p>Submitting on behalf of <b>{onBehalfOf.name}</b> ({onBehalfOf.email}). They stay the owner of this brief; you are recorded as assisting.</p>
+        </section>
+      )}
       <form className="live-panel create-form" onSubmit={submit}>
         <p className="eyebrow">STEP {step + 1} OF {STEPS.length} · {STEPS[step].toUpperCase()}</p>
 
@@ -142,7 +157,7 @@ export function NewSubmissionPage({
             <label className="form-field">Project title<input required maxLength={240} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Give the project a clear, concise title" /></label>
             <label className="form-field">Purpose<textarea required maxLength={5000} rows={3} value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="What does this project aim to achieve?" /></label>
             <label className="form-field">Problem addressed<textarea required maxLength={5000} rows={3} value={problemAddressed} onChange={(event) => setProblemAddressed(event.target.value)} placeholder="What problem or need does it respond to?" /></label>
-            <label className="form-field">Submitter ID <span className="field-note">Optional; use an existing account identifier when linking an account.</span><input maxLength={255} value={submitterId} onChange={(event) => setSubmitterId(event.target.value)} /></label>
+            <label className="form-field">Submitter ID <span className="field-note">Optional; use an existing account identifier when linking an account.</span><input maxLength={255} value={submitterId} readOnly={Boolean(onBehalfOf)} onChange={(event) => setSubmitterId(event.target.value)} /></label>
             {category === 'student' && (
               <>
                 <div className="form-grid">
@@ -218,7 +233,7 @@ export function NewSubmissionPage({
         {error && <div className="api-error api-error-banner" role="alert">{error}</div>}
         <div className="form-actions">
           {step > 0 && <button className="btn btn-outline" type="button" onClick={goBack} disabled={busy}>Back</button>}
-          {step === 0 && <Link to="/submissions" className="btn btn-outline">Cancel</Link>}
+          {step === 0 && <Link to={cancelPath} className="btn btn-outline">Cancel</Link>}
           {step < STEPS.length - 1
             ? <button className="btn btn-primary" type="button" onClick={goNext}>Next<ArrowRight size={15} /></button>
             : <button className="btn btn-primary" type="submit" disabled={busy || !rulesAccepted}>

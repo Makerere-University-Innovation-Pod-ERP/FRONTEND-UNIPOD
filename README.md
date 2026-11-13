@@ -139,5 +139,38 @@ used, and is not part of the `/textile` contract.
 Tests: `src/lib/textile.test.js` (rules) and `src/services/textile.test.js`
 (API contract through MSW) run in Vitest's node environment.
 `src/pages/textile/Textile.test.jsx` (screens) needs jsdom, which needs
-Node ≥ 22.22.2 (or ≥ 24.15). On older Node it fails to start with
-"Cannot read properties of undefined (reading 'bind')" in undici.
+Node ≥ 22.22.2 (or ≥ 24.15) under the installed Vitest 5 / undici. On older
+Node it fails to start with "Cannot read properties of undefined (reading
+'bind')" in undici.
+
+## Reception (Assignment 3 - Peter Arnold Mukasa)
+
+Screens for `ROLE_RECEPTIONIST`, shown in the sidebar.
+
+| Screen | Route |
+|---|---|
+| Reception home (counters + searchable new briefs) | `/reception/home` |
+| Brief check & forward, ask for missing information, comments, history | `/reception/briefs/:id` |
+| Missing documents list & search | `/reception/missing-documents` |
+| Sign up (student / public / organisation) - **mock only** | "Create an account" on the sign-in page |
+| Assisted (walk-in) submission: find or create the person's account, then the 5-step form on their behalf | `/reception/walk-in` |
+| Walk-in confirmation (owner = walk-in, assisted by = receptionist) | `/reception/walk-in/confirmation` |
+
+Rules (enforced by the mock in `src/mocks/reception-handlers.js`; the real backend must enforce them too):
+
+- Forward is refused (`409`) unless every check list item is ticked.
+- Asking for missing information needs at least one item and a due date.
+- Every forward, missing-information request and comment is written to history with date, user and destination.
+- The receptionist can comment but cannot edit the submitter's content.
+- Sign up needs the general-rules tick-box; students give student number and course, organisations give the organisation name (MoU reference optional).
+- A walk-in brief is created with the walk-in's `submitterId` (they stay the owner); the backend must record the signed-in receptionist as the person who registered it.
+
+The walk-in reuses `NewSubmissionPage` (Assignment 4) through three optional props: `onBehalfOf`, `confirmationPath`, `cancelPath`. Without them the page behaves as before.
+
+The `/reception/*` and `/auth/register` contracts (`src/services/reception.js`) are proposals and are not deployed yet.
+Run with `VITE_ENABLE_MOCKS=true` and sign in as `reception@unipod.test` (any password).
+"Create an account" only appears when mocks are on, because the deployed backend has public registration disabled.
+Accounts made on the mock sign-up screen sign in as submitters until the page is reloaded.
+
+The walk-in account step (`POST /reception/walk-in-accounts`) is mock only until the backend decides how minimal accounts are created.
+Check list items, department list and stage names are placeholders.

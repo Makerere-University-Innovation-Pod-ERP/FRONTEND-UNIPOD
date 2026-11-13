@@ -2,9 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
+import {
+  COORDINATOR_ONLY_REASON,
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReceptionist,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -22,6 +29,16 @@ import { DepartmentQueue } from '@/pages/fact-finding/DepartmentQueue';
 import { DepartmentResponsePage } from '@/pages/fact-finding/DepartmentResponsePage';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
+import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
+import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
+import { CoordinatorImprovementsPage } from '@/pages/coordinator/CoordinatorImprovementsPage';
+import { CoordinatorChangesPage } from '@/pages/coordinator/CoordinatorChangesPage';
+import { CoordinatorVersionsPage } from '@/pages/coordinator/CoordinatorVersionsPage';
+import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
+import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
+import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
+import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
+import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
 import { ReviewerCaseFile } from '@/pages/reviewer/ReviewerCaseFile';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
@@ -32,6 +49,12 @@ import { StockMovementPage } from '@/pages/textile/StockMovementPage';
 import { MachineListPage } from '@/pages/textile/MachineListPage';
 import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
 import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
+import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
+import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
+import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
+import { SignUpPage } from '@/pages/reception/SignUpPage';
+import { WalkInSubmissionPage } from '@/pages/reception/WalkInSubmissionPage';
+import { WalkInSubmittedPage } from '@/pages/reception/WalkInSubmittedPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
@@ -41,6 +64,10 @@ const queryClient = new QueryClient();
 // no login, no dashboard, every other route redirects to the order board.
 const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
 const TEXTILE_HOME = '/textile/board';
+
+// Sign up is mock-only for now: the real backend has public registration
+// disabled (Reception QUESTIONS.md, Question 1).
+const SIGN_UP_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true';
 
 async function textileMockSession() {
   const { makeMockToken } = await import('@/mocks/jwt');
@@ -75,7 +102,12 @@ function AuthenticatedApp({
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
+  const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
+  const canReception = isReceptionist(session.roles);
+  const reception = (Page) => (canReception
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="The Reception screens are only available to reception staff." />);
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
@@ -87,6 +119,25 @@ function AuthenticatedApp({
         <Routes>
           {TEXTILE_ONLY ? null : <>
           <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
+          <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/operations/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/price-lists" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+
+          {/* Submissions & Queues */}
           <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/submissions/student" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
           <Route path="/submissions/general" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" />} />
@@ -97,6 +148,12 @@ function AuthenticatedApp({
           <Route path="/submissions/new/confirmation" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <BriefSubmittedPage /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
           <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
+          {/* Reception (Assignment 3 - Peter Arnold Mukasa) */}
+          <Route path="/reception/home" element={reception(ReceptionHomePage)} />
+          <Route path="/reception/briefs/:id" element={reception(BriefCheckPage)} />
+          <Route path="/reception/missing-documents" element={reception(MissingDocumentsPage)} />
+          <Route path="/reception/walk-in" element={reception(WalkInSubmissionPage)} />
+          <Route path="/reception/walk-in/confirmation" element={canReception ? <WalkInSubmittedPage staffName={session.subject} /> : <AccessRestricted label="The Reception screens are only available to reception staff." />} />
           <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
@@ -104,6 +161,12 @@ function AuthenticatedApp({
           <Route path="/fact-finding/department/:id" element={canFactFind ? <DepartmentResponsePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+          <Route path="/coordinator" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/improvements" element={canCoordinate ? <CoordinatorImprovementsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/changes" element={canCoordinate ? <CoordinatorChangesPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/versions" element={canCoordinate ? <CoordinatorVersionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/reviewer/cases/:id" element={canReview ? <ReviewerCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           </>}
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
@@ -133,9 +196,11 @@ function App() {
     const saved = loadSession();
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
-    return TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles) ? null : saved;
+    if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
+    return saved;
   });
   const [health, setHealth] = useState('checking');
+  const [showSignUp, setShowSignUp] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -187,7 +252,9 @@ function App() {
     };
   }, [session, acceptSession]);
 
-  if (!session) return TEXTILE_ONLY ? null : <LoginPage onLogin={acceptSession} />;
+  if (!session && TEXTILE_ONLY) return null;
+  if (!session && SIGN_UP_ENABLED && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} />;
+  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={SIGN_UP_ENABLED ? () => setShowSignUp(true) : undefined} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 

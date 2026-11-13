@@ -3,7 +3,7 @@ import { ArrowRight, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { backendApi } from '@/services/backend-api';
 import { createSession, saveSession } from '@/lib/auth';
 
-export function LoginPage({ onLogin }) {
+export function LoginPage({ onLogin, onCreateAccount }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -61,7 +61,13 @@ export function LoginPage({ onLogin }) {
               {!busy && <ArrowRight size={15} />}
             </button>
           </form>
-          <p className="login-footnote">Accounts are provisioned by an administrator. Public registration is disabled.</p>
+          {onCreateAccount ? (
+            <p className="login-footnote">
+              New here? <button type="button" className="btn btn-outline" onClick={onCreateAccount}>Create an account</button>
+            </p>
+          ) : (
+            <p className="login-footnote">Accounts are provisioned by an administrator. Public registration is disabled.</p>
+          )}
         </div>
       </section>
       <aside className="login-hero" aria-hidden="true">
