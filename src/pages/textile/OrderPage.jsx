@@ -238,7 +238,11 @@ export function OrdersIndexPage({ token, onUnauthorized }) {
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · ORDERS" title="Order pages" intro="Open an order to record materials, machine, staff, quality checks and collection." />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" /> : !orders.data?.length ? (
+        <section className="live-panel">
+          <p className="live-empty">No orders yet. <Link to="/textile/orders/new">Create the first order</Link>.</p>
+        </section>
+      ) : (
         <section className="live-panel">
           <div className="live-table-wrap">
             <table className="live-table">
