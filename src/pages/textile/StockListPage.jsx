@@ -12,6 +12,11 @@ export function StockListPage({ token, onUnauthorized }) {
   useUnauthorizedRedirect(onUnauthorized, stock.error, movements.error);
   const items = stock.data?.items ?? [];
   const lowCount = items.filter(isLowStock).length;
+  const [query, setQuery] = useState('');
+  const [lowOnly, setLowOnly] = useState(false);
+  const needle = query.trim().toLowerCase();
+  const visibleItems = items.filter((item) =>
+    (!lowOnly || isLowStock(item)) && (!needle || `${item.name} ${item.location}`.toLowerCase().includes(needle)));
 
   return (
     <div className="live-page page-enter">
