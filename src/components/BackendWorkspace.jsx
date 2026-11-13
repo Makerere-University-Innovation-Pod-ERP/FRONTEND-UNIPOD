@@ -34,6 +34,7 @@ function buildNavigation(roles) {
   }
   if (isInnovationCoordinator(roles)) {
     items.push({ label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow });
+    items.push({ label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight });
   }
   return items;
 }

@@ -113,6 +113,46 @@ export function projectCodePrefix(category) {
   return category === 'student' ? 'STU' : 'GEN';
 }
 
+/**
+ * Whole calendar days from today until `dueDate` (negative when overdue).
+ *
+ * Deliberately NOT a millisecond subtraction: `new Date('2026-11-20')` parses
+ * as UTC midnight, so in any timezone behind UTC a naive diff is off by one,
+ * and a 24h-based diff drifts across a daylight-saving boundary. Both dates
+ * are reduced to their local calendar Y/M/D first, then compared as UTC
+ * midnights, so 13 Nov → 20 Nov is exactly 7 everywhere.
+ *
+ * `dueDate` is an ISO date string (YYYY-MM-DD). Returns null if absent or
+ * malformed.
+ */
+export function calendarDaysUntil(dueDate, today = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dueDate ?? ''));
+  if (!match) return null;
+  const due = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((due - now) / 86_400_000);
+}
+
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+/**
+ * The deadline chip for a refinement case.
+ * tone: 'overdue' | 'attention' | 'neutral' | 'none' — paired with an icon and
+ * text at the call site so the state is never signalled by colour alone.
+ */
+export function deadlineLabel(dueDate, today = new Date()) {
+  const days = calendarDaysUntil(dueDate, today);
+  if (days === null) return { tone: 'none', days: null, label: 'No due date set' };
+  if (days < 0) return { tone: 'overdue', days, label: `Overdue by ${plural(-days, 'day')}` };
+  if (days === 0) return { tone: 'attention', days, label: 'Due today' };
+  if (days === 1) return { tone: 'attention', days, label: 'Due tomorrow' };
+  return {
+    tone: days <= 2 ? 'attention' : 'neutral',
+    days,
+    label: `Due in ${plural(days, 'day')}`,
+  };
+}
+
 /** Looks up one of the three coordinator outcomes by id. */
 export function findOutcome(outcomeId) {
   return COORDINATOR_OUTCOMES.find((outcome) => outcome.id === outcomeId) ?? null;

@@ -6,7 +6,16 @@ export const coordinatorKeys = {
   brief: (token, id) => ['coordinator', 'brief', token, id],
   reviewerPool: (token) => ['coordinator', 'reviewer-pool', token],
   decision: (token, id) => ['coordinator', 'decision', token, id],
+  improvements: (token) => ['coordinator', 'improvements', token],
 };
+
+export function useImprovementQueue(token) {
+  return useQuery({
+    queryKey: coordinatorKeys.improvements(token),
+    queryFn: ({ signal }) => coordinatorApi.improvements(token, signal),
+    enabled: Boolean(token),
+  });
+}
 
 export function useCoordinatorBriefs(token) {
   return useQuery({

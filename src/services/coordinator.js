@@ -53,6 +53,16 @@ export const reviewPanelSchema = z.object({
   assignments: z.array(reviewAssignmentSchema),
 });
 
+/**
+ * When an improvement has been asked for, the coordinator's request metadata.
+ * Null on every brief that is not in refinement.
+ */
+export const refinementRequestSchema = z.object({
+  requestedAt: z.string(),
+  dueDate: z.string().nullable(),
+  requestedBy: z.string().nullable(),
+});
+
 export const coordinatorBriefSchema = z.object({
   id: z.string(),
   code: z.string().nullable(),
@@ -62,6 +72,9 @@ export const coordinatorBriefSchema = z.object({
   summary: z.string(),
   purpose: z.string(),
   problemAddressed: z.string(),
+  /** The applicant. Distinct from responsibleOfficer, who is the coordinator. */
+  submitterName: z.string().nullable(),
+  refinement: refinementRequestSchema.nullable().default(null),
   responsibleOfficer: z.string().nullable(),
   assignedSector: z.string().nullable(),
   documentCount: z.number().int().min(0),
@@ -100,6 +113,22 @@ export const decisionViewSchema = z.object({
   lockedReason: z.string().nullable(),
 });
 
+/** One row of the "Ideas being improved" queue (page 3). Read-only. */
+export const improvementCaseSchema = z.object({
+  id: z.string(),
+  code: z.string().nullable(),
+  title: z.string(),
+  submitterName: z.string().nullable(),
+  requestedAt: z.string(),
+  dueDate: z.string().nullable(),
+  versions: z.number().int().min(1),
+  stage: stageSchema,
+});
+
+export const improvementListSchema = z.object({
+  items: z.array(improvementCaseSchema),
+});
+
 export const reviewerOptionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -134,6 +163,10 @@ export const coordinatorApi = {
       method: 'POST',
     });
     return coordinatorBriefSchema.parse(payload);
+  },
+  improvements: async (token, signal) => {
+    const payload = await request('/coordinator/improvements', { token, signal });
+    return improvementListSchema.parse(payload).items;
   },
   decisionView: async (token, id, signal) => {
     const payload = await request(`/coordinator/briefs/${encodeURIComponent(id)}/decision`, {

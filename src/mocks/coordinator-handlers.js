@@ -98,6 +98,28 @@ export const coordinatorHandlers = [
     return HttpResponse.json(brief);
   }),
 
+  /**
+   * The "Ideas being improved" queue (page 3). Filtered to briefs awaiting an
+   * improved version — search and the deadline filters are applied in the
+   * page, over this list.
+   */
+  http.get(`${API_BASE_URL}/coordinator/improvements`, () => {
+    const items = Object.values(coordinatorBriefs)
+      .filter((brief) => brief.stage === 'REFINEMENT_REQUESTED' && brief.refinement)
+      .map((brief) => ({
+        id: brief.id,
+        code: brief.code,
+        title: brief.title,
+        submitterName: brief.submitterName,
+        requestedAt: brief.refinement.requestedAt,
+        dueDate: brief.refinement.dueDate,
+        versions: brief.versions,
+        stage: brief.stage,
+      }))
+      .sort((a, b) => String(a.dueDate ?? '').localeCompare(String(b.dueDate ?? '')));
+    return HttpResponse.json({ items });
+  }),
+
   http.get(`${API_BASE_URL}/coordinator/briefs/:id/decision`, ({ params }) => {
     const brief = coordinatorBriefs[params.id];
     if (!brief) return new HttpResponse(null, { status: 404 });

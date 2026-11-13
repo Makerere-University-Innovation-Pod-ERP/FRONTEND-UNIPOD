@@ -39,6 +39,7 @@ export const coordinatorBriefs = {
     purpose: 'Improve water efficiency for local growers.',
     problemAddressed: 'Manual irrigation schedules do not account for changing soil moisture.',
     responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Lydia Nabirye',
     assignedSector: 'Technical Assessment',
     documentCount: 1,
     versions: 1,
@@ -84,6 +85,7 @@ export const coordinatorBriefs = {
     purpose: 'Make early water-quality concerns easier to flag.',
     problemAddressed: 'Routine testing is not always available close to source.',
     responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'David Kamoga',
     assignedSector: 'Research & Innovation',
     documentCount: 1,
     versions: 2,
@@ -129,12 +131,20 @@ export const coordinatorBriefs = {
     purpose: 'Improve continuity of postnatal care.',
     problemAddressed: 'Follow-up visits can be missed when records are fragmented.',
     responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Brian Ssekandi',
     assignedSector: 'Academic Department',
     documentCount: 1,
     versions: 2,
     submittedAt: '2026-10-05',
     updatedAt: '2026-10-16',
     outcome: null,
+    // Overdue case: the deadline from the Figma Refinement Workspace frame
+    // (requested 16 Oct, due 30 Oct 2026) has passed.
+    refinement: {
+      requestedAt: '2026-10-16',
+      dueDate: '2026-10-30',
+      requestedBy: 'Sarah Kintu',
+    },
     reviewPanel: {
       mode: 'parallel',
       requiredReviews: 1,
@@ -154,6 +164,51 @@ export const coordinatorBriefs = {
       ],
     },
   },
+  // Second refinement case, from the same Figma frame (Inclusive Learning
+  // Audio Notes · STU-2026-006). Its deadline is still ahead of today, so the
+  // "Within deadline" filter and the "Overdue" filter each have one case.
+  'IH-26027': {
+    id: 'IH-26027',
+    code: 'STU-2026-006',
+    title: 'Inclusive Learning Audio Notes',
+    category: 'student',
+    stage: 'REFINEMENT_REQUESTED',
+    summary:
+      'Recorded lecture summaries for students who find dense written notes hard to work from.',
+    purpose: 'Make course material easier to revise from.',
+    problemAddressed: 'Written notes alone exclude students with reading difficulties.',
+    responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Patience Amongin',
+    assignedSector: 'Academic Department',
+    documentCount: 1,
+    versions: 1,
+    submittedAt: '2026-10-28',
+    updatedAt: '2026-11-09',
+    outcome: null,
+    refinement: {
+      requestedAt: '2026-11-09',
+      dueDate: '2026-11-20',
+      requestedBy: 'Sarah Kintu',
+    },
+    reviewPanel: {
+      mode: 'parallel',
+      requiredReviews: 1,
+      completedReviews: 1,
+      dueDate: '2026-11-09',
+      assignments: [
+        {
+          reviewerId: 'rev-5',
+          reviewerName: 'Esther Achieng',
+          mode: 'parallel',
+          step: 1,
+          of: 1,
+          decisionStatus: 'changes_needed',
+          assignedAt: '2026-11-02',
+          dueDate: '2026-11-09',
+        },
+      ],
+    },
+  },
   'IH-26030': {
     id: 'IH-26030',
     code: null,
@@ -164,6 +219,7 @@ export const coordinatorBriefs = {
     purpose: 'Reduce landfill waste and create local energy.',
     problemAddressed: 'Markets lack a reliable pathway for organic waste.',
     responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Community Energy Group',
     assignedSector: null,
     documentCount: 0,
     versions: 1,
@@ -182,6 +238,7 @@ export const coordinatorBriefs = {
     purpose: 'Preserve and respectfully share local heritage.',
     problemAddressed: 'Valuable histories can be lost without consent-led preservation.',
     responsibleOfficer: 'Sarah Kintu',
+    submitterName: 'Noah Kisakye',
     assignedSector: 'Research & Innovation',
     documentCount: 1,
     versions: 4,
@@ -261,6 +318,11 @@ export const reviewComments = {
     comment:
       'Agreed. The archival format choice is sensible and the storage costs are accounted for.',
     decidedAt: '2026-10-13',
+  },
+  'IH-26027:rev-5': {
+    comment:
+      'The idea is sound but the brief does not say who records the summaries or how quality is checked. Please set that out before this goes any further.',
+    decidedAt: '2026-11-09',
   },
 };
 

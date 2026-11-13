@@ -612,6 +612,198 @@
   letter-spacing: 0.04em;
 }
 
+/* ---- Ideas being improved (page 3) ----------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.coordinator-queue-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mak-space-3);
+  margin-bottom: var(--mak-space-3);
+}
+
+.coordinator-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--mak-space-2);
+  flex: 1 1 260px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--mak-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.coordinator-search input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--mak-text-sm);
+}
+
+.coordinator-search input:focus {
+  outline: none;
+}
+
+/* The whole field shows focus, so the inner input does not need its own ring. */
+.coordinator-search:focus-within {
+  border-color: var(--forest);
+  box-shadow: var(--mak-focus-ring);
+}
+
+.coordinator-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--mak-radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.coordinator-queue-toolbar .coordinator-queue-filters {
+  margin-bottom: 0;
+}
+
+.coordinator-result-count {
+  margin: 0 0 var(--mak-space-3);
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+}
+
+.coordinator-improvement-list {
+  display: grid;
+  gap: var(--mak-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coordinator-improvement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mak-space-4);
+  padding: var(--mak-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--mak-radius-md);
+  background: var(--surface);
+}
+
+.coordinator-improvement-main {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.coordinator-improvement-main h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--mak-text-lg);
+  line-height: 1.3;
+}
+
+.coordinator-improvement-ref {
+  margin: var(--mak-space-1) 0 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--mak-text-xs);
+  letter-spacing: 0.04em;
+}
+
+.coordinator-improvement-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--mak-space-3);
+  margin: var(--mak-space-4) 0 0;
+}
+
+.coordinator-improvement-meta dt {
+  color: var(--muted);
+  font-size: var(--mak-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coordinator-improvement-meta dd {
+  margin: var(--mak-space-1) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--mak-text-sm);
+}
+
+.coordinator-improvement-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--mak-space-3);
+  flex: 0 0 auto;
+}
+
+.coordinator-improvement-side .btn {
+  min-height: 44px;
+  padding: 0 var(--mak-space-4);
+}
+
+/* Deadline chip: colour is always paired with an icon and wording, so the
+   state is legible without relying on hue (WCAG 1.4.1). */
+.coordinator-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mak-space-1);
+  padding: var(--mak-space-1) var(--mak-space-3);
+  border-radius: var(--mak-radius-pill);
+  font-size: var(--mak-text-xs);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.deadline-overdue {
+  background: var(--rose-bg);
+  color: var(--rose);
+}
+
+.deadline-attention {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.deadline-neutral,
+.deadline-none {
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+}
+
+.coordinator-empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mak-space-3);
+}
+
 /* ---- Focus + responsive ---------------------------------------------- */
 
 .coordinator-filter:focus-visible,
@@ -622,6 +814,9 @@
 .coordinator-field textarea:focus-visible,
 .coordinator-icon-button:focus-visible,
 .coordinator-queue-row:focus-visible,
+.coordinator-search-clear:focus-visible,
+.coordinator-improvement-side .btn:focus-visible,
+.coordinator-empty-block .btn:focus-visible,
 .coordinator-next-step-actions .btn:focus-visible,
 .coordinator-form-actions .btn:focus-visible {
   outline: 2px solid var(--forest);
@@ -633,6 +828,15 @@
   .coordinator-form-grid,
   .coordinator-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .coordinator-improvement-side {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .coordinator-improvement-side .btn {
+    width: 100%;
   }
 
   .coordinator-form-actions .btn,
