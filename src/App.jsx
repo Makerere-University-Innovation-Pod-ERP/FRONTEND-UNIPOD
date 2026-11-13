@@ -22,10 +22,46 @@ import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
+import { NewOrderPage } from '@/pages/textile/NewOrderPage';
+import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
+import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
+import { OrderPage, OrdersIndexPage } from '@/pages/textile/OrderPage';
+import { StockListPage } from '@/pages/textile/StockListPage';
+import { StockMovementPage } from '@/pages/textile/StockMovementPage';
+import { MachineListPage } from '@/pages/textile/MachineListPage';
+import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
+import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
 const queryClient = new QueryClient();
+
+// `npm run dev:textile` runs the app as the Textile Operations screens only:
+// no login, no dashboard, every other route redirects to the order board.
+const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
+const TEXTILE_HOME = '/textile/board';
+
+async function textileMockSession() {
+  const { makeMockToken } = await import('@/mocks/jwt');
+  return createSession({
+    accessToken: makeMockToken(['ROLE_TEXTILE_DOMAIN_OWNER'], 'Faith Nabwire'),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
+  });
+}
+
+/** Textile-only mode: sidebar links that belong to other teams' modules land here. */
+function OtherModulePage({ title }) {
+  return (
+    <div className="live-page page-enter">
+      <div className="live-panel not-found-live">
+        <p className="eyebrow">OTHER MODULE</p>
+        <h1>{title}</h1>
+        <p>This module is built by another team. This workspace runs the Textile Operations screens only.</p>
+        <a className="btn btn-primary" href={TEXTILE_HOME}>Go to the order board</a>
+      </div>
+    </div>
+  );
+}
 
 const DEFAULT_COORDINATOR_SESSION = {
   accessToken: 'mock-coordinator-token',

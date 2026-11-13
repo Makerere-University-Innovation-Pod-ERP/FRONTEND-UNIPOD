@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, Menu, Moon, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
