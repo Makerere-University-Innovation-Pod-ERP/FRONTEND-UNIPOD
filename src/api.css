@@ -516,6 +516,9 @@ td.tx-negative{color:var(--rose)}
 .tx-payment{display:grid;gap:6px}
 .tx-payment .tx-status{justify-self:start}
 .tx-payment p{margin:0;font-size:11px;line-height:1.55;color:var(--sidebar-muted)}
+.tx-demo-payment{display:grid;gap:5px;margin-top:10px;padding-top:10px;border-top:1px dashed currentColor;border-color:color-mix(in srgb,currentColor 25%,transparent)}
+.tx-demo-payment .btn{justify-self:start}
+.tx-demo-payment small{font-size:10px;opacity:.75}
 .tx-payment b{color:var(--sidebar-ink)}
 .tx-quote-card .api-error{margin:0}
 
