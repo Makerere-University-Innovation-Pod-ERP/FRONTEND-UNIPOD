@@ -32,11 +32,16 @@ export function StockListPage({ token, onUnauthorized }) {
             <article className="live-metric"><p>Movements this week <Activity size={14} /></p><strong>{stock.data?.movementsThisWeek ?? 0}</strong></article>
           </section>
           <section className="live-panel tx-table-panel">
+            <div className="tx-stock-filters">
+              <input type="search" aria-label="Search stock" placeholder="Search by item or location" value={query} onChange={(event) => setQuery(event.target.value)} />
+              <label className="tx-check"><input type="checkbox" checked={lowOnly} onChange={(event) => setLowOnly(event.target.checked)} /><span>Low stock only</span></label>
+            </div>
+            {visibleItems.length === 0 && <p className="live-empty">No items match{needle ? ` “${query.trim()}”` : ''}{lowOnly ? ' among low-stock items' : ''}.</p>}
             <div className="live-table-wrap">
               <table className="live-table">
                 <thead><tr><th>Item</th><th>Quantity</th><th>Minimum</th><th>Location</th><th>Status</th></tr></thead>
                 <tbody>
-                  {items.map((item) => (
+                  {visibleItems.map((item) => (
                     <tr key={item.id}>
                       <td><b className="tx-strong">{item.name}</b></td>
                       <td className="tx-mono">{item.quantity}</td>
