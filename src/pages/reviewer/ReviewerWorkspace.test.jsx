@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReviewerWorkspace } from './ReviewerWorkspace';
 import { reviewerAssigned } from '@/mocks/fixtures/reviewer';
@@ -8,7 +9,9 @@ function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ReviewerWorkspace token="test-token" onUnauthorized={vi.fn()} />
+      <MemoryRouter>
+        <ReviewerWorkspace token="test-token" onUnauthorized={vi.fn()} />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

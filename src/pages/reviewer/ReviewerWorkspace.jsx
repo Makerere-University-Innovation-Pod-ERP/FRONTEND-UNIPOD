@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CircleAlert, LoaderCircle, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight, CircleAlert, LoaderCircle, UserPlus } from 'lucide-react';
 import { useReviewerAssigned, useReviewerCase } from '@/hooks/useReviewer';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
@@ -74,8 +75,9 @@ function CaseSummaryPanel({ token, id, onUnauthorized }) {
     <section className="live-panel">
       <div className="live-panel-heading">
         <div><p className="eyebrow">CASE · {summary.code || 'UNCODED'}</p><h2>{summary.title}</h2></div>
-        <span className={`decision-badge decision-${summary.decisionStatus}`}>{decisionLabel[summary.decisionStatus]}</span>
+        <Link to={`/reviewer/cases/${id}`}>Open case file <ArrowUpRight size={14} /></Link>
       </div>
+      <div style={{ marginBottom: 14 }}><span className={`decision-badge decision-${summary.decisionStatus}`}>{decisionLabel[summary.decisionStatus]}</span></div>
       <div className="case-fields">
         <Field label="Purpose" value={summary.purpose} />
         <Field label="Problem addressed" value={summary.problemAddressed} />
@@ -96,7 +98,7 @@ function CaseSummaryPanel({ token, id, onUnauthorized }) {
           <span className="disabled-reason">{REVIEWER_CANNOT_ASSIGN_REASON}</span>
         </div>
         <p className="live-note" style={{ marginTop: 10 }}>
-          The independent decision form (Recommended / Changes needed / Not recommended) lives on the Reviewer Case File screen, built separately as part of this role's workflow.
+          The independent decision form (Recommended / Changes needed / Not recommended) lives on the <Link to={`/reviewer/cases/${id}`}>Reviewer Case File</Link>.
         </p>
       </div>
     </section>
