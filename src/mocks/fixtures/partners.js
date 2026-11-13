@@ -1,0 +1,43 @@
+export const initialPartners = [
+  {
+    id: 'partner-1',
+    name: 'Kampala AgriTech Collective',
+    type: 'Industry partner',
+    renewalDate: '12 Nov 2026',
+    status: 'Renewal due',
+    contactPerson: 'David Kintu',
+    contactEmail: 'partnerships@agritech.co.ug',
+    notes: 'Joint incubation and testbed deployment for precision agriculture prototypes.',
+  },
+  {
+    id: 'partner-2',
+    name: 'Ministry of ICT Innovation Fund',
+    type: 'Funder',
+    renewalDate: '4 Mar 2027',
+    status: 'Active',
+    contactPerson: 'Sarah Nabatanzi',
+    contactEmail: 'innovations@ict.go.ug',
+    notes: 'Government funding framework supporting university technology commercialisation.',
+  },
+  {
+    id: 'partner-3',
+    name: 'Makerere Health Sciences',
+    type: 'Academic partner',
+    renewalDate: '—',
+    status: 'Active',
+    contactPerson: 'Prof. Peter Byarugaba',
+    contactEmail: 'research@chs.mak.ac.ug',
+    notes: 'Cross-faculty collaboration on medical devices and health innovations.',
+  },
+  {
+    id: 'partner-4',
+    name: 'EcoBuild Uganda Ltd',
+    type: 'Industry partner',
+    renewalDate: '30 Oct 2026',
+    status: 'Expiring soon',
+    contactPerson: 'Amina Nakazzi',
+    contactEmail: 'contact@ecobuild.ug',
+    notes: 'Sustainable construction material testing and student internship host partner.',
+  },
+];
+
