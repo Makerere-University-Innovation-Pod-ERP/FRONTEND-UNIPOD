@@ -10,7 +10,7 @@ import { useUnauthorizedRedirect } from './helpers';
 const BOOKING_STATUS_LABELS = { APPROVED: 'Approved', PENDING: 'Pending', CANCELLED: 'Cancelled' };
 const BOOKING_STATUS_TONE = { APPROVED: 'positive', PENDING: 'attention', CANCELLED: 'neutral' };
 
-const EMPTY_FORM ={ kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
+const EMPTY_FORM = { kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
 
 /** Current local time as HH:MM, to compare with a booking's start time. */
 function currentTime() {
