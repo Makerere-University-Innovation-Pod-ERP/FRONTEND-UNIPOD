@@ -10,11 +10,15 @@ import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
+import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
+import { RespondToRequestPage } from '@/pages/RespondToRequestPage';
 import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
 import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
 import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
+import { DepartmentQueue } from '@/pages/fact-finding/DepartmentQueue';
+import { DepartmentResponsePage } from '@/pages/fact-finding/DepartmentResponsePage';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
@@ -22,6 +26,7 @@ import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
+import { ReviewerCaseFile } from '@/pages/reviewer/ReviewerCaseFile';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
 import { OrderBoardPage } from '@/pages/textile/OrderBoardPage';
@@ -120,12 +125,17 @@ function AuthenticatedApp({
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
           <Route path="/submissions/new" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot create submissions." />} />
+          <Route path="/submissions/new/confirmation" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <BriefSubmittedPage /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
+          <Route path="/fact-finding/department" element={canFactFind ? <DepartmentQueue token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
+          <Route path="/fact-finding/department/:id" element={canFactFind ? <DepartmentResponsePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+          <Route path="/reviewer/cases/:id" element={canReview ? <ReviewerCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           </>}
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />

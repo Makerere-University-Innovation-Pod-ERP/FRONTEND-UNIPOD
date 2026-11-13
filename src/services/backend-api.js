@@ -96,6 +96,11 @@ export const backendApi = {
       token,
       body: { stage },
     }),
+  respondToRequest: (
+    token,
+    id,
+    body,
+  ) => request(`/submissions/${encodeURIComponent(id)}/respond`, { token, body }),
   assignReviewer: (token, id, subject) =>
     request(`/submissions/${encodeURIComponent(id)}/reviewer`, {
       token,

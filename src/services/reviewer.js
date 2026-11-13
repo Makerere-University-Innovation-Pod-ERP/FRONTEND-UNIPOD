@@ -3,12 +3,16 @@ import { request } from './api-client';
 
 /**
  * These endpoints (/reviewer/*) are not yet part of the deployed backend
- * contract — see the note in services/fact-finding.js. The Reviewer Case
- * File (the decision form: Recommended / Changes needed / Not recommended)
- * belongs to Assignment 5 (Kasibante Taufic Larry); this module only reads
+ * contract — see the note in services/fact-finding.js. This module reads
  * assigned-case summaries for the Reviewer Overview and Review Workspace
- * screens and never exposes a reviewer-assignment action.
+ * screens, and exposes the Reviewer Case File's independent decision
+ * (Recommended / Changes needed / Not recommended, exactly one required
+ * comment, immutable once submitted). It never exposes a
+ * reviewer-assignment action — that stays an Innovation Coordinator /
+ * Sector Officer action (Assignment 2 / 5's department-intake side).
  */
+
+export const reviewerDecisionStatusSchema = z.enum(['pending', 'recommended', 'changes_needed', 'not_recommended']);
 
 export const reviewerAssignedCaseSchema = z.object({
   id: z.string(),
@@ -18,7 +22,7 @@ export const reviewerAssignedCaseSchema = z.object({
   stage: z.string(),
   assignedAt: z.string(),
   pendingAction: z.string(),
-  decisionStatus: z.enum(['pending', 'recommended', 'changes_needed', 'not_recommended']),
+  decisionStatus: reviewerDecisionStatusSchema,
 });
 
 export const reviewerAssignedSchema = z.object({
@@ -38,7 +42,14 @@ export const reviewerCaseSummarySchema = z.object({
     status: z.string(),
   })),
   pendingAction: z.string(),
-  decisionStatus: reviewerAssignedCaseSchema.shape.decisionStatus,
+  decisionStatus: reviewerDecisionStatusSchema,
+  comment: z.string().nullable(),
+  decidedAt: z.string().nullable(),
+});
+
+export const reviewDecisionSchema = z.object({
+  decision: z.enum(['recommended', 'changes_needed', 'not_recommended']),
+  comment: z.string().min(1, 'A comment is required for every decision.'),
 });
 
 export const reviewerApi = {
@@ -48,6 +59,13 @@ export const reviewerApi = {
   },
   caseSummary: async (token, id, signal) => {
     const payload = await request(`/reviewer/cases/${encodeURIComponent(id)}`, { token, signal });
+    return reviewerCaseSummarySchema.parse(payload);
+  },
+  submitDecision: async (token, id, body) => {
+    const payload = await request(`/reviewer/cases/${encodeURIComponent(id)}/decision`, {
+      token,
+      body: reviewDecisionSchema.parse(body),
+    });
     return reviewerCaseSummarySchema.parse(payload);
   },
 };

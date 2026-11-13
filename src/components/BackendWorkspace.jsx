@@ -15,6 +15,24 @@ import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
 
+function buildNavigation(roles) {
+  const items = [
+    { label: 'Overview', href: '/', icon: LayoutDashboard },
+    { label: 'Submissions', href: '/submissions', icon: Boxes },
+  ];
+  if (isFactFindingOfficer(roles)) {
+    items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
+    items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
+    items.push({ label: 'Department queue', href: '/fact-finding/department', icon: ClipboardList });
+  }
+  if (isReviewer(roles)) {
+    items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
+    items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
+  }
+  return items;
+}
+
+/** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
   if (!isTextileDomainOwner(roles)) return [];
   return [
