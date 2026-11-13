@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { collectionDeadline, groupOrdersByColumn, isOrderOverdue, todayIso } from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import { useTextileOrders } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
 export function OrderBoardPage({ token, onUnauthorized }) {
