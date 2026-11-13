@@ -46,7 +46,7 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
     clashes.unshift({ kind: 'time', message: 'That start time has already passed today.' });
   }
   const ready = form.date && form.start && form.end && form.purpose.trim() && proposalInView && !calendar.isFetching;
-  const selected = bookings.find((booking) => booking.id === selectedId && booking.kind === 'TRAINING');
+  const selected = bookings.find((booking) => booking.id === selectedId);
 
   const set = (field) => (event) => {
     const value = event.target.value;
