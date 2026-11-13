@@ -74,7 +74,34 @@ export const TEXTILE_RULES = [
   'Changes to size or design after scheduling may change the price and completion date.',
 ];
 
-export const SCHEDULE_BLOCKED_REASON = 'An order can only be scheduled once Finance confirms payment.';
+/** Days a Ready order is kept before it may be disposed of (see TEXTILE_RULES). */
+export const COLLECTION_LIMIT_DAYS = 30;
+/** Start warning this many days before the collection limit. */
+export const COLLECTION_WARNING_DAYS = 7;
+
+/**
+ * An order is overdue when the customer's date needed has passed and the work
+ * is not finished yet (Ready and Collected orders are done on time or waiting
+ * for the customer).
+ */
+export function isOrderOverdue(order, today) {
+  if (!order.dateNeeded || ['DRAFT', 'RETURNED', 'READY', 'COLLECTED'].includes(order.status)) return false;
+  return order.dateNeeded < today;
+}
+
+/**
+ * For a Ready order: the last day it can be collected and how many days are
+ * left (negative once the limit has passed). Null for any other status.
+ */
+export function collectionDeadline(order, today) {
+  if (order.status !== 'READY') return null;
+  const readyAt = [...order.history].reverse().find((entry) => entry.status === 'READY')?.at ?? order.updatedAt;
+  const deadline = addDays(readyAt.slice(0, 10), COLLECTION_LIMIT_DAYS);
+  const daysLeft = Math.round((new Date(`${deadline}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86_400_000);
+  return { deadline, daysLeft, warn: daysLeft <= COLLECTION_WARNING_DAYS };
+}
+
+export const SCHEDULE_BLOCKED_REASON ='An order can only be scheduled once Finance confirms payment.';
 export const READY_BLOCKED_REASON = 'Complete every quality check before marking the order ready.';
 
 export function groupOrdersByColumn(orders) {
