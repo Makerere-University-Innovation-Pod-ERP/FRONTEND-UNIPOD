@@ -8,6 +8,7 @@ import {
 } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
 import { formatDateTime, useUnauthorizedRedirect } from './helpers';
+import { DemoPaymentButton } from './DemoPaymentButton';
 
 const PRODUCTION_STATUSES = ['SCHEDULED', 'BEING_MADE', 'READY', 'COLLECTED'];
 const ignore = () => {};
