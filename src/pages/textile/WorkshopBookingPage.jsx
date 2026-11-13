@@ -253,6 +253,8 @@ function AttendancePanel({ token, booking, onUnauthorized }) {
   useUnauthorizedRedirect(onUnauthorized, addAttendee.error, setAttendance.error);
   const full = booking.capacity !== null && booking.attendees.length >= booking.capacity;
   const attended = booking.attendees.filter((attendee) => attendee.attended).length;
+  // Sign-ups are open beforehand, but attendance can only be taken from the day of the session.
+  const notStarted = booking.date > todayIso();
 
   return (
     <section className="live-panel">
