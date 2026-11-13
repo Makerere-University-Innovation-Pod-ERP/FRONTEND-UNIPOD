@@ -138,7 +138,13 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
               </ol>
             )}
           </section>
-          {selected && <AttendancePanel key={selected.id} token={token} booking={selected} onUnauthorized={onUnauthorized} />}
+          {selected && (
+            <BookingPanel key={`${selected.id}-${selected.status}`} token={token} booking={selected} today={today} onUnauthorized={onUnauthorized}
+              machineName={machineList.find((machine) => machine.id === selected.machineId)?.name} />
+          )}
+          {selected?.kind === 'TRAINING' && selected.status !== 'CANCELLED' && (
+            <AttendancePanel key={selected.id} token={token} booking={selected} onUnauthorized={onUnauthorized} />
+          )}
         </div>
 
         <form className="live-panel tx-form" onSubmit={onSubmit}>
