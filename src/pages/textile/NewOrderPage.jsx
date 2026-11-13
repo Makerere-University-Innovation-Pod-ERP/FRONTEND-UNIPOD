@@ -48,6 +48,8 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
   } : EMPTY_ORDER));
   const [photo, setPhoto] = useState(null);
   const [savedDraft, setSavedDraft] = useState(draft);
+  // What was last saved (or the empty form), to tell whether there are unsaved changes.
+  const [savedValues, setSavedValues] = useState(values);
   const [notice, setNotice] = useState('');
   const createOrder = useCreateOrder(token);
   const updateDraft = useUpdateDraft(token, savedDraft?.id ?? '');
