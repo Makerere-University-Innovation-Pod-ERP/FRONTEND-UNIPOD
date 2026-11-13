@@ -191,6 +191,54 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
   );
 }
 
+/** Details of the selected booking, with a cancel form for upcoming bookings. */
+function BookingPanel({ token, booking, machineName, today, onUnauthorized }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState('');
+  const cancel = useCancelBooking(token);
+  useUnauthorizedRedirect(onUnauthorized, cancel.error);
+  const cancellable = booking.status !== 'CANCELLED' && booking.date >= today;
+
+  return (
+    <section className="live-panel">
+      <div className="live-panel-heading">
+        <div>
+          <p className="eyebrow">{booking.kind === 'TRAINING' ? 'TRAINING SESSION' : 'WORKSHOP BOOKING'}</p>
+          <h2>{booking.purpose}</h2>
+        </div>
+        <StatusDot tone={BOOKING_STATUS_TONE[booking.status] ?? 'neutral'}>{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}</StatusDot>
+      </div>
+      <dl className="tx-facts single">
+        <div><dt>When</dt><dd>{dayLabel(booking.date, { weekday: 'long', day: 'numeric', month: 'long' })}, {booking.start}–{booking.end}</dd></div>
+        <div><dt>Machine</dt><dd>{machineName ?? 'No specific machine'}</dd></div>
+        <div><dt>Booked by</dt><dd>{booking.bookedBy}</dd></div>
+      </dl>
+      {cancellable && !cancelling && (
+        <div className="tx-actions">
+          <button type="button" className="btn tx-ghost" onClick={() => { setCancelling(true); setReason(''); }}>Cancel booking</button>
+        </div>
+      )}
+      {cancelling && (
+        <form className="tx-inline-form" onSubmit={(event) => {
+          event.preventDefault();
+          cancel.mutateAsync({ bookingId: booking.id, reason: reason.trim() }).then(() => setCancelling(false)).catch(() => {});
+        }}>
+          <label>Why is this booking being cancelled?
+            <textarea required rows={2} value={reason} onChange={(event) => setReason(event.target.value)} />
+          </label>
+          <div className="tx-actions">
+            <button type="submit" className="btn btn-primary" disabled={!reason.trim() || cancel.isPending}>
+              {cancel.isPending ? <LoaderCircle size={14} className="spin" /> : null}Confirm cancellation
+            </button>
+            <button type="button" className="btn" onClick={() => setCancelling(false)}>Keep booking</button>
+          </div>
+        </form>
+      )}
+      <ErrorBanner error={cancel.error} fallback="Could not cancel the booking." />
+    </section>
+  );
+}
+
 function AttendancePanel({ token, booking, onUnauthorized }) {
   const [name, setName] = useState('');
   const addAttendee = useAddAttendee(token);
