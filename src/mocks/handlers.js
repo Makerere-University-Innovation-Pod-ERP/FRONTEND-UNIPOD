@@ -6,11 +6,30 @@ import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
+import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
+import { sectors, submissions, toCaseFile } from './fixtures/submissions';
+import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
+import { initialMediaRequests } from './fixtures/media';
+import { initialPartners } from './fixtures/partners';
+import { initialFinanceOverview } from './fixtures/overview';
+import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
+import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
+  ...coordinatorMockUsers,
+  'coordinator@unipod.test': { subject: 'Grace Namuli', roles: ['ROLE_DEPARTMENT_COORDINATOR'] },
+  'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
+  'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
+};
+
+let trainingSessions = [...initialTrainingSessions];
+let mentorshipFollowUps = [...initialMentorshipFollowUps];
+let mediaRequests = [...initialMediaRequests];
+let partners = [...initialPartners];
+let invoices = [...initialInvoices];
   'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
   'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
   ...receptionMockUsers,
@@ -413,5 +432,203 @@ export const handlers = [
   }),
 
   ...receptionHandlers,
+  ...coordinatorHandlers,
+  // Operations / Multimedia - Training & Mentorship
+  http.get(`${API_BASE_URL}/operations/training/overview`, () => {
+    const upcomingSessions = trainingSessions.filter((s) => s.status === 'Upcoming' || s.status === 'In Progress').length;
+    const seatsFilled = trainingSessions.reduce((acc, s) => acc + s.enrolledCount, 0);
+    const totalSeats = trainingSessions.reduce((acc, s) => acc + s.capacity, 0);
+    const mentorshipFollowUpsCount = mentorshipFollowUps.length;
+
+    return HttpResponse.json({
+      upcomingSessions,
+      seatsFilled,
+      totalSeats,
+      mentorshipFollowUps: mentorshipFollowUpsCount,
+      sessions: trainingSessions,
+      followUps: mentorshipFollowUps,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/training/sessions/:id`, ({ params }) => {
+    const session = trainingSessions.find((s) => s.id === params.id);
+    if (!session) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(session);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/attendance`, async ({ params, request }) => {
+    const { sessionId } = params;
+    const { participantId, attendance } = await request.json();
+    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
+    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
+
+    const session = trainingSessions[sessionIndex];
+    const updatedParticipants = session.participants.map((p) =>
+      p.id === participantId ? { ...p, attendance } : p,
+    );
+    trainingSessions[sessionIndex] = { ...session, participants: updatedParticipants };
+    return HttpResponse.json(trainingSessions[sessionIndex]);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/registrations`, async ({ params, request }) => {
+    const { sessionId } = params;
+    const body = await request.json();
+    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
+    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
+
+    const newParticipant = {
+      id: `p-${Date.now()}`,
+      attendance: 'Unmarked',
+      registeredAt: new Date().toISOString(),
+      ...body,
+    };
+    const session = trainingSessions[sessionIndex];
+    trainingSessions[sessionIndex] = {
+      ...session,
+      enrolledCount: session.enrolledCount + 1,
+      participants: [...session.participants, newParticipant],
+    };
+    return HttpResponse.json(newParticipant);
+  }),
+
+  // Operations / Multimedia - Media Services
+  http.get(`${API_BASE_URL}/operations/media/overview`, () => {
+    return HttpResponse.json({
+      requestedCount: mediaRequests.filter((r) => r.status === 'REQUESTED').length,
+      scheduledCount: mediaRequests.filter((r) => r.status === 'SCHEDULED').length,
+      inProductionCount: mediaRequests.filter((r) => r.status === 'IN_PRODUCTION').length,
+      deliveredCount: mediaRequests.filter((r) => r.status === 'DELIVERED').length,
+      requests: mediaRequests,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/media/requests`, () => {
+    return HttpResponse.json(mediaRequests);
+  }),
+
+  http.patch(`${API_BASE_URL}/operations/media/requests/:id/status`, async ({ params, request }) => {
+    const id = params.id;
+    const body = await request.json();
+    const index = mediaRequests.findIndex((r) => r.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    mediaRequests[index] = { ...mediaRequests[index], status: body.status };
+    return HttpResponse.json(mediaRequests[index]);
+  }),
+
+  // Operations / Multimedia - Partners & MOUs
+  http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
+    return HttpResponse.json({
+      totalPartners: partners.length,
+      renewalDueCount: partners.filter((p) => p.status === 'Renewal due' || p.status === 'Expiring soon').length,
+      partners,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/partners`, () => {
+    return HttpResponse.json(partners);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/partners/:id/renew`, async ({ params, request }) => {
+    const { id } = params;
+    const body = await request.json();
+    const index = partners.findIndex((p) => p.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    partners[index] = {
+      ...partners[index],
+      renewalDate: body.renewalDate || '12 Nov 2027',
+      status: 'Active',
+    };
+    return HttpResponse.json(partners[index]);
+  }),
+
+  http.put(`${API_BASE_URL}/operations/partners/:id`, async ({ params, request }) => {
+    const { id } = params;
+    const body = await request.json();
+    const index = partners.findIndex((p) => p.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    partners[index] = { ...partners[index], ...body };
+    return HttpResponse.json(partners[index]);
+  }),
+
+  // Finance / Overview (Daniel Kato, Finance Officer)
+  http.get(`${API_BASE_URL}/finance/overview`, () => {
+    return HttpResponse.json(initialFinanceOverview);
+  }),
+
+  // Finance / Price Lists & Invoices
+  http.get(`${API_BASE_URL}/finance/invoices/overview`, () => {
+    const awaitingCount = invoices.filter(
+      (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
+    ).length;
+    const receiptedCount = invoices.filter((inv) => inv.status === 'Receipted').length;
+
+    return HttpResponse.json({
+      ...initialInvoicesOverview,
+      metrics: [
+        {
+          id: 'income',
+          label: 'INCOME (MTD)',
+          value: 'UGX 1.62M',
+          variant: 'default',
+          icon: 'Receipt',
+        },
+        {
+          id: 'awaiting',
+          label: 'AWAITING VERIFICATION',
+          value: awaitingCount,
+          variant: 'burgundy',
+          icon: 'Clock',
+        },
+        {
+          id: 'receipted',
+          label: 'RECEIPTED',
+          value: receiptedCount,
+          variant: 'default',
+          icon: 'CheckCircle',
+        },
+      ],
+      priceList: initialPriceList,
+      invoices,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/verify`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    invoices[index] = { ...invoices[index], status: 'Verified' };
+    return HttpResponse.json(invoices[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/receipt`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    // Gating check: only verified invoices can release a receipt!
+    if (invoices[index].status !== 'Verified') {
+      return new HttpResponse(
+        JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
+    invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    return HttpResponse.json(invoices[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/finance/invoices/:id/evidence`, async ({ params, request }) => {
+    const id = params.id;
+    const body = await request.json();
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Awaiting verification',
+      paymentReference: body.paymentReference || 'BANK-REF-AUTOUPLOAD',
+    };
+    return HttpResponse.json(invoices[index]);
+  }),
   ...textileHandlers,
 ];

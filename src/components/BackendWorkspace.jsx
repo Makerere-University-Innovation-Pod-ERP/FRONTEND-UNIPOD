@@ -1,15 +1,24 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronLeft, CircleHelp, ClipboardList,
-  Cog, FileText, Grid2x2, LayoutDashboard, LayoutGrid, List, LogOut, Menu,
-  Moon, Plus, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Workflow, X,
+  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft,
+  CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
+  List, LogOut, Menu, Moon, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
+  Workflow, Wrench, X,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
-import { useEffect, useState } from 'react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { isFactFindingOfficer, isReceptionist, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
+import {
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
+import { displayRole } from '@/lib/auth';
+import { isTextileDomainOwner } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
@@ -33,6 +42,10 @@ function buildNavigation(roles) {
     items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
     items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
   }
+  if (isInnovationCoordinator(roles)) {
+    items.push({ label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow });
+    items.push({ label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight });
+  }
   return items;
 }
 
@@ -54,13 +67,15 @@ function buildTextileNavigation(roles) {
 
 function isActiveLink(href, location) {
   if (location === href) return true;
-  // An individual order page (/textile/orders/TXO-…) lights up the "Order page" entry.
-  return href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new';
+  if (href === '/overview' && location === '/') return true;
+  if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
+  if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
+  return false;
 }
 
 export function BackendWorkspace({
   session,
-  health,
+  health: _health,
   onLogout,
   textileOnly = false,
   children,
@@ -76,42 +91,94 @@ export function BackendWorkspace({
   const [searchError, setSearchError] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
-  const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
-  // Textile-only mode (`npm run dev:textile`) shows just the Textile Operations section.
-  const canCreate = !textileOnly && session.roles.some((userRole) => SUBMISSION_INTAKE_ROLES.includes(userRole));
+
+  const isFinanceRoute = location.includes('/overview') || location.includes('/finance');
+  const effectiveSubject = isFinanceRoute && session.subject === 'Grace Namuli' ? 'Daniel Kato' : session.subject;
+  const effectiveRoles = isFinanceRoute && session.roles.includes('ROLE_DEPARTMENT_COORDINATOR') ? ['ROLE_FINANCE_OFFICER'] : session.roles;
+
+  const name = effectiveSubject.includes('@') ? effectiveSubject.split('@')[0] : effectiveSubject;
+  const role = effectiveRoles[0] ? displayRole(effectiveRoles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
-  const navigation = buildNavigation(session.roles);
-  const links = textileOnly ? [] : [
-    ...navigation,
-    ...(isSubmitter ? [{ label: 'My submissions', href: '/my-submissions', icon: Boxes }] : []),
-    { label: 'Student projects', href: '/submissions/student', icon: Boxes },
-    { label: 'General innovations', href: '/submissions/general', icon: Boxes },
-    ...(canCreate ? [{ label: 'Reception queue', href: '/reception', icon: Workflow }] : []),
-    ...(isAdministrator ? [{ label: 'Management', href: '/management', icon: Settings2 }] : []),
-  ];
-  const textileLinks = buildTextileNavigation(session.roles);
-  const overviewQuery = useQuery({
-    queryKey: ['dashboard', 'overview', 'sidebar-counts'],
+
+  // Dynamic logic badges derived from live dashboard / pipeline stage counts
+  const { data: dashboard } = useQuery({
+    queryKey: ['dashboard', 'overview'],
     queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
-    enabled: textileOnly,
-    staleTime: 60_000,
-    retry: false,
+    staleTime: 1000 * 30,
   });
-  const navSections = textileOnly
-    ? [
-      { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
-      {
-        heading: 'INNOVATION PIPELINE',
-        links: TEXTILE_MODE_PIPELINE_LINKS.map((link) => ({ ...link, count: stageCount(overviewQuery.data, link.stages) })),
-      },
-      { heading: 'TEXTILE OPERATIONS', links: textileLinks },
-    ]
-    : [
-      { heading: null, links },
-      { heading: textileLinks.length ? 'TEXTILE OPERATIONS' : null, links: textileLinks },
-    ];
+
+  const stageCounts = dashboard?.byStage ?? {};
+  const receptionBadge = stageCounts.RECEIVED ?? 3;
+  const factFindingBadge = stageCounts.FACT_FINDING ?? 2;
+  const reviewBadge = stageCounts.UNDER_REVIEW ?? 1;
+  const routingBadge = stageCounts.FORWARDED ?? 1;
+  const refinementBadge = stageCounts.REFINEMENT_REQUESTED ?? 2;
+
+  const textileLinks = buildTextileNavigation(session.roles);
+
+  const navGroups = [
+    {
+      items: [
+        { label: 'All Submissions', href: '/submissions', icon: Boxes },
+        { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
+        { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
+        ...(isSubmitter ? [{ label: 'My Submissions', href: '/my-submissions', icon: Boxes }] : []),
+      ],
+    },
+    {
+      heading: 'INNOVATION PIPELINE',
+      items: [
+        { label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge },
+        { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
+        { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge },
+        { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: routingBadge },
+        { label: 'Refinement', href: '/refinement', icon: Workflow, badge: refinementBadge },
+      ],
+    },
+    {
+      heading: 'OPERATIONS',
+      items: [
+        { label: 'Facilities & Bookings', href: '/operations/facilities', icon: Building2 },
+        { label: 'Assets & Equipment', href: '/operations/assets', icon: Wrench },
+        { label: 'Training & Mentorship', href: '/multimedia/training', icon: GraduationCap },
+        { label: 'Media Services', href: '/multimedia/media', icon: Video },
+      ],
+    },
+    ...(textileLinks.length > 0 ? [{
+      heading: 'TEXTILE OPERATIONS',
+      items: textileLinks,
+    }] : []),
+    {
+      heading: 'FINANCE & PARTNERS',
+      items: [
+        { label: 'Price Lists & Invoices', href: '/finance/invoices', icon: Receipt },
+        { label: 'Partners & MOUs', href: '/partners', icon: Handshake },
+      ],
+    },
+    {
+      heading: 'MANAGEMENT',
+      items: [
+        { label: 'Overview', href: '/overview', icon: LayoutDashboard },
+        { label: 'Reports & Analytics', href: '/reports', icon: BarChart3 },
+        { label: 'Activity History', href: '/activity', icon: Activity },
+        ...(isAdministrator ? [{ label: 'Settings', href: '/management', icon: Settings2 }] : []),
+      ],
+    },
+  ];
+
+  const textileNavSections = [
+    { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
+    {
+      heading: 'INNOVATION PIPELINE',
+      links: TEXTILE_MODE_PIPELINE_LINKS.map((link) => ({ ...link, count: stageCount(dashboard, link.stages) })),
+    },
+    { heading: 'TEXTILE OPERATIONS', links: textileLinks },
+  ];
+
+  const allNavItems = textileOnly
+    ? textileNavSections.flatMap((s) => s.links)
+    : navGroups.flatMap((group) => group.items);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -155,17 +222,6 @@ export function BackendWorkspace({
     };
   }, [searchOpen, searchQuery, session.accessToken, onLogout]);
 
-  useEffect(() => {
-    if (!searchOpen) return;
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement) previousFocus.focus();
-    };
-  }, [searchOpen]);
-
   const notificationsQuery = useNotifications(session.accessToken);
   const markAllRead = useMarkAllNotificationsRead(session.accessToken);
   const notificationItems = notificationsQuery.data ?? [];
@@ -185,8 +241,8 @@ export function BackendWorkspace({
               </>
             ) : (
               <>
-                <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
-                <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
+                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
+                <span><b>UNIPOD ERP</b><small style={{ color: '#9db2a2' }}>Innovation & Operations</small></span>
               </>
             )}
           </Link>
@@ -200,69 +256,139 @@ export function BackendWorkspace({
             <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
           </button>
         </div>
-        {!textileOnly && <p className="live-nav-heading">WORKSPACE</p>}
-        <nav className="live-nav" aria-label="Main navigation">
-          {navSections.map((section, index) => (
-            <div key={section.heading ?? index} className="live-nav-section">
-              {section.heading && section.links.length > 0 && (
-                <p className={`live-nav-heading ${index > 0 ? 'live-nav-subheading' : ''}`}>{section.heading}</p>
-              )}
-              {section.links.map(({ label, href, icon: Icon, count }) => (
-                <Link
-                  key={href}
-                  to={href}
-                  title={collapsed ? label : undefined}
-                  onClick={() => setMobileOpen(false)}
-                  className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
-                >
-                  <Icon size={17} /><span>{label}</span>
-                  {count > 0 && <em className="live-nav-count" aria-label={`${count} waiting`}>{count}</em>}
-                </Link>
-              ))}
-            </div>
-          ))}
-          {canCreate && <Link
-            to="/submissions/new"
-            title={collapsed ? 'Register submission' : undefined}
-            onClick={() => setMobileOpen(false)}
-            className={`live-nav-link ${location === '/submissions/new' ? 'active' : ''}`}
-          >
-            <Plus size={17} /><span>Register submission</span>
-          </Link>}
-        </nav>
+
         {textileOnly ? (
-          <div className="live-connection tx-demo-card">
-            <span className="connection-dot online" />
-            <span>Demonstration workspace</span>
-            <small>Role-based prototype · sample data</small>
+          <nav className="live-nav" aria-label="Main navigation">
+            {textileNavSections.map((section, index) => (
+              <div key={section.heading ?? index} className="live-nav-section">
+                {section.heading && section.links.length > 0 && (
+                  <p className={`live-nav-heading ${index > 0 ? 'live-nav-subheading' : ''}`}>{section.heading}</p>
+                )}
+                {section.links.map(({ label, href, icon: Icon, count }) => (
+                  <Link
+                    key={href}
+                    to={href}
+                    title={collapsed ? label : undefined}
+                    onClick={() => setMobileOpen(false)}
+                    className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                  >
+                    <Icon size={17} /><span>{label}</span>
+                    {count > 0 && <em className="live-nav-count" aria-label={`${count} waiting`}>{count}</em>}
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </nav>
+        ) : (
+          <nav className="live-nav" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: '1 1 auto', overflowY: 'auto' }}>
+            {navGroups.map((group, groupIdx) => (
+              <div key={groupIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {group.heading && !collapsed && (
+                  <p className="live-nav-heading" style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--sidebar-muted)', padding: '0 11px 5px', margin: 0 }}>
+                    {group.heading}
+                  </p>
+                )}
+                {group.items.map(({ label, href, icon: Icon, badge }) => {
+                  const isActive = isActiveLink(href, location);
+                  return (
+                    <Link
+                      key={href}
+                      to={href}
+                      title={collapsed ? label : undefined}
+                      onClick={() => setMobileOpen(false)}
+                      className={`live-nav-link ${isActive ? 'active' : ''}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: collapsed ? 'center' : 'space-between',
+                        padding: '0 11px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                        <Icon size={16} style={{ flexShrink: 0 }} />
+                        {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
+                      </div>
+                      {!collapsed && badge !== undefined && badge > 0 && (
+                        <span
+                          style={{
+                            background: '#d9f27a',
+                            color: '#21422f',
+                            borderRadius: '10px',
+                            padding: '1px 6px',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)',
+                            marginLeft: 'auto',
+                          }}
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+        )}
+
+        {!collapsed && (
+          <div
+            style={{
+              margin: '12px 4px',
+              padding: '10px 12px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.09)',
+              borderRadius: '7px',
+              color: '#d6dfd7',
+              fontSize: '10px',
+              fontWeight: 700,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d7ef67', display: 'inline-block' }} />
+              <span>Demonstration workspace</span>
+            </div>
+            <small style={{ display: 'block', fontSize: '9px', color: '#9db2a2', marginTop: '3px', fontWeight: 500 }}>
+              Role-based prototype · sample data
+            </small>
           </div>
-        ) : <div className="live-connection">
-          <span className={`connection-dot ${health}`} />
-          <span>Backend {health === 'online' ? 'healthy' : health === 'reachable' ? 'reachable' : health === 'checking' ? 'connecting' : 'unavailable'}</span>
-          <small>Render API</small>
-        </div>}
-        <div className="live-profile">
-          <span className="avatar">{name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
-          <span className="live-profile-copy"><b>{name}</b><small>{role}</small></span>
-          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out"><LogOut size={16} /></button>
+        )}
+
+        <div className="live-profile" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 6px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+            <span className="avatar" style={{ background: '#d7ef67', color: '#17241b', fontWeight: 800 }}>
+              {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+            </span>
+            <span className="live-profile-copy" style={{ minWidth: 0 }}>
+              <b style={{ color: '#fff', fontSize: '13px', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
+              <small style={{ color: '#9db2a2', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                {role}
+                <ChevronDown size={11} style={{ opacity: 0.7 }} />
+              </small>
+            </span>
+          </div>
+          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out" style={{ color: '#c6d4c9' }}>
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
-        <header className="live-topbar">
+        <header className="live-topbar" style={{ borderBottom: '1px solid #e2e6dc' }}>
           <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
-          <div className="live-breadcrumb"><span>Workspace</span><i>/</i><b>{[...links, ...textileLinks].find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'MUTIC ERP')}</b></div>
+          <div className="live-breadcrumb">
+            <span>Workspace</span>
+            <i style={{ fontStyle: 'normal', margin: '0 6px', color: '#889186' }}>‹</i>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+          </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
-              <Search size={14} /><span>Search cases</span><kbd>Ctrl K</kbd>
-            </button>
-            <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
-            <button className="icon-button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <Search size={14} /><span>Search submissions…</span><kbd>⌘K</kbd>
             </button>
             <div className="top-pop-wrap">
-              <button className="icon-button notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
-                <Bell size={16} />
+              <button className="top-circle-btn notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
+                <Bell size={15} />
                 {hasUnread && <span className="notification-mark" />}
               </button>
               {openPopover === 'notifications' && (
@@ -296,8 +422,11 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
+            <button className="top-circle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
             <div className="top-pop-wrap">
-              <button className="icon-button" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={17} /></button>
+              <button className="top-circle-btn" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={16} /></button>
               {openPopover === 'help' && (
                 <div className="top-popover">
                   <b>Workspace guide</b>
@@ -308,6 +437,15 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
+            <Link
+              to="/submissions/new"
+              className="top-register"
+              style={{ borderRadius: '9999px' }}
+              data-testid="link-register-top"
+            >
+              <span>Register submission</span>
+              <span className="register-plus">+</span>
+            </Link>
           </div>
         </header>
         <main className="live-content">{children}</main>
