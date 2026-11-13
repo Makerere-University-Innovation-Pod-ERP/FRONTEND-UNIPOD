@@ -12,6 +12,12 @@ const BOOKING_STATUS_TONE = { APPROVED: 'positive', PENDING: 'attention', CANCEL
 
 const EMPTY_FORM ={ kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
 
+/** Current local time as HH:MM, to compare with a booking's start time. */
+function currentTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
 function dayLabel(isoDate, options) {
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, options);
 }
