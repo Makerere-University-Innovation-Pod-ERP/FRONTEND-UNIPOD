@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOARD_COLUMNS, SCHEDULE_BLOCKED_REASON, READY_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder, describeMaterialLine,
   evaluateMovement, findBookingClashes, groupOrdersByColumn, isLowStock, isMachineBookable, isoWeekday,
-  nextOrderStep, startOfWeek, transitionError,
+  nextOrderStep, startOfWeek, transitionError, collectionDeadline, isOrderOverdue,
 } from './textile';
 import { isTextileDomainOwner } from './permissions';
 
