@@ -5,7 +5,6 @@ import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
-import { sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
