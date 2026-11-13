@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reviewerApi } from '@/services/reviewer';
 
 export const reviewerKeys = {
@@ -19,5 +19,16 @@ export function useReviewerCase(token, id) {
     queryKey: reviewerKeys.case(token, id),
     queryFn: ({ signal }) => reviewerApi.caseSummary(token, id, signal),
     enabled: Boolean(token && id),
+  });
+}
+
+export function useSubmitDecision(token, id) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => reviewerApi.submitDecision(token, id, body),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(reviewerKeys.case(token, id), updated);
+      void queryClient.invalidateQueries({ queryKey: reviewerKeys.assigned(token) });
+    },
   });
 }
