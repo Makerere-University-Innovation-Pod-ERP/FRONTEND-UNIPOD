@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/presentation';
 import {
   useMachines, useOrderTransition, useRecordCollection, useSaveProduction, useSaveQuality, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
 import { formatDateTime, useUnauthorizedRedirect } from './helpers';
 import { DemoPaymentButton } from './DemoPaymentButton';
 
