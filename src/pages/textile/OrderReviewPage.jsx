@@ -220,6 +220,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
               Finance confirms payment against reference <b>{order.code}</b>
               {order.payment.reference ? ` (payment ${order.payment.reference})` : ''}. The order reaches Scheduled only after that.
             </p>
+            <DemoPaymentButton token={token} order={order} />
           </div>
         )}
 
