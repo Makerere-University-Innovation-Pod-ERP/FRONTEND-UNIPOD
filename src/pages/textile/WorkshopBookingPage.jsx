@@ -263,6 +263,7 @@ function AttendancePanel({ token, booking, onUnauthorized }) {
         <span className="tx-count"><Users size={13} />{booking.attendees.length}{booking.capacity ? `/${booking.capacity}` : ''} signed up · {attended} attended</span>
       </div>
       {booking.attendees.length === 0 && <p className="live-empty">No one has signed up yet.</p>}
+      {notStarted && booking.attendees.length > 0 && <p className="tx-inline-note">Attendance can be marked from the day of the session.</p>}
       <ul className="tx-checklist">
         {booking.attendees.map((attendee) => (
           <li key={attendee.id}>
