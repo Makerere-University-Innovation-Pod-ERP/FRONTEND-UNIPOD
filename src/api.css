@@ -575,6 +575,8 @@ td.tx-negative{color:var(--rose)}
 .tx-slot b{font-size:11px;color:var(--ink)}
 .tx-slot small{font-size:10px;color:var(--muted)}
 .tx-slot.class{background:var(--surface-raised)}
+.tx-slot.cancelled{opacity:.6;border-style:dashed}
+.tx-slot.cancelled b{text-decoration:line-through}
 .tx-slot.free{border-style:dashed}
 button.tx-slot{cursor:pointer}
 button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
