@@ -169,3 +169,27 @@ describe('textile permissions', () => {
     expect(isTextileDomainOwner(['ROLE_TEXTILE_DOMAIN_OWNER_ASSISTANT'])).toBe(false);
   });
 });
+
+describe('overdue orders and the 30-day collection limit', () => {
+  const today = '2026-11-20';
+
+  it('flags unfinished work whose date needed has passed', () => {
+    expect(isOrderOverdue({ status: 'BEING_MADE', dateNeeded: '2026-11-19' }, today)).toBe(true);
+    expect(isOrderOverdue({ status: 'SCHEDULED', dateNeeded: '2026-11-20' }, today)).toBe(false);
+    expect(isOrderOverdue({ status: 'BEING_MADE', dateNeeded: null }, today)).toBe(false);
+  });
+
+  it('never flags finished, returned or draft orders', () => {
+    for (const status of ['READY', 'COLLECTED', 'RETURNED', 'DRAFT']) {
+      expect(isOrderOverdue({ status, dateNeeded: '2026-01-01' }, today)).toBe(false);
+    }
+  });
+
+  it('counts the collection limit from the day the order became Ready', () => {
+    const order = { status: 'READY', updatedAt: '2026-11-19T09:00:00Z', history: [{ status: 'READY', at: '2026-10-25T10:00:00Z' }] };
+    expect(collectionDeadline(order, today)).toEqual({ deadline: '2026-11-24', daysLeft: 4, warn: true });
+    expect(collectionDeadline(order, '2026-11-01')).toMatchObject({ daysLeft: 23, warn: false });
+    expect(collectionDeadline(order, '2026-11-26')).toMatchObject({ daysLeft: -2, warn: true });
+    expect(collectionDeadline({ ...order, status: 'COLLECTED' }, today)).toBeNull();
+  });
+});
