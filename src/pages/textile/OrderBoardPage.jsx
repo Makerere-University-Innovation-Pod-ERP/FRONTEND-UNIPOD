@@ -27,6 +27,7 @@ export function OrderBoardPage({ token, onUnauthorized }) {
   useUnauthorizedRedirect(onUnauthorized, orders.error);
   const columns = groupOrdersByColumn(orders.data ?? []);
   const sentBack = (orders.data ?? []).filter((order) => order.status === 'RETURNED').length;
+  const today = todayIso();
 
   return (
     <div className="live-page page-enter">
