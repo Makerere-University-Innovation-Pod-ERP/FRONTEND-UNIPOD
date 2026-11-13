@@ -2,9 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
+import {
+  COORDINATOR_ONLY_REASON,
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
+import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
@@ -21,6 +27,11 @@ import { DepartmentQueue } from '@/pages/fact-finding/DepartmentQueue';
 import { DepartmentResponsePage } from '@/pages/fact-finding/DepartmentResponsePage';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
+import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
+import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
+import { CoordinatorImprovementsPage } from '@/pages/coordinator/CoordinatorImprovementsPage';
+import { CoordinatorChangesPage } from '@/pages/coordinator/CoordinatorChangesPage';
+import { CoordinatorVersionsPage } from '@/pages/coordinator/CoordinatorVersionsPage';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
@@ -86,6 +97,7 @@ function AuthenticatedApp({
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
+  const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
@@ -135,6 +147,12 @@ function AuthenticatedApp({
           <Route path="/fact-finding/department/:id" element={canFactFind ? <DepartmentResponsePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+          <Route path="/coordinator" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/improvements" element={canCoordinate ? <CoordinatorImprovementsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/changes" element={canCoordinate ? <CoordinatorChangesPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/versions" element={canCoordinate ? <CoordinatorVersionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/reviewer/cases/:id" element={canReview ? <ReviewerCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           </>}
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />

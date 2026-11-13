@@ -9,6 +9,13 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import {
+  isFactFindingOfficer,
+  isInnovationCoordinator,
+  isReviewer,
+  isTextileDomainOwner,
+} from '@/lib/permissions';
 import { displayRole } from '@/lib/auth';
 import { isTextileDomainOwner } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
@@ -28,6 +35,10 @@ function buildNavigation(roles) {
   if (isReviewer(roles)) {
     items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
     items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
+  }
+  if (isInnovationCoordinator(roles)) {
+    items.push({ label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow });
+    items.push({ label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight });
   }
   return items;
 }
