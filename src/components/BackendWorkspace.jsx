@@ -214,12 +214,12 @@ export function BackendWorkspace({
             {textileOnly ? (
               <>
                 <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
-                <span><b>UNIPOD ERP</b><small>Innovation & Operations</small></span>
+                <span><b>MUTIC ERP</b><small>Textile Operations</small></span>
               </>
             ) : (
               <>
-                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-                <span><b>UNIPOD ERP</b><small>Innovation & Operations</small></span>
+                <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
+                <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
               </>
             )}
           </Link>

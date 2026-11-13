@@ -197,7 +197,7 @@ function App() {
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
     if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
-    return saved || DEFAULT_COORDINATOR_SESSION;
+    return saved;
   });
   const [health, setHealth] = useState('checking');
   const [showSignUp, setShowSignUp] = useState(false);
@@ -231,7 +231,7 @@ function App() {
 
   const logout = useCallback(() => {
     clearSession();
-    setSession(DEFAULT_COORDINATOR_SESSION);
+    setSession(null);
   }, []);
 
   const acceptSession = useCallback((nextSession) => {
