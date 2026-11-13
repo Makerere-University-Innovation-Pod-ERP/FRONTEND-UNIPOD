@@ -230,6 +230,9 @@ export const textileApi = {
   },
   createBooking: async (token, body) =>
     bookingSchema.parse(await request('/textile/bookings', { token, body })),
+  /** Proposed endpoint: POST /textile/bookings/:id/cancel { reason } → the cancelled booking. */
+  cancelBooking: async (token, id, reason) =>
+    bookingSchema.parse(await request(`/textile/bookings/${path(id)}/cancel`, { token, body: { reason } })),
   addAttendee: async (token, id, name) =>
     bookingSchema.parse(await request(`/textile/bookings/${path(id)}/attendees`, { token, body: { name } })),
   setAttendance: async (token, id, attendeeId, attended) =>
