@@ -81,7 +81,7 @@ export function PhotoDrop({ label, hint, file, existingName, onChange }) {
           accept(event.dataTransfer.files?.[0] ?? null);
         }}
       >
-        <ImageUp size={18} aria-hidden="true" />
+        {previewUrl ? <img className="tx-photo-thumb" src={previewUrl} alt={`Preview of ${file.name}`} /> : <ImageUp size={18} aria-hidden="true" />}
         <b>{name ? `${name} ${file ? 'selected' : 'uploaded'}` : 'Drop a photo or click to choose'}</b>
         <small>{hint}</small>
         <input
