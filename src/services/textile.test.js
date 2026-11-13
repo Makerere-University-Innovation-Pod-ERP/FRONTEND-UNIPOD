@@ -126,6 +126,17 @@ describe('textile API contract', () => {
     expect((await rejection(textileApi.createBooking(token, booking))).message).toMatch(/Clashes with/);
   });
 
+  it('cancels a booking with a reason, which frees the slot', async () => {
+    const date = addDays(startOfWeek(todayIso()), 19); // a Saturday two weeks out
+    const booking = { kind: 'WORKSHOP', date, start: '13:00', end: '14:00', purpose: 'Sample run', machineId: null, capacity: null };
+    const created = await textileApi.createBooking(token, booking);
+    expect((await rejection(textileApi.cancelBooking(token, created.id, ' '))).status).toBe(400);
+    const cancelled = await textileApi.cancelBooking(token, created.id, 'Customer postponed');
+    expect(cancelled.status).toBe('CANCELLED');
+    expect((await rejection(textileApi.cancelBooking(token, created.id, 'Again'))).status).toBe(409);
+    expect((await textileApi.createBooking(token, booking)).status).toBe('APPROVED');
+  });
+
   it('refuses a booking that clashes with the class timetable', async () => {
     const monday = addDays(startOfWeek(todayIso()), 14);
     const error = await rejection(textileApi.createBooking(token, { kind: 'WORKSHOP', date: monday, start: '10:00', end: '11:00', purpose: 'Practice', machineId: null }));
