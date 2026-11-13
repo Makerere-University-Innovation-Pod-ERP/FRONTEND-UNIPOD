@@ -20,7 +20,6 @@ const mockUsers = {
   'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
   'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
   ...coordinatorMockUsers,
-  'coordinator@unipod.test': { subject: 'Grace Namuli', roles: ['ROLE_DEPARTMENT_COORDINATOR'] },
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
   ...receptionMockUsers,
 };
