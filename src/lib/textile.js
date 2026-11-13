@@ -202,7 +202,10 @@ export function assessMaterials(materials, stockItems) {
 
 export function describeMaterialLine(line) {
   if (!line.item) return 'Item not found in stock list';
-  if (!line.sufficient) return `not enough — only ${line.available} in stock`;
+  if (!line.sufficient) {
+    const total = line.requested > line.quantity ? ` for ${line.requested} across these lines` : '';
+    return `not enough — only ${line.available} in stock${total}`;
+  }
   if (line.lowAfter) return `available, low stock after use — reorder flagged`;
   return `available (${line.available} in stock)`;
 }
