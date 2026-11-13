@@ -55,6 +55,7 @@ function AuthenticatedApp({
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
+          {TEXTILE_ONLY ? null : <>
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -113,12 +114,12 @@ function AuthenticatedApp({
 }
 
 function App() {
-  const [session, setSession] = useState(() => loadSession() || DEFAULT_COORDINATOR_SESSION);
   const [session, setSession] = useState(() => {
     const saved = loadSession();
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
-    return TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles) ? null : saved;
+    if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
+    return saved || DEFAULT_COORDINATOR_SESSION;
   });
   const [health, setHealth] = useState('checking');
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText } from 'lucide-react';
-import { usePartnersOverview } from '@/hooks/usePartners';
+import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText, CheckCircle2 } from 'lucide-react';
+import { usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
+import { normalizePartnerStatus } from '@/services/partners';
 
 const FALLBACK_PARTNERS = [
   {
@@ -45,7 +46,8 @@ const FALLBACK_PARTNERS = [
   },
 ];
 
-function getStatusStyle(status) {
+function getStatusStyle(rawStatus) {
+  const status = normalizePartnerStatus(rawStatus);
   switch (status) {
     case 'Active':
       return {
@@ -65,6 +67,12 @@ function getStatusStyle(status) {
         color: '#b45d22',
         dotColor: '#b45d22',
       };
+    case 'Expired':
+      return {
+        bg: '#fee2e2',
+        color: '#991b1b',
+        dotColor: '#991b1b',
+      };
     default:
       return {
         bg: '#eff0eb',
@@ -76,6 +84,7 @@ function getStatusStyle(status) {
 
 export function PartnersMousPage({ token }) {
   const { data: overview } = usePartnersOverview(token);
+  const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
 
   const partners = overview?.partners ?? FALLBACK_PARTNERS;
@@ -404,7 +413,7 @@ export function PartnersMousPage({ token }) {
                             display: 'inline-block',
                           }}
                         />
-                        {partner.status}
+                        {normalizePartnerStatus(partner.status)}
                       </span>
                     </td>
                   </tr>
@@ -518,7 +527,7 @@ export function PartnersMousPage({ token }) {
                     background: getStatusStyle(selectedPartner.status).dotColor,
                   }}
                 />
-                {selectedPartner.status}
+                {normalizePartnerStatus(selectedPartner.status)}
               </span>
               <span
                 style={{
@@ -592,6 +601,39 @@ export function PartnersMousPage({ token }) {
               >
                 Close
               </button>
+              {normalizePartnerStatus(selectedPartner.status) !== 'Active' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const updated = await renewMutation.mutateAsync({
+                        id: selectedPartner.id,
+                        renewalDate: '12 Nov 2027',
+                      });
+                      setSelectedPartner(updated);
+                    } catch (e) {
+                      alert(`MOU renewal failed: ${e.message}`);
+                    }
+                  }}
+                  disabled={renewMutation.isPending}
+                  style={{
+                    background: '#1b5e43',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '8px 16px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <CheckCircle2 size={13} />
+                  {renewMutation.isPending ? 'Renewing…' : 'Renew MOU'}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -5,7 +5,21 @@ export const partnerStatusSchema = z.enum([
   'Renewal due',
   'Active',
   'Expiring soon',
+  'Expired',
+  'ACTIVE',
+  'RENEWAL_DUE',
+  'EXPIRING_SOON',
+  'EXPIRED',
 ]);
+
+export function normalizePartnerStatus(status) {
+  if (!status) return 'Active';
+  const upper = String(status).toUpperCase().replace(/[\s-]+/g, '_');
+  if (upper === 'RENEWAL_DUE') return 'Renewal due';
+  if (upper === 'EXPIRING_SOON') return 'Expiring soon';
+  if (upper === 'EXPIRED') return 'Expired';
+  return 'Active';
+}
 
 export const partnerSchema = z.object({
   id: z.string(),
@@ -34,5 +48,29 @@ export const partnersApi = {
     const data = await request('/operations/partners', { token, signal });
     return z.array(partnerSchema).parse(data);
   },
-};
 
+  async getPartner(id, token, signal) {
+    const data = await request(`/operations/partners/${id}`, { token, signal });
+    return partnerSchema.parse(data);
+  },
+
+  async updatePartner(id, body, token, signal) {
+    const data = await request(`/operations/partners/${id}`, {
+      method: 'PUT',
+      body,
+      token,
+      signal,
+    });
+    return partnerSchema.parse(data);
+  },
+
+  async renewMOU(id, renewalDate, token, signal) {
+    const data = await request(`/operations/partners/${id}/renew`, {
+      method: 'POST',
+      body: { renewalDate },
+      token,
+      signal,
+    });
+    return partnerSchema.parse(data);
+  },
+};

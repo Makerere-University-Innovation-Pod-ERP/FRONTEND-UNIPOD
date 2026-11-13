@@ -251,6 +251,41 @@ export const handlers = [
     return HttpResponse.json(session);
   }),
 
+  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/attendance`, async ({ params, request }) => {
+    const { sessionId } = params;
+    const { participantId, attendance } = await request.json();
+    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
+    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
+
+    const session = trainingSessions[sessionIndex];
+    const updatedParticipants = session.participants.map((p) =>
+      p.id === participantId ? { ...p, attendance } : p,
+    );
+    trainingSessions[sessionIndex] = { ...session, participants: updatedParticipants };
+    return HttpResponse.json(trainingSessions[sessionIndex]);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/registrations`, async ({ params, request }) => {
+    const { sessionId } = params;
+    const body = await request.json();
+    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
+    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
+
+    const newParticipant = {
+      id: `p-${Date.now()}`,
+      attendance: 'Unmarked',
+      registeredAt: new Date().toISOString(),
+      ...body,
+    };
+    const session = trainingSessions[sessionIndex];
+    trainingSessions[sessionIndex] = {
+      ...session,
+      enrolledCount: session.enrolledCount + 1,
+      participants: [...session.participants, newParticipant],
+    };
+    return HttpResponse.json(newParticipant);
+  }),
+
   // Operations / Multimedia - Media Services
   http.get(`${API_BASE_URL}/operations/media/overview`, () => {
     return HttpResponse.json({
@@ -286,6 +321,30 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/operations/partners`, () => {
     return HttpResponse.json(partners);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/partners/:id/renew`, async ({ params, request }) => {
+    const { id } = params;
+    const body = await request.json();
+    const index = partners.findIndex((p) => p.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    partners[index] = {
+      ...partners[index],
+      renewalDate: body.renewalDate || '12 Nov 2027',
+      status: 'Active',
+    };
+    return HttpResponse.json(partners[index]);
+  }),
+
+  http.put(`${API_BASE_URL}/operations/partners/:id`, async ({ params, request }) => {
+    const { id } = params;
+    const body = await request.json();
+    const index = partners.findIndex((p) => p.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    partners[index] = { ...partners[index], ...body };
+    return HttpResponse.json(partners[index]);
   }),
 
   // Finance / Overview (Daniel Kato, Finance Officer)

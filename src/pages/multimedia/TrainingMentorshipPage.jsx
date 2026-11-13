@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { GraduationCap, User, Activity, X, Calendar, MapPin, Users } from 'lucide-react';
-import { useTrainingOverview } from '@/hooks/useTraining';
+import { useTrainingOverview, useMarkAttendance } from '@/hooks/useTraining';
 
 export function TrainingMentorshipPage({ token }) {
   const { data: overview } = useTrainingOverview(token);
+  const markAttendanceMutation = useMarkAttendance(token);
   const [selectedSession, setSelectedSession] = useState(null);
 
   const upcomingCount = overview?.upcomingSessions ?? 4;
@@ -555,18 +556,42 @@ export function TrainingMentorshipPage({ token }) {
                         <strong style={{ color: '#16221a', display: 'block' }}>{student.name}</strong>
                         <small style={{ color: '#7a847b' }}>{student.studentId}</small>
                       </div>
-                      <span
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const nextStatus = student.status === 'Present' ? 'Absent' : 'Present';
+                          try {
+                            await markAttendanceMutation.mutateAsync({
+                              sessionId: selectedSession.id,
+                              participantId: student.id || student.studentId,
+                              attendance: nextStatus,
+                            });
+                            // update local state
+                            setSelectedSession((prev) => {
+                              if (!prev) return prev;
+                              const updatedRoster = (prev.roster || []).map((r, i) =>
+                                i === idx ? { ...r, status: nextStatus } : r,
+                              );
+                              return { ...prev, roster: updatedRoster };
+                            });
+                          } catch (e) {
+                            console.warn('Attendance update failed:', e);
+                          }
+                        }}
+                        title="Click to toggle attendance"
                         style={{
                           background: student.status === 'Present' ? '#e3f0e6' : '#fff4da',
                           color: student.status === 'Present' ? '#215f43' : '#b46a24',
+                          border: 'none',
                           borderRadius: '9999px',
                           padding: '2px 8px',
                           fontSize: '10px',
                           fontWeight: 600,
+                          cursor: 'pointer',
                         }}
                       >
                         {student.status}
-                      </span>
+                      </button>
                     </div>
                   ))}
                 </div>
