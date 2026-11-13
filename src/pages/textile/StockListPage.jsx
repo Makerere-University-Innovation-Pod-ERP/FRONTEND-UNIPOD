@@ -95,13 +95,15 @@ function MinimumCell({ token, item, onUnauthorized }) {
 }
 
 export function MovementTable({ movements, limit = 12 }) {
+  const [showAll, setShowAll] = useState(false);
   if (!movements.length) return <p className="live-empty">No stock movements recorded yet.</p>;
+  const shown = showAll ? movements : movements.slice(0, limit);
   return (
     <div className="live-table-wrap">
       <table className="live-table">
         <thead><tr><th>When</th><th>Item</th><th>Movement</th><th>Change</th><th>Balance</th><th>Order / note</th><th>By</th></tr></thead>
         <tbody>
-          {movements.slice(0, limit).map((movement) => {
+          {shown.map((movement) => {
             const delta = movementDelta(movement.type, movement.quantity);
             return (
               <tr key={movement.id}>
