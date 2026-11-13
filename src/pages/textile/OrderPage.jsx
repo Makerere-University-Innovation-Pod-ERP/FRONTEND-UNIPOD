@@ -76,6 +76,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
                 <div><dt>Payment</dt><dd><PaymentStatus status={order.payment.status} />{order.payment.reference ? ` ${order.payment.reference}` : ''}</dd></div>
               </dl>
             ) : <p className="live-empty">No quote sent yet.</p>}
+            <DemoPaymentButton token={token} order={order} />
           </section>
           <section className="live-panel">
             <h2 className="tx-panel-title">History</h2>
