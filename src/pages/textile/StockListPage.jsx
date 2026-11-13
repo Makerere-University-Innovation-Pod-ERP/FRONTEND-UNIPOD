@@ -99,6 +99,7 @@ export function MovementTable({ movements, limit = 12 }) {
   if (!movements.length) return <p className="live-empty">No stock movements recorded yet.</p>;
   const shown = showAll ? movements : movements.slice(0, limit);
   return (
+    <>
     <div className="live-table-wrap">
       <table className="live-table">
         <thead><tr><th>When</th><th>Item</th><th>Movement</th><th>Change</th><th>Balance</th><th>Order / note</th><th>By</th></tr></thead>
@@ -120,5 +121,11 @@ export function MovementTable({ movements, limit = 12 }) {
         </tbody>
       </table>
     </div>
+    {movements.length > limit && (
+      <button type="button" className="tx-link-button" onClick={() => setShowAll((value) => !value)}>
+        {showAll ? `Show the latest ${limit} only` : `Show all ${movements.length} movements`}
+      </button>
+    )}
+    </>
   );
 }
