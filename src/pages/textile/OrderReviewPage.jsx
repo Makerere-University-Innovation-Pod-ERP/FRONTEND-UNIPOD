@@ -10,6 +10,7 @@ import {
   useOrderTransition, usePriceList, useRequestDetails, useSendBack, useSendQuote, useStock, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { DemoPaymentButton } from './DemoPaymentButton';
 import { useUnauthorizedRedirect } from './helpers';
 
 export function OrderReviewPage({ token, onUnauthorized }) {
