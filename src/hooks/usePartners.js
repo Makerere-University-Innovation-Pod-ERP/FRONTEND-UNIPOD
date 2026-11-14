@@ -21,10 +21,19 @@ export function usePartners(token) {
   });
 }
 
+export function useCreatePartner(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => partnersApi.createPartner(body, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PARTNERS_OVERVIEW_KEY }),
+  });
+}
+
 export function useRenewPartnerMOU(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, renewalDate }) => partnersApi.renewMOU(id, renewalDate, token),
+    mutationFn: ({ id, renewalDate, documentReference }) =>
+      partnersApi.renewMOU(id, { renewalDate, documentReference }, token),
     onSuccess: (updatedPartner) => {
       queryClient.setQueryData(PARTNERS_OVERVIEW_KEY, (old) => {
         if (!old) return old;

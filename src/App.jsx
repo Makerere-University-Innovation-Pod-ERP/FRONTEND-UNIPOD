@@ -126,10 +126,10 @@ function AuthenticatedApp({
           <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
