@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText, CheckCircle2 } from 'lucide-react';
+import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText, CheckCircle2, Search } from 'lucide-react';
 import { usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
 import { normalizePartnerStatus } from '@/services/partners';
 
@@ -43,6 +43,20 @@ export function PartnersMousPage({ token }) {
   const { data: overview, isPending, isError, error, refetch } = usePartnersOverview(token);
   const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPartners = overview?.partners.filter((partner) => {
+    if (!normalizedSearch) return true;
+    return [
+      partner.name,
+      partner.type,
+      normalizePartnerStatus(partner.status),
+      partner.renewalDate,
+      partner.contactPerson,
+      partner.contactEmail,
+      partner.notes,
+    ].some((value) => value?.toLowerCase().includes(normalizedSearch));
+  }) ?? [];
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -225,6 +239,71 @@ export function PartnersMousPage({ token }) {
         </article>
       </section>
 
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginBottom: '16px',
+        }}
+      >
+        <div
+          className="live-search partners-search"
+          style={{
+            height: '44px',
+            flex: '1 1 280px',
+            maxWidth: '480px',
+            minWidth: 0,
+            padding: '0 14px',
+            borderRadius: '12px',
+            borderColor: '#e3e7df',
+            background: '#ffffff',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+          }}
+        >
+          <Search size={16} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Search partners"
+            placeholder="Search partners, contacts, type, or status"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              className="partners-search-clear"
+              aria-label="Clear partner search"
+              onClick={() => setSearchTerm('')}
+              style={{
+                display: 'grid',
+                placeItems: 'center',
+                width: '28px',
+                height: '28px',
+                flexShrink: 0,
+                border: 0,
+                borderRadius: '50%',
+                background: 'transparent',
+                color: '#758078',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+        <span
+          role="status"
+          style={{ color: '#7a847b', fontSize: '11px', fontWeight: 600 }}
+        >
+          {filteredPartners.length === overview.partners.length
+            ? `${overview.partners.length} ${overview.partners.length === 1 ? 'partner' : 'partners'}`
+            : `${filteredPartners.length} of ${overview.partners.length} partners`}
+        </span>
+      </div>
+
       {/* Partners & MOUs Data Table Container */}
       <section
         style={{
@@ -301,9 +380,25 @@ export function PartnersMousPage({ token }) {
               </tr>
             </thead>
             <tbody>
-              {overview.partners.map((partner, index) => {
+              {filteredPartners.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{
+                      padding: '32px 24px',
+                      color: '#7a847b',
+                      fontSize: '12px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {normalizedSearch
+                      ? `No partners match “${searchTerm.trim()}”.`
+                      : 'No partners are recorded yet.'}
+                  </td>
+                </tr>
+              ) : filteredPartners.map((partner, index) => {
                 const statusStyle = getStatusStyle(partner.status);
-                const isLast = index === overview.partners.length - 1;
+                const isLast = index === filteredPartners.length - 1;
 
                 return (
                   <tr

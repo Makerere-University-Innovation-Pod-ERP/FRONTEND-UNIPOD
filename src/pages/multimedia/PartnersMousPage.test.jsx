@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
@@ -57,6 +58,37 @@ describe('PartnersMousPage', () => {
     expect(screen.getByText('Live API Partner 6')).toBeInTheDocument();
     expect(screen.queryByText('Kampala AgriTech Collective')).not.toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(1);
+  });
+
+  it('filters live partner rows and clears the search', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(overviewPath, () =>
+        HttpResponse.json({
+          totalPartners: 6,
+          renewalDueCount: 0,
+          partners: livePartners,
+        }),
+      ),
+    );
+
+    renderPage();
+
+    const search = await screen.findByRole('searchbox', { name: 'Search partners' });
+    await screen.findByText('Live API Partner 1');
+    await user.type(search, 'partner 3');
+
+    expect(screen.getByText('Live API Partner 3')).toBeInTheDocument();
+    expect(screen.queryByText('Live API Partner 1')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('1 of 6 partners');
+
+    await user.click(screen.getByRole('button', { name: 'Clear partner search' }));
+    expect(screen.getByText('Live API Partner 1')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('6 partners');
+
+    await user.type(search, 'no match');
+    expect(screen.getByText(/no partners match/i)).toBeInTheDocument();
+    expect(screen.queryByText('Live API Partner 1')).not.toBeInTheDocument();
   });
 
   it('shows an API error rather than rendering fixture data when the request fails', async () => {
