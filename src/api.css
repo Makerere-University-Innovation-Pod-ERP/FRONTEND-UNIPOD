@@ -99,6 +99,7 @@
 .api-form input,.form-field input,.form-field select,.form-field textarea,.action-row select,.submission-filters select{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:10px 12px;color:var(--ink);font-size:12px;outline:none;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
 .api-form input:hover,.form-field input:hover,.form-field select:hover,.form-field textarea:hover,.action-row select:hover,.submission-filters select:hover{border-color:var(--ink-soft);background:var(--surface-raised)}
 .api-form input:focus,.form-field input:focus,.form-field select:focus,.form-field textarea:focus,.action-row select:focus,.submission-filters select:focus{border-color:var(--forest);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb, var(--forest) 16%, transparent)}
+.login-form #login-email,.login-form #login-password{border:1px solid var(--forest)}
 .login-submit{width:100%;justify-content:space-between;margin-top:8px}
 .password-input-wrap{position:relative;display:flex;align-items:center;width:100%}
 .password-input-wrap>input{padding-right:46px!important}
