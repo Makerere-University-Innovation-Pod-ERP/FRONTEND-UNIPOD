@@ -35,6 +35,43 @@ let invoices = [...initialInvoices];
 // In-memory stores for admin/reception endpoints that aren't part of the
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
+const departments = [
+  { id: 'dept-1', name: 'Innovation & Research', active: true, version: 1 },
+  { id: 'dept-2', name: 'Finance & Administration', active: true, version: 1 },
+  { id: 'dept-3', name: 'Textile Operations', active: true, version: 1 },
+];
+let adminUsers = [
+  { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
+  { id: 'staff-1', fullName: 'Martha Akello', email: 'martha.akello@unipod.test', role: 'RECEPTIONIST', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-01' },
+  { id: 'staff-2', fullName: 'Dr. Miriam Nsubuga', email: 'miriam.nsubuga@unipod.test', role: 'REVIEWER', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-04' },
+  { id: 'staff-3', fullName: 'Daniel Kato', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentId: 'dept-2', active: true, version: 1, createdAt: '2026-09-10' },
+  { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
+];
+const adminPermissions = [
+  { id: 'USERS_MANAGE', name: 'Manage user accounts', description: 'Create, update, and deactivate staff accounts.' },
+  { id: 'ROLES_MANAGE', name: 'Manage roles and permissions', description: 'Configure role access to system capabilities.' },
+  { id: 'DEPARTMENTS_MANAGE', name: 'Manage departments', description: 'Create and maintain departments.' },
+  { id: 'SUBMISSIONS_VIEW', name: 'View submissions', description: 'View submitted innovation briefs.' },
+  { id: 'SUBMISSIONS_REGISTER', name: 'Register submissions', description: 'Register and route submissions.' },
+  { id: 'FACT_FINDING_MANAGE', name: 'Fact-finding', description: 'Perform fact-finding on assigned submissions.' },
+  { id: 'REVIEWS_MANAGE', name: 'Review submissions', description: 'Review assigned submissions.' },
+  { id: 'FINANCE_MANAGE', name: 'Manage finance', description: 'Access finance and invoice workflows.' },
+];
+let adminRoles = [
+  { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
+  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
+  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['FINANCE_MANAGE'], version: 1, editable: true },
+  { id: 'REVIEWER', name: 'Reviewer', permissions: ['SUBMISSIONS_VIEW', 'REVIEWS_MANAGE'], version: 1, editable: true },
+  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
+  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER', 'REVIEWS_MANAGE'], version: 1, editable: true },
+  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner', permissions: [], version: 1, editable: true },
+  { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
+  { id: 'OBSERVER', name: 'Observer', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -200,9 +237,121 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
+
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
-    return HttpResponse.json({ id: `user-${Date.now()}`, email: body.email, role: body.role, createdAt: new Date().toISOString().slice(0, 10) });
+    const email = String(body.email ?? '').trim().toLowerCase();
+    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+      return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
+    }
+    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
+    }
+    if (adminUsers.some((user) => user.email.toLowerCase() === email)) {
+      return HttpResponse.json({ message: 'A staff account with this email already exists.' }, { status: 409 });
+    }
+    const createdAt = new Date().toISOString().slice(0, 10);
+    const created = {
+      id: `staff-${Date.now()}`,
+      fullName: String(body.fullName ?? email.split('@')[0]),
+      email,
+      role: body.role,
+      departmentId: body.departmentId ?? '',
+      active: true,
+      version: 1,
+      createdAt,
+    };
+    adminUsers = [created, ...adminUsers];
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/admin/users/:id`, async ({ params, request }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    if (user.role === 'ADMINISTRATOR') {
+      return HttpResponse.json({ message: 'Administrator role assignments are protected.' }, { status: 409 });
+    }
+    const body = await request.json();
+    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+      return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
+    }
+    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
+    }
+    if (body.version !== user.version) {
+      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    Object.assign(user, {
+      role: body.role,
+      departmentId: body.departmentId ?? '',
+      version: user.version + 1,
+    });
+    return HttpResponse.json(user);
+  }),
+
+  http.patch(`${API_BASE_URL}/admin/users/:id/status`, async ({ params, request }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    if (body.version !== user.version) {
+      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    if (user.role === 'ADMINISTRATOR' && !body.active
+      && adminUsers.filter((candidate) => candidate.role === 'ADMINISTRATOR' && candidate.active).length <= 1) {
+      return HttpResponse.json({ message: 'The last active administrator cannot be deactivated.' }, { status: 409 });
+    }
+    Object.assign(user, { active: Boolean(body.active), version: user.version + 1 });
+    return HttpResponse.json(user);
+  }),
+
+  http.get(`${API_BASE_URL}/admin/departments`, () => HttpResponse.json(departments)),
+
+  http.post(`${API_BASE_URL}/admin/departments`, async ({ request }) => {
+    const body = await request.json();
+    const name = String(body.name ?? '').trim();
+    if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
+      return HttpResponse.json({ message: 'A department with this name already exists.' }, { status: 409 });
+    }
+    const created = { id: `dept-${Date.now()}`, name, active: body.active ?? true, version: 1 };
+    departments.push(created);
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.put(`${API_BASE_URL}/admin/departments/:id`, async ({ params, request }) => {
+    const department = departments.find((candidate) => candidate.id === params.id);
+    if (!department) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    if (body.version !== department.version) {
+      return HttpResponse.json({ message: 'This department changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    Object.assign(department, {
+      name: String(body.name ?? department.name).trim(),
+      active: Boolean(body.active),
+      version: department.version + 1,
+    });
+    return HttpResponse.json(department);
+  }),
+
+  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(adminRoles)),
+  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
+
+  http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
+    const role = adminRoles.find((candidate) => candidate.id === params.id);
+    if (!role) return new HttpResponse(null, { status: 404 });
+    if (!role.editable) {
+      return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
+    }
+    const body = await request.json();
+    if (body.version !== role.version) {
+      return HttpResponse.json({ message: 'This role changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    const knownPermissions = new Set(adminPermissions.map(({ id }) => id));
+    if (!Array.isArray(body.permissions) || body.permissions.some((id) => !knownPermissions.has(id))) {
+      return HttpResponse.json({ message: 'One or more permissions are invalid.' }, { status: 400 });
+    }
+    Object.assign(role, { permissions: body.permissions, version: role.version + 1 });
+    return HttpResponse.json(role);
   }),
 
   http.get(`${API_BASE_URL}/queues/reception`, ({ request }) => {

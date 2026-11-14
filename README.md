@@ -91,8 +91,10 @@ belongs in the frontend service.
   general submission lists with category, stage, and sector filters.
 - Give submitters a dedicated, read-only My Submissions home with account
   capabilities and locked-module guidance.
-- Review the reception queue and create administrator-provisioned accounts.
-- Manage sectors and sector-officer assignments as an Administrator.
+- Review the reception queue; create staff accounts and manage staff roles,
+  department assignments, and active/deactivated account status as an
+  Administrator.
+- Manage departments, role permissions, sectors, and sector-officer assignments.
 - Create submission drafts and view case details.
 - Register drafts, forward received cases to a sector, and apply backend-approved
   case-stage transitions, outcomes, reviewer assignments, and document metadata.
@@ -102,6 +104,35 @@ Access tokens are kept in `sessionStorage` and sent as bearer tokens. The
 backend remains authoritative for authorization and validates every write.
 Frontend environment variables must never contain database URLs with
 credentials, database passwords, JWT signing secrets, or admin passwords.
+
+### Administrator user and access management
+
+The administrator screen at `/management` supports staff account creation,
+searchable account management, role/department assignment, reversible account
+deactivation, department lifecycle management, and permission configuration
+for system roles. The Administrator role is protected from changes in the UI;
+the backend must enforce the same restriction and prevent removal of the last
+active administrator.
+
+The frontend expects these authenticated administrator API contracts:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /admin/users` | Return staff with `id`, `fullName`, `email`, `role`, `departmentId`, `active`, and `version`. |
+| `POST /admin/users` | Create an account with `fullName`, `email`, `password`, `role`, and `departmentId`. Never return or store the supplied password. |
+| `PATCH /admin/users/{id}` | Update `role` and `departmentId` using the current `version`. |
+| `PATCH /admin/users/{id}/status` | Change `active` using the current `version`; retain the account and its history. |
+| `GET /admin/departments` | Return departments with `id`, `name`, `active`, and `version`. |
+| `POST /admin/departments`, `PUT /admin/departments/{id}` | Create or update a department; updates include `version`. |
+| `GET /admin/roles`, `GET /admin/permissions` | Return role definitions and the available permission catalog. |
+| `PUT /admin/roles/{id}/permissions` | Replace a role’s permission IDs using the current role `version`. |
+
+These account, department, role, and permission endpoints are implemented by
+the frontend’s MSW mock API for local testing; the deployed backend must provide
+the same contract before these administration workflows can be used live.
+Every endpoint must authorize the administrator server-side, validate role and
+permission IDs, reject stale versions, and write an audit event for changes.
+The frontend role checks and protected controls are only usability safeguards.
 
 ## Textile Operations (customer orders, stock and machines)
 

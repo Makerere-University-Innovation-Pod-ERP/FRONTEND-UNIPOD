@@ -9,6 +9,36 @@ export const backendApi = {
     request('/auth/login', { body: { email, password } }),
   createUser: (token, body) =>
     request('/admin/users', { token, body }),
+  adminUsers: (token) =>
+    request('/admin/users', { token }),
+  updateAdminUser: (token, id, body) =>
+    request(`/admin/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body }),
+  setAdminUserActive: (token, id, active, version) =>
+    request(`/admin/users/${encodeURIComponent(id)}/status`, {
+      token,
+      method: 'PATCH',
+      body: { active, version },
+    }),
+  adminRoles: (token) =>
+    request('/admin/roles', { token }),
+  adminPermissions: (token) =>
+    request('/admin/permissions', { token }),
+  updateRolePermissions: (token, id, body) =>
+    request(`/admin/roles/${encodeURIComponent(id)}/permissions`, {
+      token,
+      method: 'PUT',
+      body,
+    }),
+  adminDepartments: (token) =>
+    request('/admin/departments', { token }),
+  createDepartment: (token, body) =>
+    request('/admin/departments', { token, body }),
+  updateDepartment: (token, id, body) =>
+    request(`/admin/departments/${encodeURIComponent(id)}`, {
+      token,
+      method: 'PUT',
+      body,
+    }),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (
