@@ -85,6 +85,8 @@ export const handlers = [
     });
   }),
 
+  http.post(`${API_BASE_URL}/auth/forgot-password`, () => new HttpResponse(null, { status: 202 })),
+
   http.get(`${API_BASE_URL}/dashboard/overview`, () => {
     const byStage = {};
     for (const item of submissions) byStage[item.stage] = (byStage[item.stage] ?? 0) + 1;

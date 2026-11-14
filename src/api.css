@@ -100,6 +100,21 @@
 .api-form input:hover,.form-field input:hover,.form-field select:hover,.form-field textarea:hover,.action-row select:hover,.submission-filters select:hover{border-color:var(--ink-soft);background:var(--surface-raised)}
 .api-form input:focus,.form-field input:focus,.form-field select:focus,.form-field textarea:focus,.action-row select:focus,.submission-filters select:focus{border-color:var(--forest);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb, var(--forest) 16%, transparent)}
 .login-submit{width:100%;justify-content:space-between;margin-top:8px}
+.password-input-wrap{position:relative;display:flex;align-items:center;width:100%}
+.password-input-wrap>input{padding-right:46px!important}
+.password-visibility-toggle{position:absolute;right:5px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;transition:background .15s ease,color .15s ease}
+.password-visibility-toggle:hover{background:var(--surface-raised);color:var(--ink)}
+.password-visibility-toggle:focus-visible{outline:2px solid var(--mak-red-600);outline-offset:1px}
+.login-card:not(.signup-card) .api-form input:not([type='radio']):not([type='checkbox']){min-height:44px;border:1.5px solid var(--mak-silver-500);border-radius:8px}
+.login-card:not(.signup-card) .api-form input:not([type='radio']):not([type='checkbox']):hover{border-color:var(--mak-silver-700)}
+.login-card:not(.signup-card) .api-form input:not([type='radio']):not([type='checkbox']):focus{border-color:var(--mak-red-600);box-shadow:var(--mak-focus-ring)}
+.login-forgot-row{display:flex;justify-content:flex-end;margin-top:-3px}
+.login-text-button{padding:3px 0;border:0;background:transparent;color:var(--mak-red-700);font:700 11px/1.4 var(--font-sans);cursor:pointer}
+.login-text-button:hover{text-decoration:underline;color:var(--mak-red-800)}
+.login-text-button:focus-visible{outline:2px solid var(--mak-red-600);outline-offset:3px;border-radius:2px}
+.login-reset-notice{margin:0 0 16px;padding:14px 15px;border:1px solid var(--mak-green-600);border-radius:var(--r-sm);background:var(--mak-green-tint);color:var(--mak-green-600);font-size:12px;line-height:1.6}
+.login-reset-notice p{margin:4px 0 0;color:var(--ink-soft)}
+.login-back-button{width:100%;justify-content:center;gap:8px;margin-top:14px}
 .login-footnote{font-size:10px;line-height:1.6;color:var(--muted);margin:20px 0 0}
 
 .live-shell{min-height:100vh;display:flex;background:var(--bg);color:var(--ink)}

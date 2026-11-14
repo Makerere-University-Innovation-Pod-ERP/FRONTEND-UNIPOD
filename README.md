@@ -37,6 +37,26 @@ origin by copying `.env.example` to `.env.local` and setting
 `VITE_API_BASE_URL`. For a local Java backend, set it to
 `http://localhost:8080/api`.
 
+## Sign-in and sign-up
+
+The sign-in screen sends credentials to `POST /auth/login`. **Forgot password?**
+submits an email to `POST /auth/forgot-password`; the backend sends a one-time
+reset link for active accounts (valid for one hour) and always returns the same
+accepted response whether or not an account exists.
+
+Public submitter registration uses `POST /auth/signup` and is available without
+enabling mocks. The form has two steps. Students enter one university email,
+which the frontend sends as both `email` (the sign-in address) and
+`universityEmail`, plus their student number and course. All account types
+provide a phone number, 12–72 character password, and rules acceptance;
+organisations also provide their organisation name.
+
+Password visibility controls are available on sign-in and sign-up. Pressing
+Enter moves from the sign-in email to password, advances from the first sign-up
+step, and submits valid credentials or a completed sign-up. Contact details
+remain in the form when moving between sign-up steps, and the browser can
+autofill supported fields.
+
 The backend must allow the frontend's exact browser origin in
 `CORS_ALLOWED_ORIGINS`. The current backend defaults include
 `http://localhost:5173` for Vite development. For a deployed frontend, add
@@ -210,15 +230,14 @@ Rules (enforced by the mock in `src/mocks/reception-handlers.js`; the real backe
 - Asking for missing information needs at least one item and a due date.
 - Every forward, missing-information request and comment is written to history with date, user and destination.
 - The receptionist can comment but cannot edit the submitter's content.
-- Sign up needs the general-rules tick-box; students give student number and course, organisations give the organisation name (MoU reference optional).
 - A walk-in brief is created with the walk-in's `submitterId` (they stay the owner); the backend must record the signed-in receptionist as the person who registered it.
 
 The walk-in reuses `NewSubmissionPage` (Assignment 4) through three optional props: `onBehalfOf`, `confirmationPath`, `cancelPath`. Without them the page behaves as before.
 
-The `/reception/*` and `/auth/register` contracts (`src/services/reception.js`) are proposals and are not deployed yet.
-Run with `VITE_ENABLE_MOCKS=true` and sign in as `reception@unipod.test` (any password).
-"Create an account" only appears when mocks are on, because the deployed backend has public registration disabled.
-Accounts made on the mock sign-up screen sign in as submitters until the page is reloaded.
+`POST /auth/signup` is available on the deployed backend and creates a submitter account.
+Login and sign up use the Render API by default. The `/reception/*` workflow screens
+remain mock-only; enable `VITE_ENABLE_MOCKS=true` to test them with
+`reception@unipod.test` (any password).
 
 The walk-in account step (`POST /reception/walk-in-accounts`) is mock only until the backend decides how minimal accounts are created.
 Check list items, department list and stage names are placeholders.

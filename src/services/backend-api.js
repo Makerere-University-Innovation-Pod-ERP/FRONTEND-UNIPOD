@@ -7,6 +7,10 @@ export const backendApi = {
     request('/actuator/health', { signal }),
   login: (email, password) =>
     request('/auth/login', { body: { email, password } }),
+  forgotPassword: (email) =>
+    request('/auth/forgot-password', { body: { email } }),
+  signup: (body) =>
+    request('/auth/signup', { body }),
   createUser: (token, body) =>
     request('/admin/users', { token, body }),
   adminUsers: (token) =>

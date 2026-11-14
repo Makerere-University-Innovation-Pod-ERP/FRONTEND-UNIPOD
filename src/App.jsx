@@ -65,10 +65,6 @@ const queryClient = new QueryClient();
 const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
 const TEXTILE_HOME = '/textile/board';
 
-// Sign up is mock-only for now: the real backend has public registration
-// disabled (Reception QUESTIONS.md, Question 1).
-const SIGN_UP_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true';
-
 async function textileMockSession() {
   const { makeMockToken } = await import('@/mocks/jwt');
   return createSession({
@@ -118,7 +114,9 @@ function AuthenticatedApp({
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
           {TEXTILE_ONLY ? null : <>
-          <Route path="/" element={<LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/" element={session.roles.includes('ROLE_SUBMITTER')
+            ? <Navigate to="/my-submissions" replace />
+            : <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -253,8 +251,8 @@ function App() {
   }, [session, acceptSession]);
 
   if (!session && TEXTILE_ONLY) return null;
-  if (!session && SIGN_UP_ENABLED && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} />;
-  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={SIGN_UP_ENABLED ? () => setShowSignUp(true) : undefined} />;
+  if (!session && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} onLogin={acceptSession} />;
+  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={() => setShowSignUp(true)} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 
