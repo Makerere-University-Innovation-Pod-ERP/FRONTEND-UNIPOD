@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Save } from 'lucide-react';
 import { CUSTOMER_TYPES, TEXTILE_RULES, todayIso } from '@/lib/textile';
@@ -48,10 +48,21 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
   } : EMPTY_ORDER));
   const [photo, setPhoto] = useState(null);
   const [savedDraft, setSavedDraft] = useState(draft);
+  // What was last saved (or the empty form), to tell whether there are unsaved changes.
+  const [savedValues, setSavedValues] = useState(values);
   const [notice, setNotice] = useState('');
   const createOrder = useCreateOrder(token);
   const updateDraft = useUpdateDraft(token, savedDraft?.id ?? '');
   const mutation = savedDraft ? updateDraft : createOrder;
+  const unsaved = Boolean(photo) || JSON.stringify(values) !== JSON.stringify(savedValues);
+
+  // Ask before closing or reloading the tab with unsaved changes.
+  useEffect(() => {
+    if (!unsaved) return undefined;
+    const warn = (event) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
   useUnauthorizedRedirect(onUnauthorized, createOrder.error, updateDraft.error);
 
   const set = (field) => (event) => {
@@ -77,6 +88,7 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
         navigate(`/textile/review?order=${encodeURIComponent(saved.id)}`);
       } else {
         setSavedDraft(saved);
+        setSavedValues(values);
         setPhoto(null);
         setNotice('Draft saved. You can come back to it from Order Review & Quote.');
       }

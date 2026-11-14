@@ -3,11 +3,20 @@ import { ChevronLeft, ChevronRight, LoaderCircle, Lock, TriangleAlert, UserPlus,
 import {
   MACHINE_UNAVAILABLE_REASON, addDays, findBookingClashes, isMachineBookable, isoWeekday, startOfWeek, todayIso,
 } from '@/lib/textile';
-import { useAddAttendee, useBookings, useCreateBooking, useMachines, useSetAttendance } from '@/hooks/useTextile';
+import { useAddAttendee, useBookings, useCancelBooking, useCreateBooking, useMachines, useSetAttendance } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, PageHeading, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
+const BOOKING_STATUS_LABELS = { APPROVED: 'Approved', PENDING: 'Pending', CANCELLED: 'Cancelled' };
+const BOOKING_STATUS_TONE = { APPROVED: 'positive', PENDING: 'attention', CANCELLED: 'neutral' };
+
 const EMPTY_FORM = { kind: 'WORKSHOP', date: '', start: '14:00', end: '17:00', purpose: '', machineId: '', capacity: '12' };
+
+/** Current local time as HH:MM, to compare with a booking's start time. */
+function currentTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
 
 function dayLabel(isoDate, options) {
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, options);
@@ -32,8 +41,12 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
   const clashes = proposalInView && !calendar.isFetching
     ? findBookingClashes({ ...form, machineId: form.machineId || null }, { bookings, timetable, machines: machineList })
     : [];
+  // A booking for today cannot start at a time that has already passed.
+  if (form.date === today && form.start && form.start < currentTime()) {
+    clashes.unshift({ kind: 'time', message: 'That start time has already passed today.' });
+  }
   const ready = form.date && form.start && form.end && form.purpose.trim() && proposalInView && !calendar.isFetching;
-  const selected = bookings.find((booking) => booking.id === selectedId && booking.kind === 'TRAINING');
+  const selected = bookings.find((booking) => booking.id === selectedId);
 
   const set = (field) => (event) => {
     const value = event.target.value;
@@ -106,13 +119,16 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
                                   {booking.kind === 'TRAINING' ? ` · ${booking.attendees.length}${booking.capacity ? `/${booking.capacity}` : ''} signed up` : ''}
                                 </small>
                               </span>
-                              <StatusDot tone={booking.status === 'APPROVED' ? 'positive' : 'attention'}>{booking.kind === 'TRAINING' ? 'Training' : 'Approved'}</StatusDot>
+                              <StatusDot tone={BOOKING_STATUS_TONE[booking.status] ?? 'neutral'}>
+                                {booking.kind === 'TRAINING' ? 'Training · ' : ''}{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
+                              </StatusDot>
                             </>
                           );
-                          return booking.kind === 'TRAINING' ? (
-                            <button key={booking.id} type="button" className={`tx-slot booking ${selectedId === booking.id ? 'active' : ''}`}
+                          return (
+                            <button key={booking.id} type="button"
+                              className={`tx-slot booking ${selectedId === booking.id ? 'active' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}
                               aria-pressed={selectedId === booking.id} onClick={() => setSelectedId(booking.id)}>{content}</button>
-                          ) : <div key={booking.id} className="tx-slot booking">{content}</div>;
+                          );
                         })}
                         {empty && <div className="tx-slot free"><span><b>Open workshop slot</b><small>Class timetable clear</small></span><StatusDot tone="positive">Free</StatusDot></div>}
                       </div>
@@ -122,7 +138,13 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
               </ol>
             )}
           </section>
-          {selected && <AttendancePanel key={selected.id} token={token} booking={selected} onUnauthorized={onUnauthorized} />}
+          {selected && (
+            <BookingPanel key={`${selected.id}-${selected.status}`} token={token} booking={selected} today={today} onUnauthorized={onUnauthorized}
+              machineName={machineList.find((machine) => machine.id === selected.machineId)?.name} />
+          )}
+          {selected?.kind === 'TRAINING' && selected.status !== 'CANCELLED' && (
+            <AttendancePanel key={selected.id} token={token} booking={selected} onUnauthorized={onUnauthorized} />
+          )}
         </div>
 
         <form className="live-panel tx-form" onSubmit={onSubmit}>
@@ -176,6 +198,54 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
   );
 }
 
+/** Details of the selected booking, with a cancel form for upcoming bookings. */
+function BookingPanel({ token, booking, machineName, today, onUnauthorized }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState('');
+  const cancel = useCancelBooking(token);
+  useUnauthorizedRedirect(onUnauthorized, cancel.error);
+  const cancellable = booking.status !== 'CANCELLED' && booking.date >= today;
+
+  return (
+    <section className="live-panel">
+      <div className="live-panel-heading">
+        <div>
+          <p className="eyebrow">{booking.kind === 'TRAINING' ? 'TRAINING SESSION' : 'WORKSHOP BOOKING'}</p>
+          <h2>{booking.purpose}</h2>
+        </div>
+        <StatusDot tone={BOOKING_STATUS_TONE[booking.status] ?? 'neutral'}>{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}</StatusDot>
+      </div>
+      <dl className="tx-facts single">
+        <div><dt>When</dt><dd>{dayLabel(booking.date, { weekday: 'long', day: 'numeric', month: 'long' })}, {booking.start}–{booking.end}</dd></div>
+        <div><dt>Machine</dt><dd>{machineName ?? 'No specific machine'}</dd></div>
+        <div><dt>Booked by</dt><dd>{booking.bookedBy}</dd></div>
+      </dl>
+      {cancellable && !cancelling && (
+        <div className="tx-actions">
+          <button type="button" className="btn tx-ghost" onClick={() => { setCancelling(true); setReason(''); }}>Cancel booking</button>
+        </div>
+      )}
+      {cancelling && (
+        <form className="tx-inline-form" onSubmit={(event) => {
+          event.preventDefault();
+          cancel.mutateAsync({ bookingId: booking.id, reason: reason.trim() }).then(() => setCancelling(false)).catch(() => {});
+        }}>
+          <label>Why is this booking being cancelled?
+            <textarea required rows={2} value={reason} onChange={(event) => setReason(event.target.value)} />
+          </label>
+          <div className="tx-actions">
+            <button type="submit" className="btn btn-primary" disabled={!reason.trim() || cancel.isPending}>
+              {cancel.isPending ? <LoaderCircle size={14} className="spin" /> : null}Confirm cancellation
+            </button>
+            <button type="button" className="btn" onClick={() => setCancelling(false)}>Keep booking</button>
+          </div>
+        </form>
+      )}
+      <ErrorBanner error={cancel.error} fallback="Could not cancel the booking." />
+    </section>
+  );
+}
+
 function AttendancePanel({ token, booking, onUnauthorized }) {
   const [name, setName] = useState('');
   const addAttendee = useAddAttendee(token);
@@ -183,6 +253,8 @@ function AttendancePanel({ token, booking, onUnauthorized }) {
   useUnauthorizedRedirect(onUnauthorized, addAttendee.error, setAttendance.error);
   const full = booking.capacity !== null && booking.attendees.length >= booking.capacity;
   const attended = booking.attendees.filter((attendee) => attendee.attended).length;
+  // Sign-ups are open beforehand, but attendance can only be taken from the day of the session.
+  const notStarted = booking.date > todayIso();
 
   return (
     <section className="live-panel">
@@ -191,11 +263,12 @@ function AttendancePanel({ token, booking, onUnauthorized }) {
         <span className="tx-count"><Users size={13} />{booking.attendees.length}{booking.capacity ? `/${booking.capacity}` : ''} signed up · {attended} attended</span>
       </div>
       {booking.attendees.length === 0 && <p className="live-empty">No one has signed up yet.</p>}
+      {notStarted && booking.attendees.length > 0 && <p className="tx-inline-note">Attendance can be marked from the day of the session.</p>}
       <ul className="tx-checklist">
         {booking.attendees.map((attendee) => (
           <li key={attendee.id}>
             <label className="tx-check">
-              <input type="checkbox" checked={attendee.attended} disabled={setAttendance.isPending}
+              <input type="checkbox" checked={attendee.attended} disabled={notStarted || setAttendance.isPending}
                 onChange={(event) => setAttendance.mutateAsync({ bookingId: booking.id, attendeeId: attendee.id, attended: event.target.checked }).catch(() => {})} />
               <span>{attendee.name}</span>
             </label>

@@ -172,10 +172,24 @@ is not deployed yet. Run with `VITE_ENABLE_MOCKS=true` and sign in as
 `textile@unipod.test` (any password) to use the MSW implementation in
 `src/mocks/textile-handlers.js`.
 
+To run **only the Textile screens**, use `npm run dev:textile`. It turns the
+mock API on, signs in as the Textile domain owner automatically, opens the
+order board, applies the Textile green theme and shows the Textile sidebar.
+Links to other teams' modules open a placeholder page. Plain `npm run dev` is
+unchanged.
+
+In mock mode, quoted orders show a **Simulate Finance confirming payment**
+button, so an order can be taken all the way to Collected without the
+Finance screens. It calls a demo-only mock endpoint
+(`/__demo__/finance/confirm-payment`), is hidden when the real backend is
+used, and is not part of the `/textile` contract.
+
 Tests: `src/lib/textile.test.js` (rules) and `src/services/textile.test.js`
 (API contract through MSW) run in Vitest's node environment.
 `src/pages/textile/Textile.test.jsx` (screens) needs jsdom, which needs
-Node ≥ 22.18 under the installed Vitest 5 / undici.
+Node ≥ 22.22.2 (or ≥ 24.15) under the installed Vitest 5 / undici. On older
+Node it fails to start with "Cannot read properties of undefined (reading
+'bind')" in undici.
 
 ## Reception (Assignment 3 - Peter Arnold Mukasa)
 

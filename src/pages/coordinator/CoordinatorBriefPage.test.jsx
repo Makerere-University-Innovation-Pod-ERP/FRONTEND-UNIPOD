@@ -67,9 +67,11 @@ describe('CoordinatorBriefPage', () => {
   it('unlocks the decision outcomes once the required reviews are recorded', async () => {
     renderPage('/coordinator/briefs/IH-26029');
     // IH-26029 has 1 of 1 review recorded but sits at REFINEMENT_REQUESTED, so
-    // the decision trio is not the next step — the version hand-off is.
+    // the decision trio is not the next step — the version hand-off is. This
+    // action navigates to a dedicated page, so it's a link, not a button —
+    // same pattern as the unlocked decision outcomes below it.
     expect(
-      await screen.findByRole('button', { name: 'Receive improved version' }),
+      await screen.findByRole('link', { name: 'Receive improved version' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirmed as project' })).not.toBeInTheDocument();
   });
@@ -94,7 +96,10 @@ describe('CoordinatorBriefPage', () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByText('1 of 2 reviews done');
-    await user.click(screen.getByRole('checkbox', { name: /Amina Ssemanda/ }));
+    // The brief and reviewer-pool queries resolve independently — wait for
+    // the pool-backed checkbox itself rather than assuming it's already
+    // there once the brief text appears.
+    await user.click(await screen.findByRole('checkbox', { name: /Amina Ssemanda/ }));
     const due = screen.getByLabelText('Due date');
     await user.clear(due);
     await user.type(due, '2020-01-01');
@@ -106,7 +111,7 @@ describe('CoordinatorBriefPage', () => {
     const user = userEvent.setup();
     renderPage('/coordinator/briefs/IH-26030');
     await screen.findByText('No reviewers assigned yet.');
-    await user.click(screen.getByRole('checkbox', { name: /Esther Achieng/ }));
+    await user.click(await screen.findByRole('checkbox', { name: /Esther Achieng/ }));
     const required = screen.getByLabelText('Reviews required');
     await user.clear(required);
     await user.type(required, '3');
@@ -128,7 +133,7 @@ describe('CoordinatorBriefPage', () => {
     const user = userEvent.setup();
     renderPage('/coordinator/briefs/IH-26030');
     await screen.findByText('No reviewers assigned yet.');
-    await user.click(screen.getByRole('checkbox', { name: /Esther Achieng/ }));
+    await user.click(await screen.findByRole('checkbox', { name: /Esther Achieng/ }));
     expect(screen.queryByText('Step order')).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Review mode'), 'sequential');
     expect(await screen.findByText('Step order')).toBeInTheDocument();
