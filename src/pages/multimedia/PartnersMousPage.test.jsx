@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { http, HttpResponse } from 'msw';
+import { API_BASE_URL } from '@/services/backend-api';
+import { server } from '@/mocks/server';
 import { PartnersMousPage } from './PartnersMousPage';
+
+const overviewPath = `${API_BASE_URL}/operations/partners/overview`;
+const livePartners = Array.from({ length: 6 }, (_, index) => ({
+  id: `live-partner-${index + 1}`,
+  name: `Live API Partner ${index + 1}`,
+  type: 'INDUSTRY_PARTNER',
+  renewalDate: index === 0 ? null : '2027-01-31',
+  status: 'ACTIVE',
+  contactPerson: null,
+  contactEmail: null,
+  notes: null,
+  version: 0,
+}));
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -14,62 +30,46 @@ function renderPage() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <PartnersMousPage token="mock-token" />
+        <PartnersMousPage token="live-test-token" />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 describe('PartnersMousPage', () => {
-  it('renders page eyebrow, heading, and subtitle exactly matching design', async () => {
+  it('renders the live overview response without fixture partners', async () => {
+    server.use(
+      http.get(overviewPath, () =>
+        HttpResponse.json({
+          totalPartners: 6,
+          renewalDueCount: 0,
+          partners: livePartners,
+        }),
+      ),
+    );
+
     renderPage();
 
-    expect(await screen.findByText('OPERATIONS')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: /partners & mous/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/partner organisations, mou renewal dates and relationship status/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Live API Partner 1')).toBeInTheDocument();
+    const metrics = screen.getByRole('region', { name: 'Partners KPI metrics' });
+    expect(within(metrics).getByText('6')).toBeInTheDocument();
+    expect(within(metrics).getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('Live API Partner 6')).toBeInTheDocument();
+    expect(screen.queryByText('Kampala AgriTech Collective')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(1);
   });
 
-  it('renders the 2 KPI metric cards with correct values', async () => {
+  it('shows an API error rather than rendering fixture data when the request fails', async () => {
+    server.use(
+      http.get(overviewPath, () =>
+        HttpResponse.json({ detail: 'Partner service unavailable.' }, { status: 503 }),
+      ),
+    );
+
     renderPage();
 
-    expect(await screen.findByText('PARTNERS')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
-
-    expect(screen.getByText('RENEWAL DUE')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-  });
-
-  it('renders all partner rows matching the design table', async () => {
-    renderPage();
-
-    // Table headers
-    expect(await screen.findByText('PARTNER')).toBeInTheDocument();
-    expect(screen.getByText('TYPE')).toBeInTheDocument();
-    expect(screen.getByText('RENEWAL')).toBeInTheDocument();
-    expect(screen.getByText('STATUS')).toBeInTheDocument();
-
-    // Row 1
-    expect(screen.getByText('Kampala AgriTech Collective')).toBeInTheDocument();
-    expect(screen.getAllByText('Industry partner').length).toBe(2);
-    expect(screen.getByText('12 Nov 2026')).toBeInTheDocument();
-    expect(screen.getByText('Renewal due')).toBeInTheDocument();
-
-    // Row 2
-    expect(screen.getByText('Ministry of ICT Innovation Fund')).toBeInTheDocument();
-    expect(screen.getByText('Funder')).toBeInTheDocument();
-    expect(screen.getByText('4 Mar 2027')).toBeInTheDocument();
-    expect(screen.getAllByText('Active').length).toBe(2);
-
-    // Row 3
-    expect(screen.getByText('Makerere Health Sciences')).toBeInTheDocument();
-    expect(screen.getByText('Academic partner')).toBeInTheDocument();
-
-    // Row 4
-    expect(screen.getByText('EcoBuild Uganda Ltd')).toBeInTheDocument();
-    expect(screen.getByText('30 Oct 2026')).toBeInTheDocument();
-    expect(screen.getByText('Expiring soon')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Partner service unavailable.');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByText('Kampala AgriTech Collective')).not.toBeInTheDocument();
   });
 });
-

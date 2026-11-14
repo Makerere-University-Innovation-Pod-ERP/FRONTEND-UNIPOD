@@ -149,6 +149,13 @@ backend remains authoritative for authorization and validates every write.
 Frontend environment variables must never contain database URLs with
 credentials, database passwords, JWT signing secrets, or admin passwords.
 
+### Partners and MOUs
+
+The **Partners & MOUs** screen at `/partners` loads its counts and partner rows
+from `GET /operations/partners/overview`. It does not seed or substitute
+fixture data: while the request is pending it shows a loading state, and if the
+backend request fails it shows the error and a retry action.
+
 ### Administrator user and access management
 
 The administrator screen at `/management` supports staff account creation,

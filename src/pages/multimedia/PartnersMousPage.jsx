@@ -3,49 +3,6 @@ import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText, CheckCircl
 import { usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
 import { normalizePartnerStatus } from '@/services/partners';
 
-const FALLBACK_PARTNERS = [
-  {
-    id: 'partner-1',
-    name: 'Kampala AgriTech Collective',
-    type: 'Industry partner',
-    renewalDate: '12 Nov 2026',
-    status: 'Renewal due',
-    contactPerson: 'David Kintu',
-    contactEmail: 'partnerships@agritech.co.ug',
-    notes: 'Joint incubation and testbed deployment for precision agriculture prototypes.',
-  },
-  {
-    id: 'partner-2',
-    name: 'Ministry of ICT Innovation Fund',
-    type: 'Funder',
-    renewalDate: '4 Mar 2027',
-    status: 'Active',
-    contactPerson: 'Sarah Nabatanzi',
-    contactEmail: 'innovations@ict.go.ug',
-    notes: 'Government funding framework supporting university technology commercialisation.',
-  },
-  {
-    id: 'partner-3',
-    name: 'Makerere Health Sciences',
-    type: 'Academic partner',
-    renewalDate: '—',
-    status: 'Active',
-    contactPerson: 'Prof. Peter Byarugaba',
-    contactEmail: 'research@chs.mak.ac.ug',
-    notes: 'Cross-faculty collaboration on medical devices and health innovations.',
-  },
-  {
-    id: 'partner-4',
-    name: 'EcoBuild Uganda Ltd',
-    type: 'Industry partner',
-    renewalDate: '30 Oct 2026',
-    status: 'Expiring soon',
-    contactPerson: 'Amina Nakazzi',
-    contactEmail: 'contact@ecobuild.ug',
-    notes: 'Sustainable construction material testing and student internship host partner.',
-  },
-];
-
 function getStatusStyle(rawStatus) {
   const status = normalizePartnerStatus(rawStatus);
   switch (status) {
@@ -83,13 +40,9 @@ function getStatusStyle(rawStatus) {
 }
 
 export function PartnersMousPage({ token }) {
-  const { data: overview } = usePartnersOverview(token);
+  const { data: overview, isPending, isError, error, refetch } = usePartnersOverview(token);
   const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
-
-  const partners = overview?.partners ?? FALLBACK_PARTNERS;
-  const totalCount = overview?.totalPartners ?? 4;
-  const renewalDueCount = overview?.renewalDueCount ?? 2;
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -132,6 +85,17 @@ export function PartnersMousPage({ token }) {
         </p>
       </div>
 
+      {isPending && <p role="status">Loading partners…</p>}
+      {isError && (
+        <div className="api-error api-error-banner" role="alert">
+          <span>{error instanceof Error ? error.message : 'Could not load partners.'}</span>
+          <button type="button" className="btn btn-outline" onClick={() => void refetch()}>
+            Retry
+          </button>
+        </div>
+      )}
+      {overview && !isError && (
+        <>
       {/* 2 KPI Metric Cards */}
       <section
         style={{
@@ -197,7 +161,7 @@ export function PartnersMousPage({ token }) {
               lineHeight: 1,
             }}
           >
-            {totalCount}
+            {overview.totalPartners}
           </strong>
         </article>
 
@@ -256,7 +220,7 @@ export function PartnersMousPage({ token }) {
               lineHeight: 1,
             }}
           >
-            {renewalDueCount}
+            {overview.renewalDueCount}
           </strong>
         </article>
       </section>
@@ -337,9 +301,9 @@ export function PartnersMousPage({ token }) {
               </tr>
             </thead>
             <tbody>
-              {partners.map((partner, index) => {
+              {overview.partners.map((partner, index) => {
                 const statusStyle = getStatusStyle(partner.status);
-                const isLast = index === partners.length - 1;
+                const isLast = index === overview.partners.length - 1;
 
                 return (
                   <tr
@@ -384,7 +348,7 @@ export function PartnersMousPage({ token }) {
                         color: '#7a847b',
                       }}
                     >
-                      {partner.renewalDate}
+                      {partner.renewalDate ?? '—'}
                     </td>
                     <td
                       style={{
@@ -542,7 +506,7 @@ export function PartnersMousPage({ token }) {
                 }}
               >
                 <Calendar size={12} />
-                Renewal: {selectedPartner.renewalDate}
+                Renewal: {selectedPartner.renewalDate ?? '—'}
               </span>
             </div>
 
@@ -637,6 +601,8 @@ export function PartnersMousPage({ token }) {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
