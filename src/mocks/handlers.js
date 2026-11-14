@@ -15,6 +15,7 @@ import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fi
 import { textileHandlers } from './textile-handlers';
 
 const mockUsers = {
+  'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
   'factfinding@unipod.test': { subject: 'Joseph Lwanga', roles: ['ROLE_FACT_FINDING_OFFICER'] },
   'reviewer@unipod.test': { subject: 'Dr. Miriam Nsubuga', roles: ['ROLE_REVIEWER'] },
   'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
@@ -30,9 +31,104 @@ let mediaRequests = [...initialMediaRequests];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 
+const invoiceStatusMap = {
+  'Pending evidence': 'WAITING_FOR_PROOF',
+  'Awaiting verification': 'WAITING_FOR_CHECK',
+  Verified: 'PAID',
+  Receipted: 'RECEIPTED',
+};
+
+const toApiInvoice = (invoice) => {
+  const rawAmount = invoice.amountNumeric ?? Number(String(invoice.amount ?? '0').replace(/[^\d]/g, ''));
+  const amountNumeric = Number(rawAmount || 0);
+  const normalizedStatus = invoiceStatusMap[invoice.status] || 'WAITING_FOR_PROOF';
+  const receipt = invoice.receiptNumber
+    ? {
+        id: `receipt-${invoice.id}`,
+        invoiceId: invoice.id,
+        receiptNumber: invoice.receiptNumber,
+        issuedBy: 'Daniel Kato',
+        issuedAt: new Date().toISOString(),
+      }
+    : null;
+
+  return {
+    id: invoice.id,
+    number: invoice.invoiceNumber,
+    customerEmail: invoice.client ? `${invoice.client.toLowerCase().replace(/\s+/g, '.')}@demo.test` : 'finance@unipod.test',
+    customerName: invoice.client || 'Client',
+    department: null,
+    description: invoice.title,
+    amount: amountNumeric,
+    currency: 'UGX',
+    sourceType: 'REQUEST',
+    sourceId: null,
+    status: normalizedStatus,
+    statusLabel: invoice.status,
+    issuedBy: 'Daniel Kato',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
+    updatedAt: new Date().toISOString(),
+    paymentProof: invoice.paymentReference
+      ? {
+          id: `proof-${invoice.id}`,
+          reference: invoice.paymentReference,
+          amount: amountNumeric,
+          paidOn: new Date().toISOString().slice(0, 10),
+          contentType: 'application/octet-stream',
+          fileSize: 1024,
+          originalFilename: 'payment-proof.txt',
+          status: invoice.paymentProofStatus || (invoice.status === 'Verified' || invoice.status === 'Receipted' ? 'VERIFIED' : 'PENDING'),
+          rejectionReason: invoice.rejectionReason || null,
+          uploadedBy: 'submitter@unipod.test',
+          uploadedAt: new Date().toISOString(),
+          verifiedBy: invoice.status === 'Verified' || invoice.status === 'Receipted' ? 'Daniel Kato' : null,
+          verifiedAt: invoice.status === 'Verified' || invoice.status === 'Receipted' ? new Date().toISOString() : null,
+        }
+      : null,
+    receipt,
+  };
+};
+
 // In-memory stores for admin/reception endpoints that aren't part of the
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
+const departments = [
+  { id: 'dept-1', name: 'Innovation & Research', active: true, version: 1 },
+  { id: 'dept-2', name: 'Finance & Administration', active: true, version: 1 },
+  { id: 'dept-3', name: 'Textile Operations', active: true, version: 1 },
+];
+let adminUsers = [
+  { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
+  { id: 'staff-1', fullName: 'Martha Akello', email: 'martha.akello@unipod.test', role: 'RECEPTIONIST', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-01' },
+  { id: 'staff-2', fullName: 'Dr. Miriam Nsubuga', email: 'miriam.nsubuga@unipod.test', role: 'REVIEWER', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-04' },
+  { id: 'staff-3', fullName: 'Daniel Kato', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentId: 'dept-2', active: true, version: 1, createdAt: '2026-09-10' },
+  { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
+];
+const adminPermissions = [
+  { id: 'USERS_MANAGE', name: 'Manage user accounts', description: 'Create, update, and deactivate staff accounts.' },
+  { id: 'ROLES_MANAGE', name: 'Manage roles and permissions', description: 'Configure role access to system capabilities.' },
+  { id: 'DEPARTMENTS_MANAGE', name: 'Manage departments', description: 'Create and maintain departments.' },
+  { id: 'SUBMISSIONS_VIEW', name: 'View submissions', description: 'View submitted innovation briefs.' },
+  { id: 'SUBMISSIONS_REGISTER', name: 'Register submissions', description: 'Register and route submissions.' },
+  { id: 'FACT_FINDING_MANAGE', name: 'Fact-finding', description: 'Perform fact-finding on assigned submissions.' },
+  { id: 'REVIEWS_MANAGE', name: 'Review submissions', description: 'Review assigned submissions.' },
+  { id: 'FINANCE_MANAGE', name: 'Manage finance', description: 'Access finance and invoice workflows.' },
+];
+let adminRoles = [
+  { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
+  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
+  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['FINANCE_MANAGE'], version: 1, editable: true },
+  { id: 'REVIEWER', name: 'Reviewer', permissions: ['SUBMISSIONS_VIEW', 'REVIEWS_MANAGE'], version: 1, editable: true },
+  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
+  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER', 'REVIEWS_MANAGE'], version: 1, editable: true },
+  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
+  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner', permissions: [], version: 1, editable: true },
+  { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
+  { id: 'OBSERVER', name: 'Observer', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+];
 
 export const handlers = [
   http.get(`${API_BASE_URL}/actuator/health`, () => HttpResponse.json({ status: 'UP' })),
@@ -46,6 +142,8 @@ export const handlers = [
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
     });
   }),
+
+  http.post(`${API_BASE_URL}/auth/forgot-password`, () => new HttpResponse(null, { status: 202 })),
 
   http.get(`${API_BASE_URL}/dashboard/overview`, () => {
     const byStage = {};
@@ -198,9 +296,121 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
+
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
-    return HttpResponse.json({ id: `user-${Date.now()}`, email: body.email, role: body.role, createdAt: new Date().toISOString().slice(0, 10) });
+    const email = String(body.email ?? '').trim().toLowerCase();
+    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+      return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
+    }
+    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
+    }
+    if (adminUsers.some((user) => user.email.toLowerCase() === email)) {
+      return HttpResponse.json({ message: 'A staff account with this email already exists.' }, { status: 409 });
+    }
+    const createdAt = new Date().toISOString().slice(0, 10);
+    const created = {
+      id: `staff-${Date.now()}`,
+      fullName: String(body.fullName ?? email.split('@')[0]),
+      email,
+      role: body.role,
+      departmentId: body.departmentId ?? '',
+      active: true,
+      version: 1,
+      createdAt,
+    };
+    adminUsers = [created, ...adminUsers];
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/admin/users/:id`, async ({ params, request }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    if (user.role === 'ADMINISTRATOR') {
+      return HttpResponse.json({ message: 'Administrator role assignments are protected.' }, { status: 409 });
+    }
+    const body = await request.json();
+    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+      return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
+    }
+    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
+    }
+    if (body.version !== user.version) {
+      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    Object.assign(user, {
+      role: body.role,
+      departmentId: body.departmentId ?? '',
+      version: user.version + 1,
+    });
+    return HttpResponse.json(user);
+  }),
+
+  http.patch(`${API_BASE_URL}/admin/users/:id/status`, async ({ params, request }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    if (body.version !== user.version) {
+      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    if (user.role === 'ADMINISTRATOR' && !body.active
+      && adminUsers.filter((candidate) => candidate.role === 'ADMINISTRATOR' && candidate.active).length <= 1) {
+      return HttpResponse.json({ message: 'The last active administrator cannot be deactivated.' }, { status: 409 });
+    }
+    Object.assign(user, { active: Boolean(body.active), version: user.version + 1 });
+    return HttpResponse.json(user);
+  }),
+
+  http.get(`${API_BASE_URL}/admin/departments`, () => HttpResponse.json(departments)),
+
+  http.post(`${API_BASE_URL}/admin/departments`, async ({ request }) => {
+    const body = await request.json();
+    const name = String(body.name ?? '').trim();
+    if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
+      return HttpResponse.json({ message: 'A department with this name already exists.' }, { status: 409 });
+    }
+    const created = { id: `dept-${Date.now()}`, name, active: body.active ?? true, version: 1 };
+    departments.push(created);
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.put(`${API_BASE_URL}/admin/departments/:id`, async ({ params, request }) => {
+    const department = departments.find((candidate) => candidate.id === params.id);
+    if (!department) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    if (body.version !== department.version) {
+      return HttpResponse.json({ message: 'This department changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    Object.assign(department, {
+      name: String(body.name ?? department.name).trim(),
+      active: Boolean(body.active),
+      version: department.version + 1,
+    });
+    return HttpResponse.json(department);
+  }),
+
+  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(adminRoles)),
+  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
+
+  http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
+    const role = adminRoles.find((candidate) => candidate.id === params.id);
+    if (!role) return new HttpResponse(null, { status: 404 });
+    if (!role.editable) {
+      return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
+    }
+    const body = await request.json();
+    if (body.version !== role.version) {
+      return HttpResponse.json({ message: 'This role changed elsewhere. Refresh and try again.' }, { status: 409 });
+    }
+    const knownPermissions = new Set(adminPermissions.map(({ id }) => id));
+    if (!Array.isArray(body.permissions) || body.permissions.some((id) => !knownPermissions.has(id))) {
+      return HttpResponse.json({ message: 'One or more permissions are invalid.' }, { status: 400 });
+    }
+    Object.assign(role, { permissions: body.permissions, version: role.version + 1 });
+    return HttpResponse.json(role);
   }),
 
   http.get(`${API_BASE_URL}/queues/reception`, ({ request }) => {
@@ -552,7 +762,131 @@ export const handlers = [
     return HttpResponse.json(initialFinanceOverview);
   }),
 
-  // Finance / Price Lists & Invoices
+  http.get(`${API_BASE_URL}/finance/summary`, () => {
+    const waitingForProof = invoices.filter((inv) => inv.status === 'Pending evidence').length;
+    const waitingForCheck = invoices.filter((inv) => inv.status === 'Awaiting verification').length;
+    const paid = invoices.filter((inv) => inv.status === 'Verified').length;
+    const receipted = invoices.filter((inv) => inv.status === 'Receipted').length;
+
+    return HttpResponse.json({
+      totalInvoices: invoices.length,
+      waitingForProof,
+      waitingForCheck,
+      paid,
+      receipted,
+      outstandingUgx: 340000,
+      collectedUgx: 1620000,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const filtered = status
+      ? invoices.filter((inv) => {
+          const mapped = invoiceStatusMap[inv.status];
+          return mapped === status;
+        })
+      : invoices;
+
+    return HttpResponse.json({
+      items: filtered.map(toApiInvoice),
+      page: 0,
+      size: filtered.length,
+      totalElements: filtered.length,
+      totalPages: 1,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id`, ({ params }) => {
+    const id = params.id;
+    const invoice = invoices.find((item) => item.id === id);
+    if (!invoice) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(toApiInvoice(invoice));
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id/proof/file`, ({ params }) => {
+    const invoice = invoices.find((item) => item.id === params.id);
+    if (!invoice?.paymentReference) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(new Blob([`Payment proof for ${invoice.invoiceNumber}`]), {
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id/receipt/download`, ({ params }) => {
+    const invoice = invoices.find((item) => item.id === params.id);
+    if (!invoice?.receiptNumber) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(`Receipt ${invoice.receiptNumber}`, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/verify`, async ({ params, request }) => {
+    const id = params.id;
+    const url = new URL(request.url);
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    const proofId = url.searchParams.get('proofId');
+    if (!proofId) {
+      return new HttpResponse(JSON.stringify({ message: 'proofId is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    invoices[index] = { ...invoices[index], status: 'Verified', paymentReference: invoices[index].paymentReference || 'BANK-REF-AUTOUPLOAD' };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/reject`, async ({ params, request }) => {
+    const body = await request.json();
+    const index = invoices.findIndex((inv) => inv.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    if (!body.proofId || !body.reason) {
+      return HttpResponse.json({ message: 'proofId and reason are required' }, { status: 400 });
+    }
+
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Pending evidence',
+      paymentProofStatus: 'REJECTED',
+      rejectionReason: body.reason,
+    };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/receipt`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    if (invoices[index].status !== 'Verified') {
+      return new HttpResponse(
+        JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
+    invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/evidence`, async ({ params, request }) => {
+    const id = params.id;
+    const formData = await request.formData();
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    const paymentReference = (formData.get('reference') || 'BANK-REF-AUTOUPLOAD').toString();
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Awaiting verification',
+      paymentReference,
+    };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  // Finance / Price Lists & Invoices legacy route retained for mocked UI compatibility
   http.get(`${API_BASE_URL}/finance/invoices/overview`, () => {
     const awaitingCount = invoices.filter(
       (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
@@ -601,7 +935,6 @@ export const handlers = [
     const id = params.id;
     const index = invoices.findIndex((inv) => inv.id === id);
     if (index === -1) return new HttpResponse(null, { status: 404 });
-    // Gating check: only verified invoices can release a receipt!
     if (invoices[index].status !== 'Verified') {
       return new HttpResponse(
         JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),
