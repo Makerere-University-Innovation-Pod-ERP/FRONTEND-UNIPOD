@@ -30,6 +30,64 @@ let mediaRequests = [...initialMediaRequests];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 
+const invoiceStatusMap = {
+  'Pending evidence': 'WAITING_FOR_PROOF',
+  'Awaiting verification': 'WAITING_FOR_CHECK',
+  Verified: 'PAID',
+  Receipted: 'RECEIPTED',
+};
+
+const toApiInvoice = (invoice) => {
+  const rawAmount = invoice.amountNumeric ?? Number(String(invoice.amount ?? '0').replace(/[^\d]/g, ''));
+  const amountNumeric = Number(rawAmount || 0);
+  const normalizedStatus = invoiceStatusMap[invoice.status] || 'WAITING_FOR_PROOF';
+  const receipt = invoice.receiptNumber
+    ? {
+        id: `receipt-${invoice.id}`,
+        invoiceId: invoice.id,
+        receiptNumber: invoice.receiptNumber,
+        issuedBy: 'Daniel Kato',
+        issuedAt: new Date().toISOString(),
+      }
+    : null;
+
+  return {
+    id: invoice.id,
+    number: invoice.invoiceNumber,
+    customerEmail: invoice.client ? `${invoice.client.toLowerCase().replace(/\s+/g, '.')}@demo.test` : 'finance@unipod.test',
+    customerName: invoice.client || 'Client',
+    department: null,
+    description: invoice.title,
+    amount: amountNumeric,
+    currency: 'UGX',
+    sourceType: 'REQUEST',
+    sourceId: null,
+    status: normalizedStatus,
+    statusLabel: invoice.status,
+    issuedBy: 'Daniel Kato',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
+    updatedAt: new Date().toISOString(),
+    paymentProof: invoice.paymentReference
+      ? {
+          id: `proof-${invoice.id}`,
+          reference: invoice.paymentReference,
+          amount: amountNumeric,
+          paidOn: new Date().toISOString().slice(0, 10),
+          contentType: 'application/octet-stream',
+          fileSize: 1024,
+          originalFilename: 'payment-proof.txt',
+          status: invoice.paymentProofStatus || (invoice.status === 'Verified' || invoice.status === 'Receipted' ? 'VERIFIED' : 'PENDING'),
+          rejectionReason: invoice.rejectionReason || null,
+          uploadedBy: 'submitter@unipod.test',
+          uploadedAt: new Date().toISOString(),
+          verifiedBy: invoice.status === 'Verified' || invoice.status === 'Receipted' ? 'Daniel Kato' : null,
+          verifiedAt: invoice.status === 'Verified' || invoice.status === 'Receipted' ? new Date().toISOString() : null,
+        }
+      : null,
+    receipt,
+  };
+};
+
 // In-memory stores for admin/reception endpoints that aren't part of the
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
@@ -552,7 +610,131 @@ export const handlers = [
     return HttpResponse.json(initialFinanceOverview);
   }),
 
-  // Finance / Price Lists & Invoices
+  http.get(`${API_BASE_URL}/finance/summary`, () => {
+    const waitingForProof = invoices.filter((inv) => inv.status === 'Pending evidence').length;
+    const waitingForCheck = invoices.filter((inv) => inv.status === 'Awaiting verification').length;
+    const paid = invoices.filter((inv) => inv.status === 'Verified').length;
+    const receipted = invoices.filter((inv) => inv.status === 'Receipted').length;
+
+    return HttpResponse.json({
+      totalInvoices: invoices.length,
+      waitingForProof,
+      waitingForCheck,
+      paid,
+      receipted,
+      outstandingUgx: 340000,
+      collectedUgx: 1620000,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const filtered = status
+      ? invoices.filter((inv) => {
+          const mapped = invoiceStatusMap[inv.status];
+          return mapped === status;
+        })
+      : invoices;
+
+    return HttpResponse.json({
+      items: filtered.map(toApiInvoice),
+      page: 0,
+      size: filtered.length,
+      totalElements: filtered.length,
+      totalPages: 1,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id`, ({ params }) => {
+    const id = params.id;
+    const invoice = invoices.find((item) => item.id === id);
+    if (!invoice) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(toApiInvoice(invoice));
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id/proof/file`, ({ params }) => {
+    const invoice = invoices.find((item) => item.id === params.id);
+    if (!invoice?.paymentReference) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(new Blob([`Payment proof for ${invoice.invoiceNumber}`]), {
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/invoices/:id/receipt/download`, ({ params }) => {
+    const invoice = invoices.find((item) => item.id === params.id);
+    if (!invoice?.receiptNumber) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(`Receipt ${invoice.receiptNumber}`, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/verify`, async ({ params, request }) => {
+    const id = params.id;
+    const url = new URL(request.url);
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    const proofId = url.searchParams.get('proofId');
+    if (!proofId) {
+      return new HttpResponse(JSON.stringify({ message: 'proofId is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    invoices[index] = { ...invoices[index], status: 'Verified', paymentReference: invoices[index].paymentReference || 'BANK-REF-AUTOUPLOAD' };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/reject`, async ({ params, request }) => {
+    const body = await request.json();
+    const index = invoices.findIndex((inv) => inv.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    if (!body.proofId || !body.reason) {
+      return HttpResponse.json({ message: 'proofId and reason are required' }, { status: 400 });
+    }
+
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Pending evidence',
+      paymentProofStatus: 'REJECTED',
+      rejectionReason: body.reason,
+    };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/receipt`, ({ params }) => {
+    const id = params.id;
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    if (invoices[index].status !== 'Verified') {
+      return new HttpResponse(
+        JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
+    invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  http.post(`${API_BASE_URL}/invoices/:id/evidence`, async ({ params, request }) => {
+    const id = params.id;
+    const formData = await request.formData();
+    const index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+
+    const paymentReference = (formData.get('reference') || 'BANK-REF-AUTOUPLOAD').toString();
+    invoices[index] = {
+      ...invoices[index],
+      status: 'Awaiting verification',
+      paymentReference,
+    };
+    return HttpResponse.json(toApiInvoice(invoices[index]));
+  }),
+
+  // Finance / Price Lists & Invoices legacy route retained for mocked UI compatibility
   http.get(`${API_BASE_URL}/finance/invoices/overview`, () => {
     const awaitingCount = invoices.filter(
       (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
@@ -601,7 +783,6 @@ export const handlers = [
     const id = params.id;
     const index = invoices.findIndex((inv) => inv.id === id);
     if (index === -1) return new HttpResponse(null, { status: 404 });
-    // Gating check: only verified invoices can release a receipt!
     if (invoices[index].status !== 'Verified') {
       return new HttpResponse(
         JSON.stringify({ message: 'Cannot release receipt: payment has not been verified.' }),

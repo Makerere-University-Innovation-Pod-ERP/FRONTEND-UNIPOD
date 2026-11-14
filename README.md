@@ -81,6 +81,30 @@ belongs in the frontend service.
   case-stage transitions, outcomes, reviewer assignments, and document metadata.
 - Check service health from the workspace connection indicator.
 
+### Finance invoices and payment verification
+
+The **Price Lists & Invoices** screen is available at `/finance/invoices` (also
+aliased at `/finance/prices`, `/invoices`, and `/price-lists`). It requires an
+Administrator or Finance Officer account; public submitter sign-up does not
+grant finance access. Finance summary cards use all fields from
+`GET /finance/summary`, with UGX amounts displayed in full.
+
+The invoice list and finance actions use these backend endpoints:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /invoices?size=100` | Load invoices and submitted payment-proof metadata. |
+| `GET /invoices/{id}/proof/file` | Download payment proof for finance review. |
+| `POST /invoices/{id}/verify?proofId={proofId}` | Verify the inspected proof. |
+| `POST /invoices/{id}/reject` | Reject proof with `proofId` and a required reason. |
+| `POST /invoices/{id}/receipt` | Issue a receipt after payment verification. |
+| `GET /invoices/{id}/receipt/download` | Download the issued receipt. |
+
+Payment-proof uploads are submitted by the customer, not by finance staff. The
+submitter-only evidence endpoint is not used by the finance screen. The current
+OpenAPI document does not define a price-list endpoint, so the screen displays
+an empty state when no authorised price list is available.
+
 Access tokens are kept in `sessionStorage` and sent as bearer tokens. The
 backend remains authoritative for authorization and validates every write.
 Frontend environment variables must never contain database URLs with
