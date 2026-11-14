@@ -24,6 +24,7 @@ export function LiveDashboard({
   const [recent, setRecent] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const pipelineAtAGlance = overview?.pipelineAtAGlance ?? overview?.byStage ?? {};
 
   const load = useCallback(async (signal) => {
     try {
@@ -86,7 +87,7 @@ export function LiveDashboard({
               <div className="live-panel-heading"><div><p className="eyebrow">WORKFLOW</p><h2>Pipeline at a glance</h2></div></div>
               <div className="pipeline-grid">
                 {PIPELINE_STAGES.map((stage) => (
-                  <div className="pipeline-tile" key={stage}><span>{formatStage(stage)}</span><b>{(overview.pipelineAtAGlance ?? overview.byStage)[stage] ?? 0}</b></div>
+                  <div className="pipeline-tile" key={stage}><span>{formatStage(stage)}</span><b>{pipelineAtAGlance[stage] ?? 0}</b></div>
                 ))}
               </div>
             </section>
