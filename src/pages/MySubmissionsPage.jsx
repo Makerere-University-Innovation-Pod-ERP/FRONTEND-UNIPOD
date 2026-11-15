@@ -11,6 +11,21 @@ const TABS = [
   { id: 'bookings', label: 'Bookings', reason: 'Bookings belong to the operational domains\' schedule/lab/workshop screens — not yet built.' },
 ];
 
+function isSubmitterCapabilities(value) {
+  return value !== null
+    && typeof value === 'object'
+    && typeof value.message === 'string'
+    && Array.isArray(value.modules)
+    && value.modules.every((module) => (
+      module !== null
+      && typeof module === 'object'
+      && typeof module.key === 'string'
+      && typeof module.label === 'string'
+      && ['AVAILABLE', 'NOT_CONFIGURED'].includes(module.availability)
+      && (module.reason === undefined || module.reason === null || typeof module.reason === 'string')
+    ));
+}
+
 export function MySubmissionsPage({
   token,
   onUnauthorized,
@@ -28,6 +43,9 @@ export function MySubmissionsPage({
       backendApi.submitterSubmissions(token, page, 25, controller.signal),
       backendApi.submitterCapabilities(token, controller.signal),
     ]).then(([submissions, currentCapabilities]) => {
+      if (!isSubmitterCapabilities(currentCapabilities)) {
+        throw new Error('The account capabilities response is invalid. Refresh the page or contact support.');
+      }
       setResult(submissions);
       setCapabilities(currentCapabilities);
     }).catch((reason) => {
@@ -47,11 +65,15 @@ export function MySubmissionsPage({
       {capabilities && <section className="live-panel submitter-capabilities" aria-label="Account capabilities">
         <div>
           <p className="eyebrow">ACCOUNT ACCESS</p>
-          <p>{capabilities.registrationMessage}</p>
+          <p>{capabilities.message}</p>
         </div>
-        <div className="locked-modules">
-          {capabilities.lockedModules.map((module) => <span key={module}><LockKeyhole size={13} />{module}</span>)}
-        </div>
+        {capabilities.modules.some((module) => module.availability === 'NOT_CONFIGURED') && (
+          <div className="locked-modules">
+            {capabilities.modules
+              .filter((module) => module.availability === 'NOT_CONFIGURED')
+              .map((module) => <span key={module.key}><LockKeyhole size={13} />{module.label}</span>)}
+          </div>
+        )}
       </section>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       <div className="submission-filters" role="tablist" aria-label="My submissions sections">

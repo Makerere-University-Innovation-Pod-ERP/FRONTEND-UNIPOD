@@ -1146,3 +1146,241 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   .live-dashboard-grid{gap:10px}
   .pipeline-tile{min-height:82px}
 }
+
+.login-screen--framed{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  place-items:center;
+  padding:24px;
+  background:#f3f3f1;
+}
+.login-window{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,.48fr) minmax(0,.52fr);
+  width:min(100%,1180px);
+  height:min(680px,calc(100vh - 48px));
+  min-height:560px;
+  padding:12px;
+  overflow:visible;
+  border:1px solid #fff;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 12px 40px rgba(20,24,20,.08);
+}
+.login-panel{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  padding:48px 42px 62px;
+  border-radius:14px;
+  background:#fff;
+}
+.login-screen--framed .login-card{
+  width:min(100%,360px);
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.login-screen--framed .login-brand{
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  margin-bottom:22px;
+  text-align:center;
+}
+.login-screen--framed .login-brand .brand-logo{
+  width:54px;
+  height:44px;
+  padding:2px;
+  border:1px solid rgba(148,7,10,.12);
+  border-radius:9px;
+  background:#fff;
+}
+.login-screen--framed .login-brand>div:last-child{align-items:center;gap:3px}
+.login-screen--framed .login-brand b{color:#202321;font-size:9px}
+.login-screen--framed .login-brand small{color:#858a86;font-size:9px}
+.login-screen--framed .login-card>.eyebrow{margin-bottom:7px;text-align:center;font-size:8px}
+.login-screen--framed .login-card h1{
+  margin:0 0 5px;
+  color:#171918;
+  font:700 21px/1.25 var(--font-sans);
+  letter-spacing:-.025em;
+  text-align:center;
+}
+.login-screen--framed .login-intro{
+  margin:0 0 20px;
+  color:#858a86;
+  font-size:11px;
+  line-height:1.55;
+  text-align:center;
+}
+.login-screen--framed .api-form{gap:8px}
+.login-screen--framed .api-form label{color:#252825;font-size:10px}
+.login-screen--framed .login-form #login-email,
+.login-screen--framed .login-form #login-password{
+  min-height:40px;
+  border:1px solid #1a1a1a;
+  border-radius:7px;
+  background:#fff;
+  color:#202321;
+  font-size:11px;
+}
+.login-screen--framed .login-form #login-email:focus,
+.login-screen--framed .login-form #login-password:focus{
+  border-color:#111;
+  box-shadow:0 0 0 3px rgba(0,0,0,.12);
+}
+.login-screen--framed .login-forgot-row{justify-content:flex-start;margin-top:-3px}
+.login-screen--framed .login-text-button{color:#6e746f;font-size:10px}
+.login-screen--framed .login-submit{
+  min-height:40px;
+  margin-top:7px;
+  border-color:var(--mak-red-800);
+  border-radius:7px;
+  background:var(--mak-red-800);
+  color:#fff;
+}
+.login-screen--framed .login-submit:hover:not(:disabled){background:var(--mak-red-700)}
+.login-screen--framed .login-footnote{
+  position:absolute;
+  right:22px;
+  bottom:19px;
+  left:22px;
+  margin:0;
+  color:#858a86;
+  font-size:9px;
+  text-align:center;
+}
+.login-screen--framed .login-footnote .btn{
+  min-height:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#252825;
+  font-size:9px;
+  text-decoration:underline;
+}
+.login-screen--framed .login-hero{
+  position:relative;
+  min-width:0;
+  overflow:hidden;
+  border-radius:26px;
+  background:#c7c5a5;
+  isolation:isolate;
+}
+.login-screen--framed .login-hero img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+.login-screen--framed .login-hero-shade{
+  position:absolute;
+  z-index:1;
+  inset:38% 0 0;
+  background:linear-gradient(180deg,rgba(16,18,17,0),rgba(16,18,17,.42));
+  pointer-events:none;
+}
+.login-screen--framed .login-hero::before,
+.login-screen--framed .login-hero::after{
+  position:absolute;
+  z-index:2;
+  width:112px;
+  height:112px;
+  border-radius:50%;
+  background:#fff;
+  content:"";
+  pointer-events:none;
+}
+.login-screen--framed .login-hero::before{top:-56px;left:-56px}
+.login-screen--framed .login-hero::after{right:-56px;bottom:-56px}
+.login-screen--framed .login-hero-caption{
+  position:absolute;
+  z-index:3;
+  right:auto;
+  bottom:15px;
+  left:15px;
+  max-width:calc(100% - 30px);
+  padding:11px 13px;
+  border:1px solid rgba(255,255,255,.36);
+  border-radius:12px;
+  background:rgba(255,255,255,.2);
+  color:#fff;
+  backdrop-filter:blur(14px) saturate(130%);
+  box-shadow:0 6px 24px rgba(0,0,0,.12);
+}
+.login-screen--framed .login-hero-caption .eyebrow{margin-bottom:4px;color:#fff;font-size:8px}
+.login-screen--framed .login-hero-caption p:last-child{font:500 11px/1.45 var(--font-sans)}
+
+.login-screen .login-card .api-form input:not([type='radio']):not([type='checkbox']){
+  border-color:#1a1a1a;
+}
+.login-screen .login-card .api-form input:not([type='radio']):not([type='checkbox']):hover{
+  border-color:#000;
+}
+.login-screen .login-card .api-form input:not([type='radio']):not([type='checkbox']):focus{
+  border-color:#111;
+  box-shadow:0 0 0 3px rgba(0,0,0,.12);
+}
+
+.login-screen--signup .login-window{height:min(760px,calc(100vh - 48px))}
+.login-screen--framed .signup-panel{
+  align-items:flex-start;
+  justify-content:center;
+  overflow-y:auto;
+  padding:48px 30px 28px;
+  scrollbar-width:thin;
+}
+.login-screen--framed .signup-card{
+  width:min(100%,480px);
+  margin:auto;
+  padding:12px 10px 24px;
+}
+.login-screen--framed .signup-card .login-brand{margin-bottom:22px}
+.login-screen--framed .signup-card .brand-crest{
+  width:54px;
+  height:44px;
+  padding:2px;
+  border:1px solid rgba(148,7,10,.12);
+  border-radius:9px;
+  background:#fff;
+  object-fit:contain;
+}
+.login-screen--framed .signup-actions .btn-primary{
+  border-color:var(--mak-red-800);
+  background:var(--mak-red-800);
+  color:#fff;
+}
+.login-screen--framed .signup-actions .btn-primary:hover:not(:disabled){background:var(--mak-red-700)}
+
+@media(max-width:760px){
+  .login-screen--framed{min-height:100svh;padding:12px}
+  .login-screen--signup .login-window{height:auto}
+  .login-window{
+    display:block;
+    width:min(100%,520px);
+    height:auto;
+    min-height:0;
+    padding:10px;
+  }
+  .login-panel{
+    min-height:min(650px,calc(100svh - 44px));
+    padding:58px 22px 62px;
+  }
+  .login-screen--framed .login-hero{display:none}
+  .login-screen--framed .signup-panel{
+    align-items:flex-start;
+    justify-content:flex-start;
+    overflow:visible;
+    padding:58px 18px 28px;
+  }
+  .login-screen--framed .signup-card{width:min(100%,480px);margin:0 auto;padding:0 10px 24px}
+}
