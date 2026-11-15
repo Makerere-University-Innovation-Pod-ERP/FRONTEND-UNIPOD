@@ -57,7 +57,7 @@ export function LoginPage({ onLogin, onCreateAccount }) {
   }
 
   return (
-    <main className="login-screen login-screen--framed">
+    <main className={`login-screen login-screen--framed${showForgotPassword ? ' login-screen--forgot-password' : ''}`}>
       <div className="login-window">
         <section className="login-panel">
           <div className="login-card">

@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown,
+  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft, ChevronRight,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -224,6 +224,26 @@ export function BackendWorkspace({
               </>
             )}
           </Link>
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+          </button>
+          <button
+            type="button"
+            className="mobile-edge-nav-toggle"
+            onClick={() => setMobileOpen((value) => !value)}
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            title={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
+          </button>
         </div>
 
         {textileOnly ? (
@@ -294,26 +314,6 @@ export function BackendWorkspace({
           </button>
         </div>
       </aside>
-      <button
-        type="button"
-        className="sidebar-collapse"
-        onClick={() => setCollapsed((value) => !value)}
-        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        aria-expanded={!collapsed}
-      >
-        <Menu size={17} />
-      </button>
-      <button
-        type="button"
-        className="mobile-edge-nav-toggle"
-        onClick={() => setMobileOpen((value) => !value)}
-        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-        title={mobileOpen ? 'Close navigation' : 'Open navigation'}
-        aria-expanded={mobileOpen}
-      >
-        <Menu size={19} />
-      </button>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
         <header className="live-topbar">
@@ -388,7 +388,7 @@ export function BackendWorkspace({
           </div>
         </header>
         <main className="live-content">{children}</main>
-        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span><Activity size={12} /> Live data from the backend</span></footer>
+        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span></span></footer>
       </div>
       {searchOpen && <div className="case-search-overlay" onMouseDown={(event) => {
         if (event.target === event.currentTarget) {

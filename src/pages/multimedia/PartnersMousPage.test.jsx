@@ -13,7 +13,7 @@ const partnersPath = `${API_BASE_URL}/operations/partners`;
 const livePartners = Array.from({ length: 6 }, (_, index) => ({
   id: `live-partner-${index + 1}`,
   name: `Live API Partner ${index + 1}`,
-  type: 'INDUSTRY_PARTNER',
+  type: 'INDUSTRY PARTNER',
   renewalDate: index === 0 ? null : '2027-01-31',
   status: 'ACTIVE',
   contactPerson: null,
@@ -158,7 +158,7 @@ describe('PartnersMousPage', () => {
     expect(await screen.findByText('New Test Partner')).toBeInTheDocument();
     expect(submittedBody).toEqual({
       name: 'New Test Partner',
-      type: 'INDUSTRY_PARTNER',
+      type: 'INDUSTRY PARTNER',
       renewalDate: null,
       contactPerson: null,
       contactEmail: null,

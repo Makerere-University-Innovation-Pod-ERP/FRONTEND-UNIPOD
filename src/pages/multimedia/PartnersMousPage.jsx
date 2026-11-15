@@ -115,7 +115,7 @@ export function PartnersMousPage({ token, roles = [] }) {
   const [renewalFormAttempted, setRenewalFormAttempted] = useState(false);
   const [createPartnerForm, setCreatePartnerForm] = useState({
     name: '',
-    type: 'INDUSTRY_PARTNER',
+    type: 'INDUSTRY PARTNER',
     renewalDate: '',
     contactPerson: '',
     contactEmail: '',
@@ -153,7 +153,7 @@ export function PartnersMousPage({ token, roles = [] }) {
         onSuccess: () => {
           setCreatePartnerForm({
             name: '',
-            type: 'INDUSTRY_PARTNER',
+            type: 'INDUSTRY PARTNER',
             renewalDate: '',
             contactPerson: '',
             contactEmail: '',
@@ -1012,7 +1012,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                         boxShadow: '0 12px 30px rgba(20, 32, 24, 0.16)',
                       }}
                     >
-                      <SelectItem value="INDUSTRY_PARTNER">Industry partner</SelectItem>
+                      <SelectItem value="INDUSTRY PARTNER">Industry partner</SelectItem>
                       <SelectItem value="FUNDER">Funder</SelectItem>
                       <SelectItem value="ACADEMIC_PARTNER">Academic partner</SelectItem>
                     </SelectContent>
