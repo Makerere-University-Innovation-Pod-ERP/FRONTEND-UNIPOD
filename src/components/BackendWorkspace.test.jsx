@@ -34,11 +34,26 @@ describe('BackendWorkspace', () => {
     const sidebar = container.querySelector('.live-sidebar');
     expect(sidebar).not.toHaveClass('collapsed');
 
-    await user.click(screen.getByRole('button', { name: /collapse navigation/i }));
+    const collapseToggle = screen.getByRole('button', { name: /collapse navigation/i });
+    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-menu');
+    await user.click(collapseToggle);
     expect(sidebar).toHaveClass('collapsed');
 
     await user.click(screen.getByRole('button', { name: /expand navigation/i }));
     expect(sidebar).not.toHaveClass('collapsed');
+  });
+
+  it('moves the mobile menu toggle out of the top bar and keeps it functional at the edge', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell();
+
+    expect(container.querySelector('.live-topbar .mobile-nav-toggle')).toBeNull();
+    const menuToggle = screen.getByRole('button', { name: 'Open navigation' });
+    expect(menuToggle).toHaveClass('mobile-edge-nav-toggle');
+
+    await user.click(menuToggle);
+    expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(container.querySelector('.live-sidebar')).toHaveClass('mobile-open');
   });
 
   it('searches submissions and shows matching results', async () => {

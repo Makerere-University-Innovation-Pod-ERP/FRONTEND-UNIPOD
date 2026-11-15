@@ -6,6 +6,15 @@ import { ApiError, backendApi } from '@/services/backend-api';
 import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { formatStage } from '@/lib/presentation';
 
+const PIPELINE_STAGES = [
+  'UNDER_REVIEW',
+  'FACT_FINDING',
+  'REFINEMENT_REQUESTED',
+  'FORWARDED',
+  'COMPLETED',
+  'RECEIVED',
+];
+
 export function LiveDashboard({
   token,
   roles,
@@ -64,9 +73,9 @@ export function LiveDashboard({
             <section className="live-panel live-attention">
               <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/submissions">All cases <ArrowUpRight size={14} /></Link></div>
               {overview.needsAttention.length ? (
-                <div className="attention-list">{overview.needsAttention.slice(0, 5).map((item) => (
+                <div className="attention-list">{overview.needsAttention.slice(0, 4).map((item, index) => (
                   <Link className="attention-row" to={`/submissions/${item.id}`} key={item.id}>
-                    <span className="attention-icon"><CircleAlert size={16} /></span>
+                    <span className="attention-number">{String(index + 1).padStart(2, '0')}</span>
                     <span className="attention-copy"><b>{item.title}</b><small>{item.code || 'Uncoded'} · {formatStage(item.stage)} · {item.reason}</small></span>
                     <ArrowRight size={15} />
                   </Link>
@@ -75,11 +84,10 @@ export function LiveDashboard({
             </section>
             <section className="live-panel live-pipeline">
               <div className="live-panel-heading"><div><p className="eyebrow">WORKFLOW</p><h2>Pipeline at a glance</h2></div></div>
-              <div className="pipeline-list">
-                {Object.entries(overview.pipelineAtAGlance ?? overview.byStage).map(([stage, count]) => (
-                  <div className="pipeline-row" key={stage}><span>{formatStage(stage)}</span><b>{count}</b><div className="pipeline-track"><span style={{ width: `${overview.totalSubmissions ? Math.max(4, (count / overview.totalSubmissions) * 100) : 0}%` }} /></div></div>
+              <div className="pipeline-grid">
+                {PIPELINE_STAGES.map((stage) => (
+                  <div className="pipeline-tile" key={stage}><span>{formatStage(stage)}</span><b>{(overview.pipelineAtAGlance ?? overview.byStage)[stage] ?? 0}</b></div>
                 ))}
-                {!Object.keys(overview.pipelineAtAGlance ?? overview.byStage).length && <p className="live-empty">Pipeline data is not available for this role.</p>}
               </div>
             </section>
           </div>

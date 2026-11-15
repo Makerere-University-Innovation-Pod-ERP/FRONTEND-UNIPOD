@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft,
+  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
   List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
@@ -12,8 +12,8 @@ import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole } from '@/lib/auth';
 import {
   isFactFindingOfficer,
-  isInnovationCoordinator,
   isReceptionist,
+  isInnovationCoordinator,
   isTextileDomainOwner,
 } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
@@ -207,7 +207,7 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
+    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
@@ -218,20 +218,11 @@ export function BackendWorkspace({
               </>
             ) : (
               <>
-                <img src="/mak-crest.png" alt="" aria-hidden="true" className="brand-crest" />
-                <span><b>MUTIC ERP</b><small>Project & Ideas Management</small></span>
+                <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
+                <span><b>MUTIC ERP</b><small>Makerere Innovation Center</small></span>
               </>
             )}
           </Link>
-          <button
-            type="button"
-            className="sidebar-collapse"
-            onClick={() => setCollapsed((value) => !value)}
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          >
-            <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
-          </button>
         </div>
 
         {textileOnly ? (
@@ -302,10 +293,29 @@ export function BackendWorkspace({
           </button>
         </div>
       </aside>
+      <button
+        type="button"
+        className="sidebar-collapse"
+        onClick={() => setCollapsed((value) => !value)}
+        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        aria-expanded={!collapsed}
+      >
+        <Menu size={17} />
+      </button>
+      <button
+        type="button"
+        className="mobile-edge-nav-toggle"
+        onClick={() => setMobileOpen((value) => !value)}
+        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        title={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileOpen}
+      >
+        <Menu size={19} />
+      </button>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
         <header className="live-topbar">
-          <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
           <div className="live-breadcrumb">
             <span>Workspace</span>
             <i>‹</i>

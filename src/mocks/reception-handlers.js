@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
+import { makeMockToken } from './jwt';
 import { knownSubmitterAccounts, receptionBriefs, receptionDepartments } from './fixtures/reception';
 
 /** Fake sign-in account for the Reception screens (any password works). */
@@ -70,18 +71,28 @@ function errorResponse(status, message) {
 }
 
 export const receptionHandlers = [
-  http.post(`${API_BASE_URL}/auth/register`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/auth/signup`, async ({ request }) => {
     const body = await request.json();
     const email = (body.email ?? '').trim().toLowerCase();
-    if (!['student', 'public', 'organisation'].includes(body.type)) return errorResponse(400, 'Choose who you are signing up as.');
-    if (!email || !(body.fullName ?? '').trim()) return errorResponse(400, 'Fill in your name and email.');
-    if (body.acceptedGeneralRules !== true) return errorResponse(400, 'Accept the UniPod general rules to continue.');
+    if (!['STUDENT', 'PUBLIC', 'ORGANISATION'].includes(body.accountKind)) return errorResponse(400, 'Choose who you are signing up as.');
+    if (!email || !(body.fullName ?? '').trim() || !(body.phone ?? '').trim()) return errorResponse(400, 'Fill in your name, email and phone.');
+    if (body.accountKind === 'STUDENT' && (!body.studentNumber || !body.course || !body.universityEmail)) {
+      return errorResponse(422, 'Enter your student number, course and university email.');
+    }
+    if (body.accountKind === 'ORGANISATION' && !body.organisationName) return errorResponse(422, 'Enter the organisation name.');
+    if (body.password?.length < 12 || body.password?.length > 72) return errorResponse(422, 'Password must be 12 to 72 characters.');
+    if (body.rulesAccepted !== true || !body.rulesVersion) return errorResponse(400, 'Accept the UniPod general rules to continue.');
     if (email.endsWith('@unipod.test') || registeredMockUsers[email]) {
       return errorResponse(409, 'An account with this email already exists.');
     }
     const id = `user-${Object.keys(registeredMockUsers).length + 1}`;
     registeredMockUsers[email] = { id, subject: body.fullName.trim(), roles: ['ROLE_SUBMITTER'] };
-    return HttpResponse.json({ id, email, type: body.type }, { status: 201 });
+    return HttpResponse.json({
+      tokenType: 'Bearer',
+      accessToken: makeMockToken(['ROLE_SUBMITTER'], body.fullName.trim()),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
+      mustChangePassword: false,
+    }, { status: 201 });
   }),
 
   // Walk-in: find the person's account by email, or create a minimal one.

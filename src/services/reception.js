@@ -92,12 +92,6 @@ export const walkInAccountSchema = z.object({
   existing: z.boolean(),
 });
 
-export const signUpResultSchema = z.object({
-  id: z.string(),
-  email: z.string(),
-  type: z.enum(['student', 'public', 'organisation']),
-});
-
 /** Adds ?q=... to a path only when there is something to search for. */
 function withSearch(path, search) {
   const text = (search ?? '').trim();
@@ -142,12 +136,4 @@ export const receptionApi = {
   findOrCreateWalkInAccount: async (token, body) =>
     walkInAccountSchema.parse(await request('/reception/walk-in-accounts', { token, body })),
 
-  /**
-   * MOCK ONLY - the deployed backend has public registration disabled
-   * (see QUESTIONS.md, Question 1). No token: the person is not signed in yet.
-   * body: { type, fullName, email, password, acceptedGeneralRules,
-   *         studentNumber?, course?, organisationName?, mouReference? }
-   */
-  signUp: async (body) =>
-    signUpResultSchema.parse(await request('/auth/register', { body })),
 };

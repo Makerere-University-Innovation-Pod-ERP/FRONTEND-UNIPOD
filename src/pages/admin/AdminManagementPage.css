@@ -1,0 +1,21 @@
+.management-search{max-width:420px}
+.management-staff-name{display:block;color:#354239;font-weight:700}
+.management-table td small{display:block;margin-top:4px;color:#89918a;font-size:9px}
+.management-table select{max-width:210px;border:1px solid #dfe3d9;border-radius:5px;background:#fff;padding:7px;color:#465148;font-size:10px}
+.management-row-actions{display:flex;align-items:center;gap:6px}
+.management-row-actions .btn{min-height:31px;padding:0 9px;font-size:9px}
+.management-empty{text-align:center;color:#89918a}
+.management-role{border-top:1px solid #eff0eb;padding:15px 0}
+.management-role-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.management-role-heading h3{margin:0 0 4px;color:#354239;font-size:12px}
+.management-role-heading small{color:#89918a;font-size:9px}
+.management-permissions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.management-permissions label{display:flex;align-items:flex-start;gap:7px;color:#59645b;font-size:10px;line-height:1.45}
+.management-permissions input{accent-color:#176b52;margin:1px 0 0}
+.management-permissions span{color:#59645b;font-size:10px}
+@media(max-width:720px){
+  .management-table{min-width:880px}
+  .management-row-actions{align-items:flex-start;flex-direction:column}
+  .management-permissions{grid-template-columns:1fr}
+  .management-role-heading{align-items:flex-start;flex-direction:column}
+}
