@@ -73,6 +73,7 @@ export function BackendWorkspace({
     queryKey: ['dashboard', 'overview'],
     queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
     staleTime: 1000 * 30,
+    enabled: isAdministrator || isInnovationCoordinator(session.roles),
   });
 
   const stageCounts = dashboard?.byStage ?? {};

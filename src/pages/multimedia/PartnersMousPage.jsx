@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Handshake, AlertTriangle, X, Calendar, Mail, User, FileText, CheckCircle2, Search } from 'lucide-react';
-import { usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
+import { Handshake, AlertTriangle, X, Calendar as CalendarIcon, Mail, User, FileText, CheckCircle2, Search, Plus } from 'lucide-react';
+import { Calendar as DateCalendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCreatePartner, usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
 import { normalizePartnerStatus } from '@/services/partners';
 
 function getStatusStyle(rawStatus) {
@@ -39,11 +42,89 @@ function getStatusStyle(rawStatus) {
   }
 }
 
-export function PartnersMousPage({ token }) {
+function formatPartnerDate(date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function PartnerDatePicker({ id, label, value, onChange, open, onOpenChange, required = false }) {
+  const selectedDate = value ? new Date(`${value}T00:00:00`) : undefined;
+
+  return (
+    <div className="form-field">
+      <span id={`${id}-label`}>{label}</span>
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-labelledby={`${id}-label`}
+            aria-required={required}
+            className="partners-date-trigger"
+          >
+            <CalendarIcon size={16} aria-hidden="true" />
+            <span>
+              {selectedDate
+                ? selectedDate.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : 'Choose a date'}
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="partners-date-popover"
+          style={{
+            zIndex: 10001,
+            width: 'auto',
+            padding: '8px',
+            border: '1px solid #d5dad3',
+            borderRadius: '16px',
+            background: '#ffffff',
+            boxShadow: '0 12px 30px rgba(20, 32, 24, 0.16)',
+          }}
+        >
+          <DateCalendar
+            mode="single"
+            selected={selectedDate}
+            defaultMonth={selectedDate}
+            onSelect={(date) => {
+              onChange(date ? formatPartnerDate(date) : '');
+              onOpenChange(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+export function PartnersMousPage({ token, roles = [] }) {
   const { data: overview, isPending, isError, error, refetch } = usePartnersOverview(token);
+  const createPartnerMutation = useCreatePartner(token);
   const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateDateOpen, setIsCreateDateOpen] = useState(false);
+  const [isRenewalDateOpen, setIsRenewalDateOpen] = useState(false);
+  const [renewalFormDate, setRenewalFormDate] = useState('');
+  const [renewalDocumentReference, setRenewalDocumentReference] = useState('');
+  const [renewalFormAttempted, setRenewalFormAttempted] = useState(false);
+  const [createPartnerForm, setCreatePartnerForm] = useState({
+    name: '',
+    type: 'INDUSTRY_PARTNER',
+    renewalDate: '',
+    contactPerson: '',
+    contactEmail: '',
+    notes: '',
+  });
   const [searchTerm, setSearchTerm] = useState('');
+  const canCreatePartner = roles.some((role) =>
+    ['ROLE_ADMINISTRATOR', 'ROLE_DEPARTMENT_COORDINATOR'].includes(role),
+  );
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPartners = overview?.partners.filter((partner) => {
     if (!normalizedSearch) return true;
@@ -57,46 +138,120 @@ export function PartnersMousPage({ token }) {
       partner.notes,
     ].some((value) => value?.toLowerCase().includes(normalizedSearch));
   }) ?? [];
+  const submitCreatePartner = (event) => {
+    event.preventDefault();
+    createPartnerMutation.mutate(
+      {
+        name: createPartnerForm.name.trim(),
+        type: createPartnerForm.type,
+        renewalDate: createPartnerForm.renewalDate || null,
+        contactPerson: createPartnerForm.contactPerson.trim() || null,
+        contactEmail: createPartnerForm.contactEmail.trim() || null,
+        notes: createPartnerForm.notes.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          setCreatePartnerForm({
+            name: '',
+            type: 'INDUSTRY_PARTNER',
+            renewalDate: '',
+            contactPerson: '',
+            contactEmail: '',
+            notes: '',
+          });
+          setIsCreateOpen(false);
+        },
+      },
+    );
+  };
+  const submitRenewal = (event, partnerId) => {
+    event.preventDefault();
+    if (!renewalFormDate) {
+      setRenewalFormAttempted(true);
+      return;
+    }
+
+    renewMutation.mutate(
+      {
+        id: partnerId,
+        renewalDate: renewalFormDate,
+        documentReference: renewalDocumentReference.trim() || null,
+      },
+      {
+        onSuccess: (updatedPartner) => {
+          setSelectedPartner(updatedPartner);
+          setRenewalFormDate('');
+          setRenewalDocumentReference('');
+          setRenewalFormAttempted(false);
+          setIsRenewalDateOpen(false);
+        },
+      },
+    );
+  };
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
       {/* Eyebrow & Title Area */}
-      <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            letterSpacing: '0.14em',
-            color: '#1b5e43',
-            textTransform: 'uppercase',
-            margin: '0 0 8px 0',
-          }}
-        >
-          OPERATIONS
-        </p>
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(28px, 3.5vw, 34px)',
-            lineHeight: 1.15,
-            fontWeight: 600,
-            color: '#16221a',
-            margin: '0 0 8px 0',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Partners & MOUs
-        </h1>
-        <p
-          style={{
-            fontSize: '13px',
-            color: '#7a847b',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          Partner organisations, MOU renewal dates and relationship status.
-        </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+          marginBottom: '28px',
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              letterSpacing: '0.14em',
+              color: '#1b5e43',
+              textTransform: 'uppercase',
+              margin: '0 0 8px 0',
+            }}
+          >
+            OPERATIONS
+          </p>
+          <h1
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 'clamp(28px, 3.5vw, 34px)',
+              lineHeight: 1.15,
+              fontWeight: 600,
+              color: '#16221a',
+              margin: '0 0 8px 0',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Partners & MOUs
+          </h1>
+          <p
+            style={{
+              fontSize: '13px',
+              color: '#7a847b',
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            Partner organisations, MOU renewal dates and relationship status.
+          </p>
+        </div>
+        {canCreatePartner && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              createPartnerMutation.reset();
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus size={16} />
+            Add partner
+          </button>
+        )}
       </div>
 
       {isPending && <p role="status">Loading partners…</p>}
@@ -404,7 +559,14 @@ export function PartnersMousPage({ token }) {
                   <tr
                     key={partner.id}
                     data-testid={`partner-row-${partner.id}`}
-                    onClick={() => setSelectedPartner(partner)}
+                    onClick={() => {
+                      setSelectedPartner(partner);
+                      setRenewalFormDate('');
+                      setRenewalDocumentReference('');
+                      setRenewalFormAttempted(false);
+                      setIsRenewalDateOpen(false);
+                      renewMutation.reset();
+                    }}
                     style={{
                       borderBottom: isLast ? 'none' : '1px solid #eff0eb',
                       cursor: 'pointer',
@@ -600,7 +762,7 @@ export function PartnersMousPage({ token }) {
                   fontSize: '11px',
                 }}
               >
-                <Calendar size={12} />
+                <CalendarIcon size={12} />
                 Renewal: {selectedPartner.renewalDate ?? '—'}
               </span>
             </div>
@@ -643,61 +805,303 @@ export function PartnersMousPage({ token }) {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedPartner(null)}
-                style={{
-                  background: '#eef0ea',
-                  color: '#414842',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+            {normalizePartnerStatus(selectedPartner.status) !== 'Active' ? (
+              <form
+                className="partners-renewal-form"
+                onSubmit={(event) => submitRenewal(event, selectedPartner.id)}
               >
-                Close
-              </button>
-              {normalizePartnerStatus(selectedPartner.status) !== 'Active' && (
+                <div className="form-grid">
+                  <PartnerDatePicker
+                    id="partner-mou-renewal-date"
+                    label="New renewal date *"
+                    value={renewalFormDate}
+                    onChange={(date) => {
+                      setRenewalFormDate(date);
+                      setRenewalFormAttempted(false);
+                    }}
+                    open={isRenewalDateOpen}
+                    onOpenChange={setIsRenewalDateOpen}
+                    required
+                  />
+                  <label className="form-field">
+                    Signed MOU reference
+                    <input
+                      name="documentReference"
+                      maxLength={500}
+                      value={renewalDocumentReference}
+                      placeholder="Reference or document ID"
+                      onChange={(event) => setRenewalDocumentReference(event.target.value)}
+                    />
+                    <small className="field-note">
+                      Leave blank to clear any saved reference.
+                    </small>
+                  </label>
+                </div>
+
+                {renewalFormAttempted && !renewalFormDate && (
+                  <p className="api-error" role="alert">
+                    Choose a new renewal date before submitting.
+                  </p>
+                )}
+                {renewMutation.isError && (
+                  <p className="api-error" role="alert">
+                    {renewMutation.error instanceof Error
+                      ? renewMutation.error.message
+                      : 'Could not renew the MOU.'}
+                  </p>
+                )}
+
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setSelectedPartner(null)}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={renewMutation.isPending}
+                  >
+                    <CheckCircle2 size={13} />
+                    {renewMutation.isPending ? 'Renewing…' : 'Renew MOU'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      const updated = await renewMutation.mutateAsync({
-                        id: selectedPartner.id,
-                        renewalDate: '12 Nov 2027',
-                      });
-                      setSelectedPartner(updated);
-                    } catch (e) {
-                      alert(`MOU renewal failed: ${e.message}`);
-                    }
-                  }}
-                  disabled={renewMutation.isPending}
-                  style={{
-                    background: '#1b5e43',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '9999px',
-                    padding: '8px 16px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+                  className="btn btn-outline"
+                  onClick={() => setSelectedPartner(null)}
                 >
-                  <CheckCircle2 size={13} />
-                  {renewMutation.isPending ? 'Renewing…' : 'Renew MOU'}
+                  Close
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
         </>
+      )}
+      {isCreateOpen && canCreatePartner && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-partner-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            background: 'rgba(0, 0, 0, 0.45)',
+          }}
+          onClick={() => setIsCreateOpen(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '620px',
+              maxHeight: 'calc(100vh - 32px)',
+              overflowY: 'auto',
+              padding: '24px',
+              borderRadius: '16px',
+              background: '#ffffff',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    margin: '0 0 5px',
+                    color: '#1b5e43',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Partner directory
+                </p>
+                <h2
+                  id="create-partner-title"
+                  style={{
+                    margin: 0,
+                    color: '#16221a',
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: '24px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Add a partner
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close add partner form"
+                onClick={() => setIsCreateOpen(false)}
+                style={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  width: '34px',
+                  height: '34px',
+                  flexShrink: 0,
+                  border: 0,
+                  borderRadius: '50%',
+                  background: '#f2f4ee',
+                  color: '#414842',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form className="partners-create-form" onSubmit={submitCreatePartner}>
+              <label className="form-field">
+                Partner name *
+                <input
+                  name="name"
+                  autoFocus
+                  required
+                  maxLength={255}
+                  value={createPartnerForm.name}
+                  onChange={(event) =>
+                    setCreatePartnerForm((form) => ({ ...form, name: event.target.value }))
+                  }
+                />
+              </label>
+
+              <div className="form-grid">
+                <div className="form-field">
+                  <span id="partner-type-label">Partner type *</span>
+                  <Select
+                    value={createPartnerForm.type}
+                    onValueChange={(type) =>
+                      setCreatePartnerForm((form) => ({ ...form, type }))
+                    }
+                  >
+                    <SelectTrigger
+                      aria-labelledby="partner-type-label"
+                      className="partners-create-select-trigger"
+                    >
+                      <SelectValue placeholder="Choose a partner type" />
+                    </SelectTrigger>
+                    <SelectContent
+                      className="partners-create-select-menu"
+                      style={{
+                        zIndex: 10001,
+                        border: '1px solid #d5dad3',
+                        borderRadius: '14px',
+                        background: '#ffffff',
+                        padding: '5px',
+                        boxShadow: '0 12px 30px rgba(20, 32, 24, 0.16)',
+                      }}
+                    >
+                      <SelectItem value="INDUSTRY_PARTNER">Industry partner</SelectItem>
+                      <SelectItem value="FUNDER">Funder</SelectItem>
+                      <SelectItem value="ACADEMIC_PARTNER">Academic partner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <PartnerDatePicker
+                  id="partner-create-renewal-date"
+                  label="Renewal date"
+                  value={createPartnerForm.renewalDate}
+                  onChange={(renewalDate) =>
+                    setCreatePartnerForm((form) => ({ ...form, renewalDate }))
+                  }
+                  open={isCreateDateOpen}
+                  onOpenChange={setIsCreateDateOpen}
+                />
+              </div>
+
+              <div className="form-grid">
+                <label className="form-field">
+                  Contact person
+                  <input
+                    name="contactPerson"
+                    maxLength={255}
+                    value={createPartnerForm.contactPerson}
+                    onChange={(event) =>
+                      setCreatePartnerForm((form) => ({ ...form, contactPerson: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  Contact email
+                  <input
+                    name="contactEmail"
+                    type="email"
+                    maxLength={254}
+                    value={createPartnerForm.contactEmail}
+                    onChange={(event) =>
+                      setCreatePartnerForm((form) => ({ ...form, contactEmail: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <label className="form-field partners-notes-field">
+                <span>
+                  Notes <span className="partners-notes-optional">Optional</span>
+                </span>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  maxLength={2000}
+                  value={createPartnerForm.notes}
+                  placeholder="Add agreement scope, collaboration details, or other important context…"
+                  onChange={(event) =>
+                    setCreatePartnerForm((form) => ({ ...form, notes: event.target.value }))
+                  }
+                />
+                <small className="partners-notes-count">
+                  {createPartnerForm.notes.length}/2000 characters
+                </small>
+              </label>
+
+              {createPartnerMutation.isError && (
+                <p className="api-error" role="alert">
+                  {createPartnerMutation.error instanceof Error
+                    ? createPartnerMutation.error.message
+                    : 'Could not create partner.'}
+                </p>
+              )}
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={createPartnerMutation.isPending}
+                >
+                  {createPartnerMutation.isPending ? 'Adding…' : 'Create partner'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

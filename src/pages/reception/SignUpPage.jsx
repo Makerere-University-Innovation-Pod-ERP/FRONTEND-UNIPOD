@@ -159,36 +159,37 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
   }
 
   return (
-    <main className="login-screen">
-      <section className="login-panel">
-        <div className="login-card signup-card">
-          <div className="login-brand">
-            <img src="/mak-crest.png" alt="Makerere University" className="brand-crest" />
-            <div><b>MUTIC ERP</b><small>Makerere University</small></div>
-          </div>
+    <main className="login-screen login-screen--framed login-screen--signup">
+      <div className="login-window">
+        <section className="login-panel signup-panel">
+          <div className="login-card signup-card">
+            <div className="login-brand">
+              <img src="/mak-crest.png" alt="Makerere University" className="brand-crest" />
+              <div><b>MUTIC ERP</b><small>Makerere University</small></div>
+            </div>
 
-          <p className="eyebrow">CREATE AN ACCOUNT</p>
-          <h1>Sign up to submit ideas.</h1>
-          <p className="login-intro">A couple of quick steps and you’ll be ready to submit your ideas.</p>
+            <p className="eyebrow">CREATE AN ACCOUNT</p>
+            <h1>Sign up to submit ideas.</h1>
+            <p className="login-intro">A couple of quick steps and you’ll be ready to submit your ideas.</p>
 
-          <ol className="signup-progress" aria-label="Sign-up progress">
-            <li className={step === 1 ? 'is-current' : 'is-complete'} aria-current={step === 1 ? 'step' : undefined}>
-              <span className="signup-progress-number">{step === 1 ? '1' : '✓'}</span>
-              <span><b>Your details</b><small>About you</small></span>
-            </li>
-            <li className={step === 2 ? 'is-current' : ''} aria-current={step === 2 ? 'step' : undefined}>
-              <span className="signup-progress-number">2</span>
-              <span><b>Finish signup</b><small>Account security</small></span>
-            </li>
-          </ol>
+            <ol className="signup-progress" aria-label="Sign-up progress">
+              <li className={step === 1 ? 'is-current' : 'is-complete'} aria-current={step === 1 ? 'step' : undefined}>
+                <span className="signup-progress-number">{step === 1 ? '1' : '✓'}</span>
+                <span><b>Your details</b><small>About you</small></span>
+              </li>
+              <li className={step === 2 ? 'is-current' : ''} aria-current={step === 2 ? 'step' : undefined}>
+                <span className="signup-progress-number">2</span>
+                <span><b>Finish signup</b><small>Account security</small></span>
+              </li>
+            </ol>
 
-          <form
-            className="api-form signup-form"
-            autoComplete="on"
-            onKeyDown={handleFormKeyDown}
-            onSubmit={handleFormSubmit}
-            noValidate
-          >
+            <form
+              className="api-form signup-form"
+              autoComplete="on"
+              onKeyDown={handleFormKeyDown}
+              onSubmit={handleFormSubmit}
+              noValidate
+            >
             {step === 1 ? (
               <>
                 <fieldset className="reception-fieldset signup-account-types">
@@ -328,16 +329,18 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
                 </div>
               </>
             )}
-          </form>
-        </div>
-      </section>
-      <aside className="login-hero" aria-hidden="true">
-        <img src="/login-hero.jpg" alt="" />
-        <div className="login-hero-caption">
-          <p className="eyebrow">MUTIC · UNIPOD</p>
-          <p>Where Makerere innovators turn ideas into working prototypes.</p>
-        </div>
-      </aside>
+            </form>
+          </div>
+        </section>
+        <aside className="login-hero" aria-hidden="true">
+          <img src="/login-hero.jpg" alt="" />
+          <div className="login-hero-shade" />
+          <div className="login-hero-caption">
+            <p className="eyebrow">MUTIC · UNIPOD</p>
+            <p>Where Makerere innovators turn ideas into working prototypes.</p>
+          </div>
+        </aside>
+      </div>
     </main>
   );
 }

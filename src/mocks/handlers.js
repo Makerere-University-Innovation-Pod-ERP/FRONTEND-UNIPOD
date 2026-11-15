@@ -432,8 +432,20 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/me/capabilities`, () => HttpResponse.json({
-    registrationMessage: 'Your account can submit and track briefs. Service requests, invoices, and bookings are not yet enabled for your account.',
-    lockedModules: ['Service requests', 'Invoices and payments', 'Bookings'],
+    canCreateBrief: true,
+    canEditDraft: true,
+    canSubmitDraft: true,
+    canRespondToInformationRequest: true,
+    canUploadDocuments: true,
+    canUploadPaymentProof: true,
+    canBook: true,
+    modules: [
+      { key: 'BRIEFS', label: 'Briefs', availability: 'AVAILABLE', reason: null },
+      { key: 'SERVICE_REQUESTS', label: 'Service requests', availability: 'AVAILABLE', reason: null },
+      { key: 'INVOICES', label: 'Invoices and payments', availability: 'AVAILABLE', reason: null },
+      { key: 'BOOKINGS', label: 'Bookings', availability: 'AVAILABLE', reason: null },
+    ],
+    message: 'Your account can create and edit your own drafts, submit them to reception, respond to information requests, upload documents, upload payment proof, view receipts, and request facility bookings.',
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
