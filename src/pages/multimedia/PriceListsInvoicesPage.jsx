@@ -3,17 +3,32 @@ import {
   Receipt,
   Clock,
   CheckCircle,
+  FileText,
   X,
   Check,
   AlertCircle,
   Download,
+  DollarSign,
 } from 'lucide-react';
 import {
   useInvoicesOverview,
   useVerifyInvoice,
+  useRejectInvoice,
   useReleaseReceipt,
-  useRecordEvidence,
+  useDownloadPaymentProof,
+  useDownloadInvoiceReceipt,
 } from '@/hooks/useInvoices';
+
+function downloadBlob(file, filename) {
+  const downloadUrl = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+}
 
 /**
  * Finance Officer - Price Lists & Invoices
@@ -23,14 +38,16 @@ import {
 export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   const { data: overview, isLoading, error } = useInvoicesOverview(token);
   const verifyMutation = useVerifyInvoice(token);
+  const rejectMutation = useRejectInvoice(token);
   const receiptMutation = useReleaseReceipt(token);
-  const evidenceMutation = useRecordEvidence(token);
+  const proofDownloadMutation = useDownloadPaymentProof(token);
+  const receiptDownloadMutation = useDownloadInvoiceReceipt(token);
 
   // Modal states
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceToVerify, setInvoiceToVerify] = useState(null);
   const [selectedPriceItem, setSelectedPriceItem] = useState(null);
-  const [evidenceInput, setEvidenceInput] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   if (error?.status === 401) {
     onUnauthorized?.();
@@ -57,13 +74,54 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   // Handle Verify Confirmation
   const handleConfirmVerify = async (invoiceId) => {
     try {
-      await verifyMutation.mutateAsync({ id: invoiceId });
+      const proofId = invoiceToVerify?.paymentProof?.id;
+      if (!proofId) {
+        throw new Error('No uploaded payment proof exists for this invoice yet.');
+      }
+
+      await verifyMutation.mutateAsync({ id: invoiceId, proofId });
       setInvoiceToVerify(null);
       if (selectedInvoice?.id === invoiceId) {
         setSelectedInvoice((prev) => (prev ? { ...prev, status: 'Verified' } : null));
       }
     } catch (err) {
       alert(`Verification failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleRejectPayment = async (invoice) => {
+    const reason = rejectionReason.trim();
+    const proofId = invoice.paymentProof?.id;
+    if (!proofId || !reason) return;
+
+    try {
+      const updated = await rejectMutation.mutateAsync({
+        id: invoice.id,
+        proofId,
+        reason,
+      });
+      setSelectedInvoice(updated);
+      setRejectionReason('');
+    } catch (err) {
+      alert(`Payment proof rejection failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleDownloadProof = async (invoice) => {
+    try {
+      const file = await proofDownloadMutation.mutateAsync({ id: invoice.id });
+      downloadBlob(file, invoice.paymentProof?.originalFilename || `${invoice.invoiceNumber}-payment-proof`);
+    } catch (err) {
+      alert(`Payment proof download failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleDownloadReceipt = async (invoice) => {
+    try {
+      const file = await receiptDownloadMutation.mutateAsync({ id: invoice.id });
+      downloadBlob(file, `${invoice.receiptNumber || invoice.invoiceNumber}-receipt.txt`);
+    } catch (err) {
+      alert(`Receipt download failed: ${err.message || 'Unknown error'}`);
     }
   };
 
@@ -76,23 +134,6 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
       }
     } catch (err) {
       alert(`Receipt generation failed: ${err.message || 'Payment must be verified first'}`);
-    }
-  };
-
-  // Handle Record Evidence
-  const handleRecordEvidence = async (invoiceId) => {
-    if (!evidenceInput.trim()) return;
-    try {
-      const updated = await evidenceMutation.mutateAsync({
-        id: invoiceId,
-        paymentReference: evidenceInput.trim(),
-      });
-      setEvidenceInput('');
-      if (selectedInvoice?.id === invoiceId) {
-        setSelectedInvoice(updated);
-      }
-    } catch (err) {
-      alert(`Evidence recording failed: ${err.message}`);
     }
   };
 
@@ -180,15 +221,18 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
         </p>
       </div>
 
-      {/* Row 1: 3 KPI Metric Cards */}
-      <section aria-label="Invoice and Revenue Metrics" className="invoices-overview-grid">
+      {/* Finance summary metrics */}
+      <section aria-label="Finance Summary Metrics" className="invoices-overview-grid">
         {metrics.map((card) => {
           const isBurgundy = card.variant === 'burgundy';
+          const isForest = card.variant === 'forest';
           const cardClass = isBurgundy
             ? 'overview-metric-card card-burgundy'
+            : isForest
+            ? 'overview-metric-card card-forest'
             : 'overview-metric-card card-default';
-          const labelColor = isBurgundy ? '#c99b8f' : '#6b7280';
-          const valueColor = isBurgundy ? '#ffffff' : '#111827';
+          const labelColor = isBurgundy ? '#c99b8f' : isForest ? '#9ec5b1' : '#6b7280';
+          const valueColor = isBurgundy || isForest ? '#ffffff' : '#111827';
 
           return (
             <div key={card.id} className={cardClass} style={{ minHeight: '130px' }}>
@@ -220,6 +264,9 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                   {card.icon === 'Receipt' && <Receipt size={15} />}
                   {card.icon === 'Clock' && <Clock size={15} />}
                   {card.icon === 'CheckCircle' && <CheckCircle size={15} />}
+                  {card.icon === 'FileText' && <FileText size={15} />}
+                  {card.icon === 'AlertCircle' && <AlertCircle size={15} />}
+                  {card.icon === 'DollarSign' && <DollarSign size={15} />}
                 </div>
               </div>
 
@@ -250,30 +297,36 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {priceList.map((item) => (
-              <div
-                key={item.id}
-                className="price-list-row"
-                onClick={() => setSelectedPriceItem(item)}
-                style={{ cursor: 'pointer' }}
-                title="Click to view rate breakdown"
-              >
-                <div style={{ fontSize: '13px', color: '#1f2937', fontWeight: 500 }}>
-                  {item.service}
-                </div>
-                <div
-                  style={{
-                    fontSize: '13px',
-                    fontFamily: 'monospace',
-                    fontWeight: 600,
-                    color: '#374151',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  {item.rate}
-                </div>
+            {priceList.length === 0 ? (
+              <div style={{ color: '#6b7280', fontSize: '12px', padding: '8px 0' }}>
+                No authorised price list is currently published.
               </div>
-            ))}
+            ) : (
+              priceList.map((item) => (
+                <div
+                  key={item.id}
+                  className="price-list-row"
+                  onClick={() => setSelectedPriceItem(item)}
+                  style={{ cursor: 'pointer' }}
+                  title="Click to view rate breakdown"
+                >
+                  <div style={{ fontSize: '13px', color: '#1f2937', fontWeight: 500 }}>
+                    {item.service}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontFamily: 'monospace',
+                      fontWeight: 600,
+                      color: '#374151',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {item.rate}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -380,10 +433,36 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                 <div>
                   <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Bank Reference</span>
                   <div style={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, color: '#111827' }}>
-                    {invoiceToVerify.paymentReference || 'BANK-STANBIC-9902'}
+                    {invoiceToVerify.paymentReference || 'No reference provided'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Amount on Proof</span>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                    {invoiceToVerify.paymentProof?.amount != null
+                      ? `UGX ${Number(invoiceToVerify.paymentProof.amount).toLocaleString('en-US')}`
+                      : 'Not provided'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Paid On</span>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                    {invoiceToVerify.paymentProof?.paidOn || 'Not provided'}
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '18px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleDownloadProof(invoiceToVerify)}
+                disabled={!invoiceToVerify.paymentProof || proofDownloadMutation.isPending}
+              >
+                <Download size={14} style={{ marginRight: 4 }} />
+                {proofDownloadMutation.isPending ? 'Downloading…' : 'Download Payment Proof'}
+              </button>
             </div>
 
             <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 18px 0', lineHeight: 1.45 }}>
@@ -469,6 +548,28 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                 </div>
               </div>
 
+              {selectedInvoice.paymentProof && (
+                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e3e7df' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12px', marginBottom: '8px' }}>
+                    <span style={{ color: '#6b7280' }}>
+                      Proof amount: {selectedInvoice.paymentProof.amount != null
+                        ? `UGX ${Number(selectedInvoice.paymentProof.amount).toLocaleString('en-US')}`
+                        : 'Not provided'}
+                    </span>
+                    <span style={{ color: '#6b7280' }}>Paid on: {selectedInvoice.paymentProof.paidOn || 'Not provided'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => handleDownloadProof(selectedInvoice)}
+                    disabled={proofDownloadMutation.isPending}
+                  >
+                    <Download size={14} style={{ marginRight: 4 }} />
+                    {proofDownloadMutation.isPending ? 'Downloading…' : 'Download Payment Proof'}
+                  </button>
+                </div>
+              )}
+
               {selectedInvoice.receiptNumber && (
                 <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e3e7df', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '12px', color: '#1b5e43', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -485,33 +586,36 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
                   <AlertCircle size={14} /> Bank Evidence Required
                 </div>
-                <p style={{ fontSize: '11px', color: '#b45309', margin: '0 0 8px 0' }}>
-                  Client has not yet submitted proof of bank deposit or EFT transfer. Record reference when received.
+                <p style={{ fontSize: '11px', color: '#b45309', margin: 0 }}>
+                  {selectedInvoice.paymentProof?.status === 'REJECTED'
+                    ? `Previous proof rejected${selectedInvoice.paymentProof.rejectionReason ? `: ${selectedInvoice.paymentProof.rejectionReason}` : '.'} Waiting for the client to upload new proof.`
+                    : 'Waiting for the client to upload payment proof.'}
                 </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={evidenceInput}
-                    onChange={(e) => setEvidenceInput(e.target.value)}
-                    placeholder="Enter Bank EFT / Slip Ref (e.g. STANBIC-1029)"
-                    style={{
-                      flex: 1,
-                      padding: '6px 10px',
-                      fontSize: '12px',
-                      borderRadius: '6px',
-                      border: '1px solid #d1d5db',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '12px', padding: '4px 10px' }}
-                    onClick={() => handleRecordEvidence(selectedInvoice.id)}
-                    disabled={!evidenceInput.trim() || evidenceMutation.isPending}
-                  >
-                    Record
-                  </button>
+              </div>
+            )}
+
+            {selectedInvoice.status === 'Awaiting verification' && (
+              <div style={{ marginBottom: '16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
+                  <AlertCircle size={14} /> Review Submitted Payment Proof
                 </div>
+                <label htmlFor="invoice-rejection-reason" style={{ display: 'block', fontSize: '11px', color: '#6b7280', marginBottom: '5px' }}>
+                  Rejection reason (required to reject)
+                </label>
+                <textarea
+                  id="invoice-rejection-reason"
+                  value={rejectionReason}
+                  onChange={(event) => setRejectionReason(event.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Explain what needs to be corrected"
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #d1d5db', resize: 'vertical' }}
+                />
+                {selectedInvoice.paymentProof?.status === 'REJECTED' && (
+                  <p style={{ fontSize: '11px', color: '#b45309', margin: '6px 0 0' }}>
+                    Previous proof rejected{selectedInvoice.paymentProof.rejectionReason ? `: ${selectedInvoice.paymentProof.rejectionReason}` : '.'}
+                  </p>
+                )}
               </div>
             )}
 
@@ -536,16 +640,26 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
               </button>
 
               {selectedInvoice.status === 'Awaiting verification' && (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setInvoiceToVerify(selectedInvoice);
-                    setSelectedInvoice(null);
-                  }}
-                >
-                  Verify Payment
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => handleRejectPayment(selectedInvoice)}
+                    disabled={!selectedInvoice.paymentProof?.id || !rejectionReason.trim() || rejectMutation.isPending}
+                  >
+                    {rejectMutation.isPending ? 'Rejecting…' : 'Reject Proof'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setInvoiceToVerify(selectedInvoice);
+                      setSelectedInvoice(null);
+                    }}
+                  >
+                    Verify Payment
+                  </button>
+                </>
               )}
 
               {selectedInvoice.status === 'Verified' && !selectedInvoice.receiptNumber && (
@@ -563,9 +677,11 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => alert(`Downloading Official Receipt ${selectedInvoice.receiptNumber}`)}
+                  onClick={() => handleDownloadReceipt(selectedInvoice)}
+                  disabled={receiptDownloadMutation.isPending}
                 >
-                  <Download size={14} style={{ marginRight: 4 }} /> Download Receipt
+                  <Download size={14} style={{ marginRight: 4 }} />
+                  {receiptDownloadMutation.isPending ? 'Downloading…' : 'Download Receipt'}
                 </button>
               )}
             </div>

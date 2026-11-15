@@ -104,7 +104,7 @@ export function LoginPage({ onLogin, onCreateAccount }) {
               <p className="eyebrow">PROJECT & IDEAS MANAGEMENT</p>
               <h1>Welcome back.</h1>
               <p className="login-intro">Sign in with your account to manage submissions and case workflows.</p>
-              <form className="api-form" onSubmit={submit}>
+              <form className="api-form login-form" onSubmit={submit}>
                 <label htmlFor="login-email">Email address</label>
                 <input
                   id="login-email"
