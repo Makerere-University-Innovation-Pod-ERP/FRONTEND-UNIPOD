@@ -154,28 +154,48 @@ export function SubmissionDetailPage({
   if (!caseFile) return <div className="live-page"><Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
 
   const submission = caseFile.submission;
+  const caseReference = caseFile.reference || submission.code || 'DRAFT';
+  const categoryLabel = submission.category === 'student' ? 'Student project' : 'General innovation';
+  const receivedLabel = submission.receivedAt
+    ? `Received ${formatDate(submission.receivedAt)}`
+    : 'Awaiting intake';
+  const reviewerTeam = Array.isArray(caseFile.reviewPanel?.reviewerTeam)
+    ? caseFile.reviewPanel.reviewerTeam
+    : [];
+  const ipPanel = Array.isArray(caseFile.reviewPanel?.ipPanel)
+    ? caseFile.reviewPanel.ipPanel
+    : null;
   const disabledCapabilities = [
     { label: 'Next step', capability: caseFile.capabilities.nextStep },
     { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
     { label: 'Update document status', capability: caseFile.capabilities.updateDocumentStatus },
   ].filter(({ capability }) => !capability.enabled && capability.reason);
   return (
-    <div className="live-page page-enter">
-      <Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>
-      <div className="live-page-heading detail-heading">
-        <div><p className="eyebrow">CASE FILE · {caseFile.reference || submission.code || 'DRAFT'}</p><h1>{submission.title}</h1><p>{submission.category === 'student' ? 'Student project' : 'General innovation'} · Received {submission.receivedAt ? formatDate(submission.receivedAt) : 'not yet'}</p></div>
-        <div className="detail-heading-actions">
+    <div className="live-page page-enter case-detail-page">
+      <Link to={backHref} className="back-link case-detail-back-link"><ArrowLeft size={15} />{backLabel}</Link>
+      <header className="case-hero">
+        <div className="case-hero-copy">
+          <p className="case-hero-kicker"><span />CASE FILE <i>{caseReference}</i></p>
+          <h1>{submission.title}</h1>
+          <p className="case-hero-description">Here’s the idea, its journey, and what comes next.</p>
+          <div className="case-hero-meta">
+            <span>{categoryLabel}</span>
+            <span>{receivedLabel}</span>
+          </div>
+        </div>
+        <div className="case-hero-actions">
+          <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
           {(caseFile.reference || submission.code) && <button className="btn btn-outline" onClick={async () => {
             try {
-              await navigator.clipboard.writeText(caseFile.reference || submission.code || '');
+              await navigator.clipboard.writeText(caseReference);
               setCopyFeedback('Reference copied.');
             } catch {
               setError('Could not copy the reference. Copy it directly from the case heading.');
             }
           }}><Copy size={14} />Copy reference</button>}
-          <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
         </div>
-      </div>
+        <span className="case-hero-decoration" aria-hidden="true" />
+      </header>
       {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
@@ -200,7 +220,7 @@ export function SubmissionDetailPage({
       </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
-          <div className="live-panel-heading"><div><p className="eyebrow">SUBMISSION</p><h2>Project summary</h2></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
+          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2><p className="case-section-note">The details behind this brief.</p></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
           <div className="case-fields">
             <Field label="Purpose" value={submission.purpose} />
             <Field label="Problem addressed" value={submission.problemAddressed} />
@@ -275,8 +295,8 @@ export function SubmissionDetailPage({
             <div className="live-panel-heading"><div><p className="eyebrow">REVIEW PANEL</p><h2>Reviewers & IP</h2></div></div>
             {caseFile.reviewPanel.availability === 'AVAILABLE' ? <>
               <Field label="Reviewer quorum" value={caseFile.reviewPanel.quorumMet ? 'Met' : caseFile.reviewPanel.quorumAvailable ? 'Not met' : 'Unavailable'} />
-              <Field label="Reviewer team" value={caseFile.reviewPanel.reviewerTeam.join(', ') || 'No reviewers assigned'} />
-              <Field label="IP panel" value={caseFile.reviewPanel.ipPanel.join(', ') || 'No IP panel assigned'} />
+              <Field label="Reviewer team" value={reviewerTeam.join(', ') || 'No reviewers assigned'} />
+              {ipPanel && <Field label="IP panel" value={ipPanel.join(', ') || 'No IP panel assigned'} />}
             </> : <p className="live-note">Reviewer and IP panel integration is not configured.</p>}
           </section>}
           {caseFile.activity && <section className="live-panel">
