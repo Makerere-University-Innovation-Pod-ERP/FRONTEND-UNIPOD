@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,10 +8,15 @@ import {
   GraduationCap,
   Lightbulb,
   LoaderCircle,
+  Eye,
+  Trash2,
   ShieldCheck,
+  Upload,
+  X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STEPS = ['Type', 'Details', 'Documents', 'Department rules', 'Check & submit'];
 const STEP_COPY = [
@@ -24,14 +29,21 @@ const STEP_COPY = [
 
 function documentRequirementsFor(category, recommendationLetterStatus) {
   const requirements = [
-    { id: 'brief', label: 'Project brief or description document', required: true },
-    { id: 'evidence', label: 'Supporting evidence (data, photos, reports)', required: false },
+    { id: 'brief', label: 'Project brief or description document', documentType: 'PROJECT_BRIEF', required: true },
+    { id: 'evidence', label: 'Supporting evidence (data, photos, reports)', documentType: 'SUPPORTING_EVIDENCE', required: false },
   ];
   if (category === 'student' && recommendationLetterStatus !== 'not_required') {
-    requirements.push({ id: 'recommendation', label: 'Recommendation letter', required: true });
+    requirements.push({ id: 'recommendation', label: 'Recommendation letter', documentType: 'RECOMMENDATION_LETTER', required: true });
   }
   return requirements;
 }
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const ACCEPTED_DOCUMENT_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.txt,.csv,.zip,.jpg,.jpeg,.png,.gif,.webp,.tif,.tiff,.svg,.dxf,.dwg,.stl';
 
 /**
  * Optional props for Reception's assisted (walk-in) submission (Assignment 3).
@@ -59,7 +71,8 @@ export function NewSubmissionPage({
   const [programme, setProgramme] = useState('');
   const [supervisor, setSupervisor] = useState('');
   const [recommendationLetterStatus, setRecommendationLetterStatus] = useState('submitted');
-  const [documentRefs, setDocumentRefs] = useState({});
+  const [documentFiles, setDocumentFiles] = useState({});
+  const [previewFile, setPreviewFile] = useState(null);
   const [rulesAccepted, setRulesAccepted] = useState(false);
   const [attemptedAdvance, setAttemptedAdvance] = useState(false);
   const [error, setError] = useState('');
@@ -70,17 +83,30 @@ export function NewSubmissionPage({
     [category, recommendationLetterStatus],
   );
 
+  useEffect(() => {
+    if (!previewFile) return undefined;
+    return () => URL.revokeObjectURL(previewFile.url);
+  }, [previewFile]);
+
   const detailsValid = Boolean(
     title.trim() && purpose.trim() && problemAddressed.trim() &&
-    (category !== 'student' || (studentNumber.trim() && programme.trim() && supervisor.trim())),
+    (category !== 'student' || (studentNumber.trim() && programme.trim())),
   );
   const documentsValid = documentRequirements.every(
-    (requirement) => !requirement.required || (documentRefs[requirement.id] || '').trim(),
+    (requirement) => !requirement.required || documentFiles[requirement.id] instanceof File,
   );
   const stepValid = [true, detailsValid, documentsValid, rulesAccepted, true][step];
 
-  function setDocumentRef(id, value) {
-    setDocumentRefs((current) => ({ ...current, [id]: value }));
+  function setDocumentFile(id, file) {
+    setDocumentFiles((current) => ({ ...current, [id]: file ?? null }));
+  }
+
+  function openFilePreview(file) {
+    setPreviewFile({ file, url: URL.createObjectURL(file) });
+  }
+
+  function closeFilePreview() {
+    setPreviewFile(null);
   }
 
   function goNext() {
@@ -95,8 +121,7 @@ export function NewSubmissionPage({
     setStep((value) => Math.max(0, value - 1));
   }
 
-  async function submit(event) {
-    event.preventDefault();
+  async function submit() {
     if (!rulesAccepted || !detailsValid || !documentsValid) {
       setAttemptedAdvance(true);
       return;
@@ -121,17 +146,16 @@ export function NewSubmissionPage({
 
     try {
       const created = await backendApi.createSubmission(token, body);
-      await Promise.all(
-        documentRequirements
-          .filter((requirement) => (documentRefs[requirement.id] || '').trim())
-          .map((requirement) =>
-            backendApi.addDocument(token, created.id, {
-              name: requirement.label,
-              status: 'SUBMITTED',
-              fileReference: documentRefs[requirement.id].trim(),
-            }),
-          ),
-      );
+      for (const requirement of documentRequirements) {
+        const file = documentFiles[requirement.id];
+        if (!(file instanceof File)) continue;
+        const formData = new FormData();
+        formData.set('name', requirement.label);
+        formData.set('status', 'SUBMITTED');
+        formData.set('documentType', requirement.documentType);
+        formData.set('file', file);
+        await backendApi.uploadDocument(token, created.id, formData);
+      }
       const submission = isSubmitter
         ? await backendApi.submitSubmission(token, created.id)
         : created;
@@ -162,12 +186,14 @@ export function NewSubmissionPage({
         </section>
       )}
       <div className={`submission-create-layout ${isSubmitter ? 'is-self-service' : ''}`}>
-      <form className="live-panel create-form submission-create-form" onSubmit={submit}>
+      <form className="live-panel create-form submission-create-form" onSubmit={(event) => event.preventDefault()}>
         <header className="submission-form-header">
           <div>
             <p className="eyebrow">STEP {String(step + 1).padStart(2, '0')} OF {String(STEPS.length).padStart(2, '0')}</p>
             <h2>{STEP_COPY[step][0]}</h2>
-            <p>{STEP_COPY[step][1]}</p>
+            <p>{step === 1 && isSubmitter
+              ? 'Fields marked * are required. Supervisor details can be added if your idea advances.'
+              : STEP_COPY[step][1]}</p>
           </div>
           <span className="submission-step-number">{String(step + 1).padStart(2, '0')}<i>/{String(STEPS.length).padStart(2, '0')}</i></span>
         </header>
@@ -205,19 +231,32 @@ export function NewSubmissionPage({
 
         {step === 1 && (
           <div className="form-section">
-            <label className="form-field">Project title<input required maxLength={240} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Give the project a clear, concise title" /></label>
-            <label className="form-field">Purpose<textarea required maxLength={5000} rows={3} value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="What does this project aim to achieve?" /></label>
-            <label className="form-field">Problem addressed<textarea required maxLength={5000} rows={3} value={problemAddressed} onChange={(event) => setProblemAddressed(event.target.value)} placeholder="What problem or need does it respond to?" /></label>
+            <label className="form-field"><span className="submission-field-label">Project title <span className="submission-required-mark" aria-label="required">*</span></span><input required maxLength={240} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Give the project a clear, concise title" /></label>
+            <label className="form-field"><span className="submission-field-label">Purpose <span className="submission-required-mark" aria-label="required">*</span></span><textarea required maxLength={5000} rows={3} value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="What does this project aim to achieve?" /></label>
+            <label className="form-field"><span className="submission-field-label">Problem addressed <span className="submission-required-mark" aria-label="required">*</span></span><textarea required maxLength={5000} rows={3} value={problemAddressed} onChange={(event) => setProblemAddressed(event.target.value)} placeholder="What problem or need does it respond to?" /></label>
             {!isSubmitter && <label className="form-field">Submitter ID <span className="field-note">Optional; use an existing account identifier when linking an account.</span><input maxLength={255} value={submitterId} readOnly={Boolean(onBehalfOf)} onChange={(event) => setSubmitterId(event.target.value)} /></label>}
             {category === 'student' && (
               <>
                 <div className="form-grid">
-                  <label className="form-field">Student number<input required maxLength={80} value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} /></label>
-                  <label className="form-field">Programme<input required maxLength={200} value={programme} onChange={(event) => setProgramme(event.target.value)} /></label>
+                  <label className="form-field"><span className="submission-field-label">Student number <span className="submission-required-mark" aria-label="required">*</span></span><input required maxLength={80} value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} /></label>
+                  <label className="form-field"><span className="submission-field-label">Programme <span className="submission-required-mark" aria-label="required">*</span></span><input required maxLength={200} value={programme} onChange={(event) => setProgramme(event.target.value)} /></label>
                 </div>
                 <div className="form-grid">
-                  <label className="form-field">Supervisor<input required maxLength={255} value={supervisor} onChange={(event) => setSupervisor(event.target.value)} /></label>
-                  <label className="form-field">Recommendation letter status<select value={recommendationLetterStatus} onChange={(event) => setRecommendationLetterStatus(event.target.value)}><option value="submitted">Submitted</option>{!isSubmitter && <option value="verified">Verified</option>}<option value="one_file">One file</option><option value="not_required">Not required</option></select></label>
+                  {!isSubmitter && <label className="form-field"><span className="submission-field-label">Supervisor</span><span className="field-note">Optional; can be added later.</span><input maxLength={255} value={supervisor} onChange={(event) => setSupervisor(event.target.value)} /></label>}
+                  <div className="form-field">
+                    <span id="recommendation-letter-status-label">Recommendation letter status <span className="submission-required-mark" aria-label="required">*</span></span>
+                    <Select value={recommendationLetterStatus} onValueChange={setRecommendationLetterStatus}>
+                      <SelectTrigger aria-labelledby="recommendation-letter-status-label" className="submission-form-select-trigger">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="submission-form-select-content" sideOffset={6}>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        {!isSubmitter && <SelectItem value="verified">Verified</SelectItem>}
+                        <SelectItem value="one_file">One file</SelectItem>
+                        <SelectItem value="not_required">Not required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </>
             )}
@@ -227,20 +266,49 @@ export function NewSubmissionPage({
 
         {step === 2 && (
           <div className="form-section">
-            <p className="submission-document-intro"><FileText size={17} /> Add a reference for each document you have ready. Required documents must be included before you can submit.</p>
+            <p className="submission-document-intro"><FileText size={17} /> Upload each required file from your device. PDF, Office, image and common design files are supported (up to 15 MB per file).</p>
             {documentRequirements.map((requirement) => (
-              <label className="form-field" key={requirement.id}>
-                {requirement.label} {requirement.required ? <span className="field-note">Required</span> : <span className="field-note">Optional</span>}
-                <input
-                  maxLength={255}
-                  value={documentRefs[requirement.id] || ''}
-                  onChange={(event) => setDocumentRef(requirement.id, event.target.value)}
-                  placeholder="File name or storage reference"
-                />
-                {attemptedAdvance && requirement.required && !(documentRefs[requirement.id] || '').trim() && (
-                  <span className="api-error" role="alert" style={{ marginTop: 4 }}>This document is required.</span>
+              <div className="form-field" key={requirement.id}>
+                <span className="submission-field-label">
+                  {requirement.label}{' '}
+                  {requirement.required
+                    ? <span className="submission-required-mark" aria-label="required">*</span>
+                    : <span className="field-note">Optional</span>}
+                </span>
+                <div className={`submission-upload-card ${documentFiles[requirement.id] ? 'has-file' : ''}`}>
+                  <input
+                    id={`submission-file-${requirement.id}`}
+                    className="submission-file-input"
+                    type="file"
+                    accept={ACCEPTED_DOCUMENT_TYPES}
+                    required={requirement.required}
+                    aria-label={`Upload ${requirement.label}`}
+                    onChange={(event) => {
+                      setDocumentFile(requirement.id, event.target.files?.[0]);
+                      event.target.value = '';
+                    }}
+                  />
+                  <span className="submission-upload-icon"><Upload size={17} /></span>
+                  <span className="submission-upload-copy">
+                    <b>{documentFiles[requirement.id]?.name || 'Choose a file to upload'}</b>
+                    <small>{documentFiles[requirement.id]
+                      ? formatFileSize(documentFiles[requirement.id].size)
+                      : 'Select from your device · PDF, DOCX, image and more'}</small>
+                  </span>
+                  <label className="submission-upload-action" htmlFor={`submission-file-${requirement.id}`}>
+                    {documentFiles[requirement.id] ? 'Change file' : 'Browse files'}
+                  </label>
+                  {documentFiles[requirement.id] && (
+                    <div className="submission-file-actions">
+                      <button type="button" className="submission-file-action" onClick={() => openFilePreview(documentFiles[requirement.id])} aria-label={`Preview ${documentFiles[requirement.id].name}`}><Eye size={14} />Preview</button>
+                      <button type="button" className="submission-file-action is-remove" onClick={() => setDocumentFile(requirement.id, null)} aria-label={`Remove ${documentFiles[requirement.id].name}`}><Trash2 size={14} />Remove</button>
+                    </div>
+                  )}
+                </div>
+                {attemptedAdvance && requirement.required && !(documentFiles[requirement.id] instanceof File) && (
+                  <span className="api-error" role="alert" style={{ marginTop: 4 }}>Upload this required document to continue.</span>
                 )}
-              </label>
+              </div>
             ))}
           </div>
         )}
@@ -268,10 +336,11 @@ export function NewSubmissionPage({
               <SummaryField label="Title" value={title} />
               <SummaryField label="Purpose" value={purpose} />
               <SummaryField label="Problem addressed" value={problemAddressed} />
-              {category === 'student' && <SummaryField label="Student number / programme / supervisor" value={`${studentNumber} · ${programme} · ${supervisor}`} />}
+              {category === 'student' && <SummaryField label="Student number / programme" value={`${studentNumber} · ${programme}`} />}
+              {category === 'student' && !isSubmitter && supervisor.trim() && <SummaryField label="Supervisor" value={supervisor} />}
               <SummaryField
                 label="Documents"
-                value={documentRequirements.map((requirement) => `${requirement.label}: ${(documentRefs[requirement.id] || '').trim() || 'not provided'}`).join('; ')}
+                value={documentRequirements.map((requirement) => `${requirement.label}: ${documentFiles[requirement.id]?.name || 'not provided'}`).join('; ')}
               />
               <SummaryField label="Department rules" value={rulesAccepted ? 'Accepted' : 'Not yet accepted'} />
             </div>
@@ -284,7 +353,7 @@ export function NewSubmissionPage({
           {step === 0 && <Link to={onBehalfOf ? cancelPath : effectiveCancelPath} className="btn btn-outline">Cancel</Link>}
           {step < STEPS.length - 1
             ? <button className="btn btn-primary" type="button" onClick={goNext}>Next<ArrowRight size={15} /></button>
-            : <button className="btn btn-primary" type="submit" disabled={busy || !rulesAccepted}>
+            : <button className="btn btn-primary" type="button" onClick={submit} disabled={busy || !rulesAccepted}>
                 {busy ? <LoaderCircle size={15} className="spin" /> : null}
                 {busy ? (isSubmitter ? 'Submitting brief…' : 'Saving draft…') : (isSubmitter ? 'Submit brief' : 'Create draft')}
                 {!busy && <ArrowRight size={15} />}
@@ -306,6 +375,23 @@ export function NewSubmissionPage({
         </aside>
       )}
       </div>
+      {previewFile && (
+        <div className="submission-preview-backdrop" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) closeFilePreview();
+        }}>
+          <section className="submission-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="submission-preview-title">
+            <header>
+              <div><p className="eyebrow">DOCUMENT PREVIEW</p><h2 id="submission-preview-title">{previewFile.file.name}</h2></div>
+              <button type="button" className="submission-preview-close" aria-label="Close preview" onClick={closeFilePreview}><X size={18} /></button>
+            </header>
+            {previewFile.file.type.startsWith('image/')
+              ? <img className="submission-preview-image" src={previewFile.url} alt={`Preview of ${previewFile.file.name}`} />
+              : previewFile.file.type === 'application/pdf' || previewFile.file.name.toLowerCase().endsWith('.pdf')
+                ? <iframe className="submission-preview-pdf" title={`Preview of ${previewFile.file.name}`} src={previewFile.url} />
+                : <div className="submission-preview-unavailable"><FileText size={28} /><p>Inline preview isn’t available for this file type.</p><span>{formatFileSize(previewFile.file.size)} · You can still upload or remove it.</span></div>}
+          </section>
+        </div>
+      )}
     </div>
   );
 }
