@@ -165,6 +165,8 @@ export function SubmissionDetailPage({
   const ipPanel = Array.isArray(caseFile.reviewPanel?.ipPanel)
     ? caseFile.reviewPanel.ipPanel
     : null;
+  const completedStepCount = caseFile.stepper.filter((step) => step.state === 'COMPLETE').length;
+  const nextStepIndex = caseFile.stepper.findIndex((step) => step.state === 'UPCOMING');
   const disabledCapabilities = [
     { label: 'Next step', capability: caseFile.capabilities.nextStep },
     { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
@@ -207,16 +209,33 @@ export function SubmissionDetailPage({
           </div>
         </section>
       )}
-      {disabledCapabilities.length > 0 && <section className="live-panel capability-notice" aria-label="Case permissions">
+      {disabledCapabilities.length > 0 && !session.roles.includes('ROLE_SUBMITTER') && <section className="live-panel capability-notice" aria-label="Case permissions">
         <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
         {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
         <ul>{disabledCapabilities.map(({ label, capability }) => <li key={label}><b>{label}:</b> {capability.reason}</li>)}</ul>
       </section>}
-      {caseFile.stepper.length > 0 && <section className="live-panel case-stepper" aria-label="Case progress">
-        <p className="eyebrow">PIPELINE PROGRESS</p>
-        <ol>{caseFile.stepper.map((step) => <li className={`step-${step.state.toLowerCase()}`} key={step.stage}>
-          <span>{step.state === 'COMPLETE' ? '✓' : ''}</span><b>{formatStage(step.stage)}</b>
-        </li>)}</ol>
+      {caseFile.stepper.length > 0 && <section className="live-panel case-stepper case-pipeline" aria-label="Pipeline progress">
+        <div className="case-pipeline-heading">
+          <div>
+            <p className="eyebrow">PIPELINE PROGRESS</p>
+            <h2>Your idea, in motion</h2>
+            <p>Every milestone, from first review to what comes next.</p>
+          </div>
+          <div className="case-pipeline-current">
+            <small>Current stage</small>
+            <strong>{formatStage(submission.stage)}</strong>
+            <span>{completedStepCount} of {caseFile.stepper.length} milestones complete</span>
+          </div>
+        </div>
+        <div className="case-journey-scroll" tabIndex={0} aria-label="Pipeline stages">
+          <ol className="case-journey">{caseFile.stepper.map((step, index) => <li className={`step-${step.state.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.state === 'CURRENT' ? 'step' : undefined}>
+            <span className="case-journey-node">{step.state === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
+            <div className="case-journey-copy">
+              <b>{formatStage(step.stage)}</b>
+              <span>{step.state === 'COMPLETE' ? 'Completed' : step.state === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
+            </div>
+          </li>)}</ol>
+        </div>
       </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
@@ -320,7 +339,6 @@ export function SubmissionDetailPage({
           </section>
         </aside>
       </div>
-      <p className="case-version">Record version {submission.version} · Your permissions are checked by the backend.</p>
     </div>
   );
 }

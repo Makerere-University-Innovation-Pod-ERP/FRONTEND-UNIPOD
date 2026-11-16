@@ -21,12 +21,15 @@ describe('SubmissionDetailPage', () => {
         problemAddressed: 'Farmers lack affordable dryers.',
       },
       reference: 'UNI-2026-001',
-      stepper: [],
+      stepper: [
+        { stage: 'SUBMITTED', state: 'CURRENT' },
+        { stage: 'FORWARDED', state: 'UPCOMING' },
+      ],
       outcome: null,
       capabilities: {
-        nextStep: { enabled: false, reason: null },
-        saveOutcome: { enabled: false, reason: null },
-        updateDocumentStatus: { enabled: false, reason: null },
+        nextStep: { enabled: false, reason: 'Staff role required.' },
+        saveOutcome: { enabled: false, reason: 'Coordinator role required.' },
+        updateDocumentStatus: { enabled: false, reason: 'Coordinator role required.' },
       },
       reviewPanel: {
         availability: 'AVAILABLE',
@@ -56,7 +59,14 @@ describe('SubmissionDetailPage', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Community solar dryer' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pipeline progress' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your idea, in motion' })).toBeInTheDocument();
+    expect(screen.getByText('0 of 2 milestones complete')).toBeInTheDocument();
+    expect(screen.getByText('In progress')).toBeInTheDocument();
+    expect(screen.getByText('Up next')).toBeInTheDocument();
     expect(screen.getByText('No reviewers assigned')).toBeInTheDocument();
     expect(screen.queryByText('IP panel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Case permissions' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Your role can view this case but cannot make workflow changes.')).not.toBeInTheDocument();
   });
 });
