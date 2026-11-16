@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { displayRole } from '@/lib/auth';
+import { canCreateSubmission, displayRole } from '@/lib/auth';
 import {
   isFactFindingOfficer,
   isReceptionist,
@@ -67,6 +67,7 @@ export function BackendWorkspace({
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
+  const mayCreateSubmission = canCreateSubmission(session.roles);
 
   // Dynamic logic badges derived from live dashboard / pipeline stage counts
   const { data: dashboard } = useQuery({
@@ -320,7 +321,7 @@ export function BackendWorkspace({
           <div className="live-breadcrumb">
             <span>Workspace</span>
             <i>‹</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
@@ -377,14 +378,16 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
-            <Link
-              to="/submissions/new"
-              className="top-register"
-              data-testid="link-register-top"
-            >
-              <span>Register submission</span>
-              <span className="register-plus">+</span>
-            </Link>
+            {mayCreateSubmission && (
+              <Link
+                to="/submissions/new"
+                className="top-register"
+                data-testid="link-register-top"
+              >
+                <span>{isSubmitter ? 'Submit an idea' : 'Register submission'}</span>
+                <span className="register-plus">+</span>
+              </Link>
+            )}
           </div>
         </header>
         <main className="live-content">{children}</main>

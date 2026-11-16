@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { formatDate } from '@/lib/presentation';
 
-export function BriefSubmittedPage() {
+export function BriefSubmittedPage({ isSubmitter = false }) {
   const location = useLocation();
   const submission = location.state?.submission;
 
@@ -32,8 +32,10 @@ export function BriefSubmittedPage() {
           <div className="case-field"><span>What happens next</span><p>Reception will check your brief for completeness, then it moves into fact-finding. You'll see status updates on your brief's page as it progresses — no action is needed from you right now.</p></div>
         </div>
         <div className="form-actions" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
-          <Link className="btn btn-primary" to={`/submissions/${submission.id}`}>View my brief</Link>
-          <Link className="btn btn-outline" to="/my-submissions">Back to my submissions</Link>
+          {isSubmitter
+            ? <Link className="btn btn-primary" to="/my-submissions">Track my submissions</Link>
+            : <Link className="btn btn-primary" to={`/submissions/${submission.id}`}>View my brief</Link>}
+          {!isSubmitter && <Link className="btn btn-outline" to="/my-submissions">Back to my submissions</Link>}
         </div>
       </section>
     </div>

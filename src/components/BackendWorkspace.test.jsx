@@ -14,12 +14,12 @@ const session = {
   roles: ['ROLE_FACT_FINDING_OFFICER'],
 };
 
-function renderShell() {
+function renderShell(currentSession = session) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <BackendWorkspace session={session} health="online" onLogout={vi.fn()}>
+        <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
           <p>Page content</p>
         </BackendWorkspace>
       </MemoryRouter>
@@ -43,6 +43,12 @@ describe('BackendWorkspace', () => {
     expect(expandToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
     await user.click(expandToggle);
     expect(sidebar).not.toHaveClass('collapsed');
+  });
+
+  it('shows submitters the submission registration action', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
+
+    expect(screen.getByRole('link', { name: /submit an idea/i })).toHaveAttribute('href', '/submissions/new');
   });
 
   it('keeps the mobile menu toggle beside the brand and opens the sidebar', async () => {
