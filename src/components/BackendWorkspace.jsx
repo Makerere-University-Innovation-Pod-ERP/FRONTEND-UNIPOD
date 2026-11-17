@@ -19,6 +19,7 @@ import {
   isReviewer,
   isTelecomsDomainOwner,
   isTextileDomainOwner,
+  isCncDomainOwner,
 } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
@@ -65,6 +66,8 @@ function isActiveLink(href, location) {
   if (href === '/telecoms/equipment') return location === '/telecoms/equipment';
   if (href === '/telecoms/stock') return location === '/telecoms/stock';
   if (href === '/multimedia/equipment') return location === '/multimedia/equipment';
+  if (href === '/cnc/machines') return location === '/cnc/machines';
+  if (href === '/cnc/board' && location.startsWith('/cnc/jobs/') && location !== '/cnc/jobs/new') return true;
   if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
   return false;
 }
@@ -187,6 +190,18 @@ export function BackendWorkspace({
     ...(textileLinks.length > 0 ? [{
       heading: 'TEXTILE OPERATIONS',
       items: textileLinks,
+    }] : []),
+    ...(isCncDomainOwner(session.roles) ? [{
+      heading: 'CNC & CARPENTRY OPERATIONS',
+      items: [
+        { label: 'New Job', href: '/cnc/jobs/new', icon: Upload },
+        { label: 'Design Check & Quote', href: '/cnc/review', icon: ClipboardList },
+        { label: 'Job Board', href: '/cnc/board', icon: LayoutGrid },
+        { label: 'Book a Machine', href: '/cnc/machines/book', icon: CalendarDays },
+        { label: 'Machine List', href: '/cnc/machines', icon: Cog },
+        { label: 'Safety Course', href: '/cnc/safety', icon: ShieldCheck },
+        { label: 'Stock List', href: '/cnc/stock', icon: Boxes },
+      ],
     }] : []),
     ...(telecomsLinks.length > 0 ? [{
       heading: 'TELECOMS OPERATIONS',

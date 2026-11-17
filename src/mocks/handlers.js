@@ -7,10 +7,11 @@ import { notifications } from './fixtures/notifications';
 import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
-import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
+import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
-import { initialEquipment, initialEquipmentLoans } from './fixtures/equipment';
-import { initialPodcastSlots } from './fixtures/podcast';
+import { initialEquipment } from './fixtures/equipment';
+import { initialBookings, initialFacilities, initialTimetableBlocks } from './fixtures/bookings';
+import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
@@ -27,6 +28,7 @@ const mockUsers = {
   ...coordinatorMockUsers,
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
   'multimedia@unipod.test': { subject: 'Nkuru', roles: ['ROLE_MULTIMEDIA_OFFICER'] },
+  'cnc@unipod.test': { subject: 'Robinson', roles: ['ROLE_CNC_DOMAIN_OWNER'] },
   'telecoms@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
   'telecom@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
   'kaddu@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
@@ -38,10 +40,61 @@ const mockUsers = {
 
 let trainingSessions = [...initialTrainingSessions];
 let mentorshipFollowUps = [...initialMentorshipFollowUps];
+
+function trainingProblem(status, detail) {
+  return HttpResponse.json({ status, detail }, { status });
+}
+
+function updateTrainingSession(sessionId, change, okStatus = 200) {
+  const index = trainingSessions.findIndex((s) => s.id === sessionId);
+  if (index === -1) return trainingProblem(404, 'Training session not found.');
+  const result = change(trainingSessions[index]);
+  if (result.error) return trainingProblem(409, result.error);
+  const participants = result.participants ?? trainingSessions[index].participants;
+  const updated = {
+    ...trainingSessions[index],
+    participants,
+    enrolledCount: participants.filter((p) => p.status !== 'CANCELLED').length,
+  };
+  trainingSessions = trainingSessions.map((s, i) => (i === index ? updated : s));
+  return HttpResponse.json(updated, { status: okStatus });
+}
+
+function updateTrainingParticipant(sessionId, participantId, change) {
+  return updateTrainingSession(sessionId, (session) => {
+    const target = session.participants.find((p) => p.id === participantId);
+    if (!target) return { error: 'Participant not found.' };
+    const result = change(target, session);
+    if (result.error) return result;
+    return { participants: session.participants.map((p) => (p.id === participantId ? result : p)) };
+  });
+}
 let mediaRequests = [...initialMediaRequests];
 let multimediaEquipment = [...initialEquipment];
-let multimediaEquipmentLoans = [...initialEquipmentLoans];
-let podcastSlots = [...initialPodcastSlots];
+let facilities = [...initialFacilities];
+let cncJobs = [...initialCncJobs];
+const CNC_STAGES = ['NEW', 'QUOTED', 'PAYMENT_GATE', 'SCHEDULED', 'IN_PRODUCTION', 'READY', 'COLLECTED'];
+let bookings = [...initialBookings];
+const timetableBlocks = [...initialTimetableBlocks];
+const BLOCKING = ['PENDING', 'APPROVED', 'CHECKED_IN', 'OUT'];
+
+function overlaps(startA, endA, startB, endB) {
+  return new Date(startA) < new Date(endB) && new Date(startB) < new Date(endA);
+}
+
+function bookingProblem(status, detail) {
+  return HttpResponse.json({ status, detail }, { status });
+}
+
+function updateBooking(id, change) {
+  const index = bookings.findIndex((b) => b.id === id);
+  if (index === -1) return bookingProblem(404, 'Booking not found.');
+  const result = change(bookings[index]);
+  if (result.error) return bookingProblem(...result.error);
+  const updated = { ...result, decidedAt: result.decidedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
+  bookings = bookings.map((b, i) => (i === index ? updated : b));
+  return HttpResponse.json(updated);
+}
 let eventContracts = [...initialContracts];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
@@ -669,17 +722,15 @@ export const handlers = [
   ...receptionHandlers,
   ...coordinatorHandlers,
   // Operations / Multimedia - Training & Mentorship
-  http.get(`${API_BASE_URL}/operations/training/overview`, () => {
-    const upcomingSessions = trainingSessions.filter((s) => s.status === 'Upcoming' || s.status === 'In Progress').length;
-    const seatsFilled = trainingSessions.reduce((acc, s) => acc + s.enrolledCount, 0);
-    const totalSeats = trainingSessions.reduce((acc, s) => acc + s.capacity, 0);
-    const mentorshipFollowUpsCount = mentorshipFollowUps.length;
+  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(trainingDepartments)),
 
+  http.get(`${API_BASE_URL}/operations/training/overview`, () => {
+    const live = trainingSessions.filter((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS');
     return HttpResponse.json({
-      upcomingSessions,
-      seatsFilled,
-      totalSeats,
-      mentorshipFollowUps: mentorshipFollowUpsCount,
+      upcomingSessions: live.length,
+      seatsFilled: trainingSessions.reduce((acc, s) => acc + s.enrolledCount, 0),
+      totalSeats: trainingSessions.reduce((acc, s) => acc + s.capacity, 0),
+      mentorshipFollowUps: mentorshipFollowUps.length,
       sessions: trainingSessions,
       followUps: mentorshipFollowUps,
     });
@@ -687,69 +738,97 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/operations/training/sessions/:id`, ({ params }) => {
     const session = trainingSessions.find((s) => s.id === params.id);
-    if (!session) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(session);
-  }),
-
-  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/attendance`, async ({ params, request }) => {
-    const { sessionId } = params;
-    const { participantId, attendance } = await request.json();
-    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
-    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
-
-    const session = trainingSessions[sessionIndex];
-    const updatedParticipants = session.participants.map((p) =>
-      p.id === participantId ? { ...p, attendance } : p,
-    );
-    trainingSessions[sessionIndex] = { ...session, participants: updatedParticipants };
-    return HttpResponse.json(trainingSessions[sessionIndex]);
-  }),
-
-  http.post(`${API_BASE_URL}/operations/training/sessions/:sessionId/registrations`, async ({ params, request }) => {
-    const { sessionId } = params;
-    const body = await request.json();
-    const sessionIndex = trainingSessions.findIndex((s) => s.id === sessionId);
-    if (sessionIndex === -1) return new HttpResponse(null, { status: 404 });
-
-    const newParticipant = {
-      id: `p-${Date.now()}`,
-      attendance: 'Unmarked',
-      registeredAt: new Date().toISOString(),
-      ...body,
-    };
-    const session = trainingSessions[sessionIndex];
-    trainingSessions[sessionIndex] = {
-      ...session,
-      enrolledCount: session.enrolledCount + 1,
-      participants: [...session.participants, newParticipant],
-    };
-    return HttpResponse.json(newParticipant);
+    return session ? HttpResponse.json(session) : trainingProblem(404, 'Training session not found.');
   }),
 
   http.post(`${API_BASE_URL}/operations/training/sessions`, async ({ request }) => {
     const body = await request.json();
+    if (!body.departmentId || !body.date || !(body.capacity >= 1)) {
+      return trainingProblem(400, 'The session request is invalid.');
+    }
+    const starts = new Date(body.date);
     const newSession = {
-      enrolledCount: 0,
-      status: 'Upcoming',
-      description: '',
-      participants: [],
-      ...body,
       id: `ts-${Date.now()}`,
+      title: body.title,
+      facilitator: body.facilitator,
+      date: body.date,
+      endsAt: body.endsAt ?? new Date(starts.getTime() + 2 * 3600_000).toISOString(),
+      enrolledCount: 0,
+      capacity: body.capacity,
+      venue: body.venue,
+      status: body.publish === false ? 'DRAFT' : 'UPCOMING',
+      description: body.description ?? null,
+      participants: [],
+      departmentId: body.departmentId,
+      fee: body.fee ?? 0,
+      safetyCourse: Boolean(body.safetyCourse),
+      published: body.publish !== false,
     };
     trainingSessions = [...trainingSessions, newSession];
     return HttpResponse.json(newSession, { status: 201 });
   }),
 
-  http.get(`${API_BASE_URL}/operations/training/mentorship-followups`, () => {
-    return HttpResponse.json(mentorshipFollowUps);
+  http.post(`${API_BASE_URL}/operations/training/sessions/:id/participants`, async ({ params, request }) => {
+    const body = await request.json();
+    return updateTrainingSession(params.id, (session) => {
+      const active = session.participants.filter((p) => p.status !== 'CANCELLED');
+      if (active.length >= session.capacity) return { error: 'This session is full.' };
+      if (active.some((p) => p.regNumber === body.regNumber)) return { error: 'This registration number is already signed up.' };
+      const added = {
+        id: `p-${Date.now()}`,
+        name: body.name,
+        regNumber: body.regNumber,
+        department: body.department,
+        contactEmail: body.contactEmail ?? null,
+        userId: null,
+        status: session.fee > 0 ? 'PENDING_PAYMENT' : 'CONFIRMED',
+        attendance: 'UNMARKED',
+        passed: false,
+        passedAt: null,
+        registeredAt: new Date().toISOString(),
+      };
+      return { participants: [...session.participants, added] };
+    }, 201);
   }),
 
-  http.patch(`${API_BASE_URL}/operations/training/mentorship-followups/:id`, async ({ params, request }) => {
-    const index = mentorshipFollowUps.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
+  http.patch(`${API_BASE_URL}/operations/training/sessions/:id/attendance`, async ({ params, request }) => {
+    const { participantId, attendance } = await request.json();
+    return updateTrainingParticipant(params.id, participantId, (p) => (p.status !== 'CONFIRMED'
+      ? { error: 'Attendance can only be recorded for confirmed participants.' }
+      : { ...p, attendance }));
+  }),
+
+  http.post(`${API_BASE_URL}/operations/training/sessions/:id/participants/:participantId/confirm-payment`, ({ params }) =>
+    updateTrainingParticipant(params.id, params.participantId, (p) => (p.status !== 'PENDING_PAYMENT'
+      ? { error: 'This registration is not waiting for payment.' }
+      : { ...p, status: 'CONFIRMED' }))),
+
+  http.post(`${API_BASE_URL}/operations/training/sessions/:id/participants/:participantId/pass`, ({ params }) =>
+    updateTrainingParticipant(params.id, params.participantId, (p, session) => {
+      if (!session.safetyCourse) return { error: 'Only safety courses record a pass.' };
+      if (p.status !== 'CONFIRMED' || p.attendance !== 'PRESENT') return { error: 'A participant must be marked present before passing.' };
+      return { ...p, passed: true, passedAt: new Date().toISOString() };
+    })),
+
+  http.post(`${API_BASE_URL}/operations/training/mentorship`, async ({ request }) => {
     const body = await request.json();
-    mentorshipFollowUps[index] = { ...mentorshipFollowUps[index], ...body };
-    return HttpResponse.json(mentorshipFollowUps[index]);
+    const created = { id: `mf-${Date.now()}`, status: 'PENDING_FOLLOW_UP', notes: null, priority: 'NORMAL', ...body, version: 0 };
+    mentorshipFollowUps = [...mentorshipFollowUps, created];
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/operations/training/mentorship/:id`, async ({ params, request }) => {
+    const index = mentorshipFollowUps.findIndex((item) => item.id === params.id);
+    if (index === -1) return trainingProblem(404, 'Follow-up not found.');
+    const { status, notes, version } = await request.json();
+    if (!status) return trainingProblem(400, 'A status is required.');
+    const current = mentorshipFollowUps[index];
+    if (version != null && version !== current.version) {
+      return trainingProblem(409, 'Someone else updated this follow-up. Reload and try again.');
+    }
+    const updated = { ...current, status, notes: notes ?? current.notes, version: current.version + 1 };
+    mentorshipFollowUps = mentorshipFollowUps.map((item, i) => (i === index ? updated : item));
+    return HttpResponse.json(updated);
   }),
 
   // Operations / Multimedia - Media Services
@@ -776,7 +855,7 @@ export const handlers = [
     return HttpResponse.json(mediaRequests[index]);
   }),
 
-  // Operations / Multimedia - Equipment register, fault reporting, lending
+  // Operations / Multimedia - Equipment register, fault reporting
   http.get(`${API_BASE_URL}/operations/equipment`, () => {
     return HttpResponse.json(multimediaEquipment);
   }),
@@ -794,137 +873,233 @@ export const handlers = [
     return HttpResponse.json(multimediaEquipment[index]);
   }),
 
-  http.get(`${API_BASE_URL}/operations/equipment/loans`, () => {
-    return HttpResponse.json(multimediaEquipmentLoans);
+  // Facilities, bookings, equipment allocations and timetable
+  http.get(`${API_BASE_URL}/facilities`, () => HttpResponse.json(facilities)),
+
+  http.get(`${API_BASE_URL}/bookings`, ({ request }) => {
+    const url = new URL(request.url);
+    const date = url.searchParams.get('date');
+    const status = url.searchParams.get('status');
+    const items = bookings
+      .filter((b) => !status || b.status === status)
+      .filter((b) => !date || b.startsAt.slice(0, 10) === date || (b.startsAt.slice(0, 10) <= date && b.endsAt.slice(0, 10) >= date))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return HttpResponse.json({ items, page: 0, size: 100, totalElements: items.length, totalPages: 1 });
   }),
 
-  http.post(`${API_BASE_URL}/operations/equipment/loans`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/bookings`, async ({ request }) => {
     const body = await request.json();
-    const item = multimediaEquipment.find((candidate) => candidate.id === body.equipmentId);
-    if (!item) return new HttpResponse(null, { status: 404 });
+    const facility = facilities.find((f) => f.id === body.facilityId);
+    if (!facility) return bookingProblem(404, 'Facility not found.');
+    if (new Date(body.endsAt) <= new Date(body.startsAt)) return bookingProblem(400, 'The booking end time must be after the start time.');
+    if (facility.status === 'MAINTENANCE') return bookingProblem(409, 'The facility is under maintenance and cannot be booked.');
+    if (body.attendees > facility.capacity) return bookingProblem(400, 'The group size exceeds the facility capacity.');
+    if (bookings.some((b) => b.facilityId === facility.id && BLOCKING.includes(b.status) && overlaps(b.startsAt, b.endsAt, body.startsAt, body.endsAt))) {
+      return bookingProblem(409, 'The facility is already booked for that time.');
+    }
+    if (timetableBlocks.some((t) => t.facility_id === facility.id && overlaps(t.starts_at, t.ends_at, body.startsAt, body.endsAt))) {
+      return bookingProblem(409, 'The selected time clashes with a scheduled timetable block.');
+    }
+    const equipment = Boolean(body.isEquipmentRequest) || ['EQUIPMENT', 'ALLOCATION'].includes(String(body.requestType).toUpperCase());
+    const now = new Date().toISOString();
+    const created = {
+      id: `bk-${Date.now()}`,
+      reference: `BKG-2026-${String(200 + bookings.length).padStart(6, '0')}`,
+      facilityId: facility.id,
+      facilityName: facility.name,
+      facilityLocation: facility.location,
+      requesterId: 'test@unipod.test',
+      purpose: body.purpose,
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+      attendees: body.attendees,
+      operator: body.operator ?? null,
+      status: 'PENDING',
+      rejectionReason: null,
+      requestType: equipment ? 'EQUIPMENT' : 'FACILITY',
+      isEquipmentRequest: equipment,
+      equipmentName: body.equipmentName ?? null,
+      purposeDetail: body.purposeDetail ?? null,
+      decisionNote: null,
+      decidedAt: null,
+      conditionOut: null,
+      conditionReturned: null,
+      returnedAt: null,
+      returnNotes: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    bookings = [created, ...bookings];
+    return HttpResponse.json(created, { status: 201 });
+  }),
 
-    const newLoan = {
-      id: `eq-loan-${Date.now()}`,
-      equipmentId: item.id,
-      equipmentName: item.name,
+  http.post(`${API_BASE_URL}/allocations/:id/decision`, async ({ params, request }) => {
+    const { decision, note } = await request.json();
+    const d = String(decision ?? '').toUpperCase();
+    return updateBooking(params.id, (b) => {
+      if (d === 'APPROVED') {
+        return b.isEquipmentRequest
+          ? { ...b, status: 'OUT', conditionOut: 'WORKING', decisionNote: note ?? null }
+          : { ...b, status: 'APPROVED', decisionNote: note ?? null };
+      }
+      if (d === 'DECLINED' || d === 'REJECTED') {
+        if (!note) return { error: [400, 'A rejection reason is required.'] };
+        return { ...b, status: 'REJECTED', rejectionReason: note };
+      }
+      return { error: [400, 'decision must be APPROVED or DECLINED.'] };
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/allocations/:id/return`, async ({ params, request }) => {
+    const body = await request.json();
+    const condition = String(body.condition_returned ?? '').toUpperCase();
+    const stored = { WORKING: 'WORKING', OK: 'WORKING', DAMAGED: 'DAMAGED', BEING_REPAIRED: 'BEING_REPAIRED', FAULTY: 'BEING_REPAIRED' }[condition];
+    return updateBooking(params.id, (b) => {
+      if (!stored) return { error: [400, 'condition_returned must be WORKING, BEING_REPAIRED, or DAMAGED.'] };
+      if (!b.isEquipmentRequest || b.status !== 'OUT') return { error: [409, 'Only an out allocation can be returned.'] };
+      return { ...b, status: 'RETURNED', conditionReturned: stored, returnedAt: body.returned_at, returnNotes: body.notes ?? null };
+    });
+  }),
+
+  http.patch(`${API_BASE_URL}/facilities/:id/status`, async ({ params, request }) => {
+    const { status } = await request.json();
+    const index = facilities.findIndex((f) => f.id === params.id);
+    if (index === -1) return bookingProblem(404, 'Facility not found.');
+    if (!['AVAILABLE', 'BOOKED', 'MAINTENANCE'].includes(status)) return bookingProblem(400, 'Invalid facility status.');
+    facilities = facilities.map((f, i) => (i === index ? { ...f, status, updatedAt: new Date().toISOString() } : f));
+    return HttpResponse.json(facilities[index]);
+  }),
+
+  http.get(`${API_BASE_URL}/price-list-items`, ({ request }) => {
+    const departmentId = new URL(request.url).searchParams.get('departmentId');
+    return HttpResponse.json(initialCncPrices.filter((p) => !departmentId || p.departmentId === departmentId));
+  }),
+
+  // CNC & Carpentry orders
+  http.get(`${API_BASE_URL}/departments/cnc/orders`, () => {
+    const columns = Object.fromEntries(CNC_STAGES.map((stage) => [stage, cncJobs.filter((j) => j.stage === stage)]));
+    return HttpResponse.json({ department: 'CNC', columns, page: 0, size: 100, totalElements: cncJobs.length, totalPages: 1 });
+  }),
+
+  http.post(`${API_BASE_URL}/departments/cnc/orders`, async ({ request }) => {
+    const body = await request.json();
+    if (!body.title || !body.specs) return bookingProblem(400, 'title and specs are required.');
+    const now = new Date().toISOString();
+    const created = {
+      id: `cnc-${Date.now()}`,
+      code: `ORD-CNC-2026-${String(cncJobs.length + 1).padStart(6, '0')}`,
+      department: 'CNC',
+      customerId: 'cnc@unipod.test',
+      title: body.title,
       quantity: body.quantity ?? 1,
-      borrowerName: body.borrowerName,
-      borrowerType: body.borrowerType ?? 'Student',
-      borrowerContact: body.borrowerContact,
-      dateOut: body.dateOut,
-      dateBack: body.dateBack,
-      outgoingCondition: body.outgoingCondition,
-      incomingCondition: null,
-      status: 'PENDING_APPROVAL',
-      managerApproval: null,
-      createdAt: new Date().toISOString(),
+      dateNeeded: body.date_needed ?? null,
+      acceptedRulesVersion: body.accepted_rules_version ?? null,
+      stage: 'NEW',
+      specs: body.specs,
+      quote: null, quoteSubmittedAt: null, quotedBy: null, invoiceId: null, invoiceStatus: null,
+      materialsUsed: null, paymentConfirmedAt: null, machineTimeUsed: null, qualityChecklist: null, collectionSignature: null,
+      stageHistory: [{ stage: 'NEW', at: now, by: 'cnc@unipod.test', notes: 'Order created' }],
+      createdBy: 'cnc@unipod.test', createdAt: now, updatedAt: now,
     };
-    multimediaEquipmentLoans = [newLoan, ...multimediaEquipmentLoans];
-    return HttpResponse.json(newLoan, { status: 201 });
+    cncJobs = [created, ...cncJobs];
+    return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/approve`, async ({ params, request }) => {
-    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
-    if (!loan) return new HttpResponse(null, { status: 404 });
-    const { note } = await request.json();
-
-    const updated = {
-      ...loan,
-      status: 'ACTIVE',
-      managerApproval: {
-        approvedBy: 'Namulinde Jean Madrine',
-        approvedAt: new Date().toISOString(),
-        note: note || 'Approved for checkout.',
-      },
-    };
-    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
-
-    multimediaEquipment = multimediaEquipment.map((eq) => {
-      if (eq.id !== loan.equipmentId) return eq;
-      const nextAvailable = Math.max(0, eq.availableQuantity - loan.quantity);
-      return { ...eq, availableQuantity: nextAvailable, state: nextAvailable <= 0 ? 'LOANED' : eq.state };
-    });
-
+  http.post(`${API_BASE_URL}/departments/cnc/orders/:id/quote`, async ({ params, request }) => {
+    const { quote } = await request.json();
+    const current = cncJobs.find((j) => j.id === params.id);
+    if (!current) return bookingProblem(404, 'Order not found.');
+    if (!quote || !(quote.amount > 0)) return bookingProblem(400, 'quote.amount must be > 0.');
+    const updated = { ...current, quote, quoteSubmittedAt: new Date().toISOString(), quotedBy: 'cnc@unipod.test', invoiceId: `inv-${current.id}`, invoiceStatus: 'WAITING_FOR_PROOF' };
+    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
     return HttpResponse.json(updated);
   }),
 
-  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/decline`, async ({ params, request }) => {
-    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
-    if (!loan) return new HttpResponse(null, { status: 404 });
-    const { reason } = await request.json();
-
-    const updated = {
-      ...loan,
-      status: 'DECLINED',
-      managerApproval: {
-        approvedBy: 'Namulinde Jean Madrine',
-        approvedAt: new Date().toISOString(),
-        note: reason || 'Declined.',
-      },
-    };
-    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
-    return HttpResponse.json(updated);
-  }),
-
-  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/return`, async ({ params, request }) => {
-    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
-    if (!loan) return new HttpResponse(null, { status: 404 });
-    const { condition } = await request.json();
-
-    const updated = { ...loan, status: 'RETURNED', incomingCondition: condition };
-    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
-
-    multimediaEquipment = multimediaEquipment.map((eq) => {
-      if (eq.id !== loan.equipmentId) return eq;
-      return { ...eq, availableQuantity: Math.min(eq.totalQuantity, eq.availableQuantity + loan.quantity), state: 'AVAILABLE' };
-    });
-
-    return HttpResponse.json(updated);
-  }),
-
-  // Operations / Multimedia - Podcast slot booking
-  http.get(`${API_BASE_URL}/operations/podcast/slots`, () => {
-    return HttpResponse.json(podcastSlots);
-  }),
-
-  http.post(`${API_BASE_URL}/operations/podcast/slots`, async ({ request }) => {
+  http.patch(`${API_BASE_URL}/departments/cnc/orders/:id/stage`, async ({ params, request }) => {
     const body = await request.json();
-    const newSlot = {
-      id: `pod-${Date.now()}`,
-      status: 'CONFIRMED',
-      createdAt: new Date().toISOString(),
-      ...body,
+    const current = cncJobs.find((j) => j.id === params.id);
+    if (!current) return bookingProblem(404, 'Order not found.');
+    const target = String(body.stage ?? '').toUpperCase();
+    if (!CNC_STAGES.includes(target)) return bookingProblem(400, `Invalid stage '${target}' for department CNC.`);
+    if (CNC_STAGES.indexOf(target) < CNC_STAGES.indexOf(current.stage) && !['READY', 'COLLECTED'].includes(target)) {
+      return bookingProblem(409, `Cannot move order backwards from ${current.stage} to ${target}.`);
+    }
+    if (target === 'SCHEDULED' && !current.quote) return bookingProblem(400, 'A quote must be submitted before scheduling.');
+    const paid = ['PAID', 'RECEIPTED'].includes(current.invoiceStatus);
+    if (['SCHEDULED', 'IN_PRODUCTION', 'READY', 'COLLECTED'].includes(target) && !paid) {
+      return bookingProblem(409, `Payment is required before moving to ${target}.`);
+    }
+    const now = new Date().toISOString();
+    const completion = ['READY', 'COLLECTED'].includes(target)
+      ? { materialsUsed: body.materials_used ?? null, machineTimeUsed: body.machine_time_used ?? null, qualityChecklist: body.quality_checklist ?? null, collectionSignature: body.collection_signature ?? null }
+      : {};
+    const updated = {
+      ...current,
+      ...completion,
+      stage: target,
+      stageHistory: [...current.stageHistory, { stage: target, at: now, by: 'cnc@unipod.test', notes: body.notes ?? null }],
+      updatedAt: now,
     };
-    podcastSlots = [...podcastSlots, newSlot];
-    return HttpResponse.json(newSlot, { status: 201 });
+    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
+    return HttpResponse.json(updated);
+  }),
+
+  http.get(`${API_BASE_URL}/timetable/blocks`, ({ request }) => {
+    const url = new URL(request.url);
+    const facilityId = url.searchParams.get('facility_id');
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    return HttpResponse.json(timetableBlocks.filter((t) => (!facilityId || t.facility_id === facilityId)
+      && (!from || !to || overlaps(t.starts_at, t.ends_at, from, to))));
   }),
 
   // Operations / Multimedia - Event-coverage contracts
-  http.get(`${API_BASE_URL}/operations/contracts`, () => {
-    return HttpResponse.json(eventContracts);
-  }),
+  http.get(`${API_BASE_URL}/media/contracts`, () => HttpResponse.json(eventContracts)),
 
-  http.post(`${API_BASE_URL}/operations/contracts`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/media/contracts`, async ({ request }) => {
     const body = await request.json();
-    const newContract = {
+    if (!body.client || !body.event_name || !body.event_date || !(body.agreed_price > 0)) {
+      return HttpResponse.json({ status: 400, detail: 'The contract request is invalid.' }, { status: 400 });
+    }
+    const now = new Date().toISOString();
+    const created = {
       id: `ct-${Date.now()}`,
+      code: `MCTR-2026-${String(eventContracts.length + 1).padStart(4, '0')}`,
+      client: body.client,
+      eventName: body.event_name,
+      eventDate: body.event_date,
+      venue: body.venue ?? null,
+      agreedPrice: body.agreed_price,
+      currency: (body.currency ?? 'UGX').toUpperCase(),
+      milestonePaymentDates: body.milestone_payment_dates ?? [],
+      signedContractDocId: body.signed_contract_doc_id ?? null,
+      assignedStaff: body.assigned_staff ?? [],
       status: 'DRAFT',
-      paymentDueDate: null,
-      signedPaperworkReference: null,
-      notes: '',
-      createdAt: new Date().toISOString(),
-      ...body,
+      invoiceIds: [],
+      createdBy: 'test@unipod.test',
+      createdAt: now,
+      updatedAt: now,
     };
-    eventContracts = [...eventContracts, newContract];
-    return HttpResponse.json(newContract, { status: 201 });
+    eventContracts = [...eventContracts, created];
+    return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.patch(`${API_BASE_URL}/operations/contracts/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE_URL}/media/contracts/:id/status`, async ({ params, request }) => {
     const index = eventContracts.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    eventContracts[index] = { ...eventContracts[index], ...body };
-    return HttpResponse.json(eventContracts[index]);
+    if (index === -1) return HttpResponse.json({ status: 404, detail: 'Media contract not found.' }, { status: 404 });
+    const { status, signed_contract_doc_id: docId } = await request.json();
+    const current = eventContracts[index];
+    const allowed = { DRAFT: ['SIGNED', 'CANCELLED'], SIGNED: ['IN_PROGRESS', 'CANCELLED'], IN_PROGRESS: ['COMPLETED', 'CANCELLED'] };
+    if (!(allowed[current.status] ?? []).includes(status)) {
+      return HttpResponse.json({ status: 409, detail: `The media contract cannot move from ${current.status} to ${status}.` }, { status: 409 });
+    }
+    const signedDoc = status === 'SIGNED' ? (docId ?? current.signedContractDocId) : current.signedContractDocId;
+    if (status === 'SIGNED' && !signedDoc) {
+      return HttpResponse.json({ status: 400, detail: 'A signed contract document is required to mark the contract as signed.' }, { status: 400 });
+    }
+    const updated = { ...current, status, signedContractDocId: signedDoc, updatedAt: new Date().toISOString() };
+    eventContracts = eventContracts.map((item, i) => (i === index ? updated : item));
+    return HttpResponse.json(updated);
   }),
 
   // Operations / Multimedia - Partners & MOUs

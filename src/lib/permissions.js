@@ -6,6 +6,7 @@ export const ROLE_TELECOMS_DOMAIN_OWNER = 'ROLE_TELECOMS_DOMAIN_OWNER';
 export const ROLE_RECEPTIONIST = 'ROLE_RECEPTIONIST';
 export const ROLE_FINANCE_OFFICER = 'ROLE_FINANCE_OFFICER';
 export const ROLE_MULTIMEDIA_OFFICER = 'ROLE_MULTIMEDIA_OFFICER';
+export const ROLE_CNC_DOMAIN_OWNER = 'ROLE_CNC_DOMAIN_OWNER';
 
 export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
@@ -60,4 +61,9 @@ export function isFinanceOfficer(roles) {
 /** Multimedia domain (Assignments 7-8): services, quoting, scheduling, skilling, equipment and contracts. */
 export function isMultimediaOfficer(roles) {
   return roles.includes(ROLE_MULTIMEDIA_OFFICER);
+}
+
+/** CNC & Carpentry domain (Assignment 10): jobs, design checks, machines, safety course and stock. */
+export function isCncDomainOwner(roles) {
+  return roles.includes(ROLE_CNC_DOMAIN_OWNER) || roles.includes('ROLE_ADMINISTRATOR');
 }

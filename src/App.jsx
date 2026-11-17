@@ -20,6 +20,7 @@ import {
   isReviewer,
   isTelecomsDomainOwner,
   isTextileDomainOwner,
+  isCncDomainOwner,
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
@@ -75,6 +76,14 @@ import { EquipmentLendingPage } from '@/pages/telecoms/EquipmentLendingPage';
 import { BootcampSessionsPage } from '@/pages/telecoms/BootcampSessionsPage';
 import { StockListPage as TelecomsStockListPage } from '@/pages/telecoms/StockListPage';
 import { StockMovementPage as TelecomsStockMovementPage } from '@/pages/telecoms/StockMovementPage';
+import { NewJobPage as CncNewJobPage } from '@/pages/cnc/NewJobPage';
+import { DesignCheckPage as CncDesignCheckPage } from '@/pages/cnc/DesignCheckPage';
+import { JobBoardPage as CncJobBoardPage } from '@/pages/cnc/JobBoardPage';
+import { JobPage as CncJobPage } from '@/pages/cnc/JobPage';
+import { MachineBookingPage as CncMachineBookingPage } from '@/pages/cnc/MachineBookingPage';
+import { MachineListPage as CncMachineListPage } from '@/pages/cnc/MachineListPage';
+import { SafetyCoursePage as CncSafetyCoursePage } from '@/pages/cnc/SafetyCoursePage';
+import { StockListPage as CncStockListPage } from '@/pages/cnc/StockListPage';
 import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
 import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
 import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
@@ -126,6 +135,7 @@ function AuthenticatedApp({
   const canReview = isReviewer(session.roles);
   const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
+  const canCnc = isCncDomainOwner(session.roles);
   const canReception = isReceptionist(session.roles);
   const canFinance = isFinanceOfficer(session.roles);
   const canMultimedia = isMultimediaOfficer(session.roles);
@@ -134,6 +144,9 @@ function AuthenticatedApp({
   const reception = (Page) => (canReception
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="The Reception screens are only available to reception staff." />);
+  const cnc = (Page) => (canCnc
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="CNC & Carpentry is only available to the CNC & Carpentry domain owner." />);
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
@@ -186,6 +199,7 @@ function AuthenticatedApp({
             : canFinance ? <Navigate to="/finance/overview" replace />
             : canMultimedia ? <Navigate to="/multimedia/media" replace />
             : canTextile ? <Navigate to="/textile/board" replace />
+            : canCnc ? <Navigate to="/cnc/board" replace />
             : <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
@@ -243,6 +257,16 @@ function AuthenticatedApp({
           <Route path="/coordinator/briefs/:id/versions" element={canCoordinate ? <CoordinatorVersionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/reviewer/cases/:id" element={canReview ? <ReviewerCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           </>}
+          {/* CNC & Carpentry (Assignment 10) */}
+          <Route path="/cnc" element={<Navigate to="/cnc/board" replace />} />
+          <Route path="/cnc/jobs/new" element={cnc(CncNewJobPage)} />
+          <Route path="/cnc/review" element={cnc(CncDesignCheckPage)} />
+          <Route path="/cnc/board" element={cnc(CncJobBoardPage)} />
+          <Route path="/cnc/jobs/:id" element={cnc(CncJobPage)} />
+          <Route path="/cnc/machines" element={cnc(CncMachineListPage)} />
+          <Route path="/cnc/machines/book" element={cnc(CncMachineBookingPage)} />
+          <Route path="/cnc/safety" element={cnc(CncSafetyCoursePage)} />
+          <Route path="/cnc/stock" element={cnc(CncStockListPage)} />
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />
           <Route path="/textile/board" element={textile(OrderBoardPage)} />
