@@ -802,6 +802,10 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_BASE_URL}/finance/price-list`, () => {
+    return HttpResponse.json({ items: initialPriceList });
+  }),
+
   http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');

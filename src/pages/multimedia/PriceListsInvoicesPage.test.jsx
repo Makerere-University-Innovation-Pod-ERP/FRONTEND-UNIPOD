@@ -60,11 +60,13 @@ describe('PriceListsInvoicesPage', () => {
     expect(screen.queryByText('UGX 1.62M')).not.toBeInTheDocument();
   });
 
-  it('shows an empty authorised price list state when the backend does not publish one', async () => {
+  it('renders the authorised price list published by the backend', async () => {
     renderPage();
 
     expect(await screen.findByText('Authorised price list')).toBeInTheDocument();
-    expect(screen.getByText('No authorised price list is currently published.')).toBeInTheDocument();
+    expect(screen.getByText('Facility booking — half day')).toBeInTheDocument();
+    expect(screen.getByText('UGX 40,000')).toBeInTheDocument();
+    expect(screen.queryByText('No authorised price list is currently published.')).not.toBeInTheDocument();
   });
 
   it('renders the invoices returned by the finance API', async () => {
