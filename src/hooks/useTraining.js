@@ -3,6 +3,7 @@ import { trainingApi } from '@/services/training';
 import { initialMentorshipFollowUps, initialTrainingSessions } from '@/mocks/fixtures/training';
 
 const TRAINING_OVERVIEW_KEY = ['training', 'overview'];
+const MENTORSHIP_FOLLOW_UPS_KEY = ['training', 'mentorship-followups'];
 
 const fallbackOverview = {
   upcomingSessions: initialTrainingSessions.filter((s) => s.status === 'Upcoming' || s.status === 'UPCOMING').length,
@@ -56,6 +57,36 @@ export function useRegisterParticipant(token) {
     onSuccess: (_, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY });
       queryClient.invalidateQueries({ queryKey: ['training', 'session', sessionId] });
+    },
+  });
+}
+
+export function useMentorshipFollowUps(token) {
+  return useQuery({
+    queryKey: MENTORSHIP_FOLLOW_UPS_KEY,
+    queryFn: ({ signal }) => trainingApi.getMentorshipFollowUps(token, signal),
+    initialData: initialMentorshipFollowUps,
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useUpdateMentorshipFollowUp(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => trainingApi.updateMentorshipFollowUp(id, body, token),
+    onSuccess: (updatedFollowUp) => {
+      queryClient.setQueryData(MENTORSHIP_FOLLOW_UPS_KEY, (old) =>
+        (old ?? []).map((item) => (item.id === updatedFollowUp.id ? updatedFollowUp : item)));
+    },
+  });
+}
+
+export function useCreateSession(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => trainingApi.createSession(body, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY });
     },
   });
 }

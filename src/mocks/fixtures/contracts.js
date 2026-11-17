@@ -1,0 +1,28 @@
+export const initialContracts = [
+  {
+    id: 'ct-1',
+    client: 'Kampala AgriTech Collective',
+    event: 'Harvest Showcase Day coverage',
+    date: '2026-11-28',
+    place: 'UniPod Exhibition Hall',
+    agreedPriceUgx: 850000,
+    paymentDueDate: '2026-11-25',
+    signedPaperworkReference: 'MOU-CT-2026-014',
+    status: 'SIGNED',
+    notes: 'Full-day photo and video coverage, same-week highlight reel delivery.',
+    createdAt: '2026-11-05T09:00:00.000Z',
+  },
+  {
+    id: 'ct-2',
+    client: 'Makerere Alumni Association',
+    event: 'Annual Innovators Gala',
+    date: '2026-12-05',
+    place: 'Makerere University Main Hall',
+    agreedPriceUgx: 1200000,
+    paymentDueDate: null,
+    signedPaperworkReference: null,
+    status: 'DRAFT',
+    notes: 'Awaiting signature from the association treasurer.',
+    createdAt: '2026-11-14T09:00:00.000Z',
+  },
+];
