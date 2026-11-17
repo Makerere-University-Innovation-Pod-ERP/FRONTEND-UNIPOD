@@ -46,6 +46,12 @@ import { CoordinatorChangesPage } from '@/pages/coordinator/CoordinatorChangesPa
 import { CoordinatorVersionsPage } from '@/pages/coordinator/CoordinatorVersionsPage';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
+import { StudentsFollowedUpPage } from '@/pages/multimedia/StudentsFollowedUpPage';
+import { EquipmentListPage as MultimediaEquipmentListPage } from '@/pages/multimedia/EquipmentListPage';
+import { ReportFaultPage as MultimediaReportFaultPage } from '@/pages/multimedia/ReportFaultPage';
+import { EquipmentLendingPage as MultimediaEquipmentLendingPage } from '@/pages/multimedia/EquipmentLendingPage';
+import { PodcastBookingPage } from '@/pages/multimedia/PodcastBookingPage';
+import { ContractsPage } from '@/pages/multimedia/ContractsPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
@@ -190,6 +196,12 @@ function AuthenticatedApp({
           <Route path="/multimedia/media" element={multimedia(MediaServicesPage)} />
           <Route path="/operations/media" element={multimedia(MediaServicesPage)} />
           <Route path="/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/multimedia/mentorship" element={multimedia(StudentsFollowedUpPage)} />
+          <Route path="/multimedia/equipment" element={multimedia(MultimediaEquipmentListPage)} />
+          <Route path="/multimedia/equipment/report-fault" element={multimedia(MultimediaReportFaultPage)} />
+          <Route path="/multimedia/equipment/lending" element={multimedia(MultimediaEquipmentLendingPage)} />
+          <Route path="/multimedia/podcast" element={multimedia(PodcastBookingPage)} />
+          <Route path="/multimedia/contracts" element={multimedia(ContractsPage)} />
           <Route path="/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
           <Route path="/multimedia/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
           <Route path="/operations/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />

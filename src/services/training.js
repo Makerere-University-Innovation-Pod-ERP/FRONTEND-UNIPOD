@@ -63,6 +63,16 @@ export const trainingApi = {
     return trainingSessionSchema.parse(data);
   },
 
+  async createSession(body, token, signal) {
+    const data = await request('/operations/training/sessions', {
+      method: 'POST',
+      body,
+      token,
+      signal,
+    });
+    return trainingSessionSchema.parse(data);
+  },
+
   async registerParticipant(sessionId, participant, token, signal) {
     const data = await request(`/operations/training/sessions/${sessionId}/registrations`, {
       method: 'POST',

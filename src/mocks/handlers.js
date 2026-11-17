@@ -9,6 +9,9 @@ import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './re
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
 import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
+import { initialEquipment, initialEquipmentLoans } from './fixtures/equipment';
+import { initialPodcastSlots } from './fixtures/podcast';
+import { initialContracts } from './fixtures/contracts';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
@@ -36,6 +39,10 @@ const mockUsers = {
 let trainingSessions = [...initialTrainingSessions];
 let mentorshipFollowUps = [...initialMentorshipFollowUps];
 let mediaRequests = [...initialMediaRequests];
+let multimediaEquipment = [...initialEquipment];
+let multimediaEquipmentLoans = [...initialEquipmentLoans];
+let podcastSlots = [...initialPodcastSlots];
+let eventContracts = [...initialContracts];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 
@@ -719,6 +726,32 @@ export const handlers = [
     return HttpResponse.json(newParticipant);
   }),
 
+  http.post(`${API_BASE_URL}/operations/training/sessions`, async ({ request }) => {
+    const body = await request.json();
+    const newSession = {
+      enrolledCount: 0,
+      status: 'Upcoming',
+      description: '',
+      participants: [],
+      ...body,
+      id: `ts-${Date.now()}`,
+    };
+    trainingSessions = [...trainingSessions, newSession];
+    return HttpResponse.json(newSession, { status: 201 });
+  }),
+
+  http.get(`${API_BASE_URL}/operations/training/mentorship-followups`, () => {
+    return HttpResponse.json(mentorshipFollowUps);
+  }),
+
+  http.patch(`${API_BASE_URL}/operations/training/mentorship-followups/:id`, async ({ params, request }) => {
+    const index = mentorshipFollowUps.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    mentorshipFollowUps[index] = { ...mentorshipFollowUps[index], ...body };
+    return HttpResponse.json(mentorshipFollowUps[index]);
+  }),
+
   // Operations / Multimedia - Media Services
   http.get(`${API_BASE_URL}/operations/media/overview`, () => {
     return HttpResponse.json({
@@ -741,6 +774,157 @@ export const handlers = [
     if (index === -1) return new HttpResponse(null, { status: 404 });
     mediaRequests[index] = { ...mediaRequests[index], status: body.status };
     return HttpResponse.json(mediaRequests[index]);
+  }),
+
+  // Operations / Multimedia - Equipment register, fault reporting, lending
+  http.get(`${API_BASE_URL}/operations/equipment`, () => {
+    return HttpResponse.json(multimediaEquipment);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/equipment/report-fault`, async ({ request }) => {
+    const body = await request.json();
+    const index = multimediaEquipment.findIndex((item) => item.id === body.equipmentId);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    multimediaEquipment[index] = {
+      ...multimediaEquipment[index],
+      state: 'FAULTY',
+      note: body.description,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    return HttpResponse.json(multimediaEquipment[index]);
+  }),
+
+  http.get(`${API_BASE_URL}/operations/equipment/loans`, () => {
+    return HttpResponse.json(multimediaEquipmentLoans);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/equipment/loans`, async ({ request }) => {
+    const body = await request.json();
+    const item = multimediaEquipment.find((candidate) => candidate.id === body.equipmentId);
+    if (!item) return new HttpResponse(null, { status: 404 });
+
+    const newLoan = {
+      id: `eq-loan-${Date.now()}`,
+      equipmentId: item.id,
+      equipmentName: item.name,
+      quantity: body.quantity ?? 1,
+      borrowerName: body.borrowerName,
+      borrowerType: body.borrowerType ?? 'Student',
+      borrowerContact: body.borrowerContact,
+      dateOut: body.dateOut,
+      dateBack: body.dateBack,
+      outgoingCondition: body.outgoingCondition,
+      incomingCondition: null,
+      status: 'PENDING_APPROVAL',
+      managerApproval: null,
+      createdAt: new Date().toISOString(),
+    };
+    multimediaEquipmentLoans = [newLoan, ...multimediaEquipmentLoans];
+    return HttpResponse.json(newLoan, { status: 201 });
+  }),
+
+  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/approve`, async ({ params, request }) => {
+    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
+    if (!loan) return new HttpResponse(null, { status: 404 });
+    const { note } = await request.json();
+
+    const updated = {
+      ...loan,
+      status: 'ACTIVE',
+      managerApproval: {
+        approvedBy: 'Namulinde Jean Madrine',
+        approvedAt: new Date().toISOString(),
+        note: note || 'Approved for checkout.',
+      },
+    };
+    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
+
+    multimediaEquipment = multimediaEquipment.map((eq) => {
+      if (eq.id !== loan.equipmentId) return eq;
+      const nextAvailable = Math.max(0, eq.availableQuantity - loan.quantity);
+      return { ...eq, availableQuantity: nextAvailable, state: nextAvailable <= 0 ? 'LOANED' : eq.state };
+    });
+
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/decline`, async ({ params, request }) => {
+    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
+    if (!loan) return new HttpResponse(null, { status: 404 });
+    const { reason } = await request.json();
+
+    const updated = {
+      ...loan,
+      status: 'DECLINED',
+      managerApproval: {
+        approvedBy: 'Namulinde Jean Madrine',
+        approvedAt: new Date().toISOString(),
+        note: reason || 'Declined.',
+      },
+    };
+    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/equipment/loans/:id/return`, async ({ params, request }) => {
+    const loan = multimediaEquipmentLoans.find((item) => item.id === params.id);
+    if (!loan) return new HttpResponse(null, { status: 404 });
+    const { condition } = await request.json();
+
+    const updated = { ...loan, status: 'RETURNED', incomingCondition: condition };
+    multimediaEquipmentLoans = multimediaEquipmentLoans.map((item) => (item.id === loan.id ? updated : item));
+
+    multimediaEquipment = multimediaEquipment.map((eq) => {
+      if (eq.id !== loan.equipmentId) return eq;
+      return { ...eq, availableQuantity: Math.min(eq.totalQuantity, eq.availableQuantity + loan.quantity), state: 'AVAILABLE' };
+    });
+
+    return HttpResponse.json(updated);
+  }),
+
+  // Operations / Multimedia - Podcast slot booking
+  http.get(`${API_BASE_URL}/operations/podcast/slots`, () => {
+    return HttpResponse.json(podcastSlots);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/podcast/slots`, async ({ request }) => {
+    const body = await request.json();
+    const newSlot = {
+      id: `pod-${Date.now()}`,
+      status: 'CONFIRMED',
+      createdAt: new Date().toISOString(),
+      ...body,
+    };
+    podcastSlots = [...podcastSlots, newSlot];
+    return HttpResponse.json(newSlot, { status: 201 });
+  }),
+
+  // Operations / Multimedia - Event-coverage contracts
+  http.get(`${API_BASE_URL}/operations/contracts`, () => {
+    return HttpResponse.json(eventContracts);
+  }),
+
+  http.post(`${API_BASE_URL}/operations/contracts`, async ({ request }) => {
+    const body = await request.json();
+    const newContract = {
+      id: `ct-${Date.now()}`,
+      status: 'DRAFT',
+      paymentDueDate: null,
+      signedPaperworkReference: null,
+      notes: '',
+      createdAt: new Date().toISOString(),
+      ...body,
+    };
+    eventContracts = [...eventContracts, newContract];
+    return HttpResponse.json(newContract, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/operations/contracts/:id`, async ({ params, request }) => {
+    const index = eventContracts.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    eventContracts[index] = { ...eventContracts[index], ...body };
+    return HttpResponse.json(eventContracts[index]);
   }),
 
   // Operations / Multimedia - Partners & MOUs

@@ -64,6 +64,7 @@ function isActiveLink(href, location) {
   if (href === '/telecoms/requests' && location.startsWith('/telecoms/requests/') && location !== '/telecoms/requests/new') return true;
   if (href === '/telecoms/equipment') return location === '/telecoms/equipment';
   if (href === '/telecoms/stock') return location === '/telecoms/stock';
+  if (href === '/multimedia/equipment') return location === '/multimedia/equipment';
   if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
   return false;
 }
@@ -176,6 +177,11 @@ export function BackendWorkspace({
       items: [
         { label: 'Training & Mentorship', href: '/multimedia/training', icon: GraduationCap },
         { label: 'Media Services', href: '/multimedia/media', icon: Video },
+        { label: 'Students Followed Up', href: '/multimedia/mentorship', icon: Users },
+        { label: 'Book a Podcast Slot', href: '/multimedia/podcast', icon: CalendarDays },
+        { label: 'Equipment Register', href: '/multimedia/equipment', icon: List },
+        { label: 'Take Equipment Out', href: '/multimedia/equipment/lending', icon: ArrowLeftRight },
+        { label: 'Event Contracts', href: '/multimedia/contracts', icon: Handshake },
       ],
     }] : []),
     ...(textileLinks.length > 0 ? [{

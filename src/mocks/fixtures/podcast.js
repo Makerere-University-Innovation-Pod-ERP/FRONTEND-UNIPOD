@@ -1,0 +1,26 @@
+export const initialPodcastSlots = [
+  {
+    id: 'pod-1',
+    date: '2026-11-20',
+    start: '10:00',
+    end: '11:30',
+    purpose: 'Innovation Spotlight Ep.13 — guest interview',
+    producer: 'Namulinde Jean Madrine',
+    studio: 'Podcast Booth',
+    bookedBy: 'Namulinde Jean Madrine',
+    status: 'CONFIRMED',
+    createdAt: '2026-11-12T09:00:00.000Z',
+  },
+  {
+    id: 'pod-2',
+    date: '2026-11-21',
+    start: '14:00',
+    end: '15:00',
+    purpose: 'Student entrepreneurship roundtable recording',
+    producer: 'Katia Birungi',
+    studio: 'Podcast Booth',
+    bookedBy: 'Daphne Kyomugisha',
+    status: 'CONFIRMED',
+    createdAt: '2026-11-13T09:00:00.000Z',
+  },
+];
