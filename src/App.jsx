@@ -312,6 +312,11 @@ function App() {
 
   const acceptSession = useCallback((nextSession) => {
     saveSession(nextSession);
+    // The browser URL may still be wherever a previous session left it (a
+    // stale path from before this session started, or from browser
+    // history). Reset it to "/" so the fresh AuthenticatedApp always starts
+    // from the role-based landing redirect below, not mid-route.
+    window.history.replaceState(null, '', '/');
     setSession(nextSession);
   }, []);
 
