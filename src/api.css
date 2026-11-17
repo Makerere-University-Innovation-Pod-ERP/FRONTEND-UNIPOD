@@ -1198,52 +1198,16 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   .tx-actions .btn{flex:1}
 }
 
-/* â”€â”€ Textile Operations green theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   Applied by BackendWorkspace (.live-shell.textile-theme) on every /textile/*
-   screen and throughout `npm run dev:textile`. Palette follows the Textile
-   design (deep green sidebar, green primary actions, lime accents, sage page).
-   Other modules keep the Makerere red/black tokens above. */
-.live-shell.textile-theme{
-  --bg:#eef2ea; --surface:#ffffff; --surface-raised:#f3f6f0; --surface-sunk:#e3eadb;
-  --border:#dbe3d4; --border-soft:#e7ece2; --ink:#16231c; --ink-soft:#3b4a41; --muted:#62716a;
-  --forest:#0f6b46; --forest-dim:#0b5838; --forest-deep:#0d3b28; --forest-700:#0a4a31;
-  --lime:#c6ef5a; --lime-ink:#0d3b28;
-  --green:#1b7a4b; --green-bg:#e2f1e5;
-  --blue:#2f4a3c; --blue-bg:#e6ede4;
-  --sidebar-a:#0f4c33; --sidebar-b:#0a3b27; --sidebar-ink:#eef6ef; --sidebar-muted:#9dbfab;
-  --sidebar-active:#1a5c40; --sidebar-active-ink:#ffffff;
-  --shadow:0 1px 2px rgba(13,40,26,.05), 0 10px 28px rgba(13,40,26,.07);
-}
-.live-shell.textile-theme .live-nav-link{color:#cfe3d5}
-.live-shell.textile-theme .live-nav-link.active svg{color:var(--lime)}
-.live-shell.textile-theme .btn-primary{border-radius:999px;padding:0 18px}
-@media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .live-shell.textile-theme{
-    --bg:#0d1511; --surface:#131d17; --surface-raised:#19251e; --surface-sunk:#0a110d;
-    --border:#2c3c33; --border-soft:#203028; --ink:#e7f0ea; --ink-soft:#bccbc2; --muted:#8c9f94;
-    --forest:#23925c; --forest-dim:#2aa86a; --forest-deep:#e7f0ea; --forest-700:#1d6d47;
-    --lime:#c6ef5a; --lime-ink:#0c2618;
-    --green:#5fc98c; --green-bg:#15271c; --blue:#bccbc2; --blue-bg:#1c2a22;
-    --sidebar-a:#07140d; --sidebar-b:#0b2218; --sidebar-ink:#e7f0ea; --sidebar-muted:#86a794;
-    --sidebar-active:#173f2c; --sidebar-active-ink:#d9f59a;
-    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
-  }
-}
-:root[data-theme="dark"] .live-shell.textile-theme{
-  --bg:#0d1511; --surface:#131d17; --surface-raised:#19251e; --surface-sunk:#0a110d;
-  --border:#2c3c33; --border-soft:#203028; --ink:#e7f0ea; --ink-soft:#bccbc2; --muted:#8c9f94;
-  --forest:#23925c; --forest-dim:#2aa86a; --forest-deep:#e7f0ea; --forest-700:#1d6d47;
-  --lime:#c6ef5a; --lime-ink:#0c2618;
-  --green:#5fc98c; --green-bg:#15271c; --blue:#bccbc2; --blue-bg:#1c2a22;
-  --sidebar-a:#07140d; --sidebar-b:#0b2218; --sidebar-ink:#e7f0ea; --sidebar-muted:#86a794;
-  --sidebar-active:#173f2c; --sidebar-active-ink:#d9f59a;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
-}
-/* Textile Operations previously had its own scoped green theme here
-   (.live-shell.textile-theme), overriding --forest/--lime/--sidebar-* with a
-   separate green/lime palette on every /textile/* screen. Removed so Textile
-   inherits the same Makerere red/black/green/gold/silver tokens as every
-   other domain — one shared visual identity, not a per-domain reskin. */
+/* Textile Operations has twice had its own scoped green theme here
+   (.live-shell.textile-theme, including a light+dark variant the second
+   time), overriding the forest/lime/sidebar tokens plus .live-nav-link and
+   .btn-primary with a separate green/lime palette and pill buttons on
+   every textile screen. Removed both times so Textile inherits the same
+   Makerere red/black/green/gold/silver tokens, and the same light/dark
+   theme handling, as every other domain: one shared visual identity, not
+   a per-domain reskin. If this reappears again, it is coming from the
+   Textile owner's branch; raise it with them directly rather than
+   re-deleting it a third time. */
 
 /* Textile-mode sidebar: lime brand tile, pipeline count badges, demo card. */
 .tx-brand-mark{width:36px;height:36px;border-radius:10px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;flex:none}
@@ -3207,7 +3171,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   box-shadow: 0 0 0 3px rgba(23, 107, 82, 0.2) !important;
 }
 /* Overview dashboard visual treatment */
-.live-shell{background:#f3f5ef}
+.live-shell{background:var(--bg)}
 .live-sidebar{width:232px;padding:20px 13px 14px;background:linear-gradient(180deg,#0b2b21 0%,#104535 100%);border:0}
 .live-sidebar.collapsed{width:76px}
 .live-brand{height:48px;margin-bottom:32px}
@@ -3227,38 +3191,38 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 .live-profile .icon-button{border:0;background:transparent;color:#c4d2c8}
 .live-profile .icon-button:hover{background:rgba(255,255,255,.1);color:#fff}
 .live-main{margin-left:232px}
-.live-topbar{height:52px;padding:0 28px;border:0;background:#f3f5ef}
+.live-topbar{height:52px;padding:0 28px;border:0;background:var(--bg)}
 .live-secure{display:none}
 .live-content{max-width:none;padding:27px 28px 42px}
 .live-page{max-width:1320px}
 .live-page-heading{align-items:flex-end;margin-bottom:21px}
 .live-page-heading h1{font-size:34px;margin:7px 0 7px}
-.live-page-heading p:not(.eyebrow){font-size:11px;color:#606b62}
-.eyebrow{font-size:8px;letter-spacing:.14em;color:#849083}
+.live-page-heading p:not(.eyebrow){font-size:11px;color:var(--muted)}
+.eyebrow{font-size:8px;letter-spacing:.14em;color:var(--muted)}
 .heading-actions{gap:8px}
 .heading-actions .btn{min-height:34px;border-radius:5px;font-size:9px}
 .live-metrics{gap:10px;margin-bottom:12px}
 .live-metric,.live-panel{border:0;border-radius:16px;box-shadow:0 8px 24px rgba(30,48,32,.07)}
 .live-metric{min-height:106px;padding:17px 18px}
-.live-metric p{margin-bottom:10px;color:#38433b;font-size:9px}
-.live-metric strong{font-size:27px;color:#1c2921}
-.live-metric small{margin-top:7px;color:#798279;font-size:8px}
+.live-metric p{margin-bottom:10px;color:var(--muted);font-size:9px}
+.live-metric strong{font-size:27px;color:var(--ink)}
+.live-metric small{margin-top:7px;color:var(--muted);font-size:8px}
 .live-dashboard-grid{grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:12px;margin-bottom:12px}
 .live-panel{padding:18px}
 .live-panel-heading{margin-bottom:13px}
 .live-panel-heading h2{font-size:18px}
 .live-panel-heading>a{font-size:9px}
-.live-attention .attention-row{gap:10px;padding:10px 0;border-top:0;border-bottom:1px solid #e4e9df;color:#26342b}
+.live-attention .attention-row{gap:10px;padding:10px 0;border-top:0;border-bottom:1px solid var(--border-soft);color:var(--ink-soft)}
 .live-attention .attention-row:last-child{border-bottom:0}
-.attention-number{width:27px;height:27px;display:grid;place-items:center;flex:none;border-radius:6px;background:#eef2e7;color:#386b52;font-size:9px;font-weight:800}
+.attention-number{width:27px;height:27px;display:grid;place-items:center;flex:none;border-radius:6px;background:var(--surface-raised);color:var(--green);font-size:9px;font-weight:800}
 .live-attention .attention-copy{gap:3px}
 .live-attention .attention-copy b{font-size:9px}
-.live-attention .attention-copy small{font-size:8px;color:#899289}
-.live-attention .attention-row>svg{color:#6e7c70}
+.live-attention .attention-copy small{font-size:8px;color:var(--muted)}
+.live-attention .attention-row>svg{color:var(--muted)}
 .pipeline-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-.pipeline-tile{min-height:96px;padding:12px 8px 9px;border-radius:10px;background:#eef2e7;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center}
-.pipeline-tile>span{max-width:100%;color:#7b887c;font-size:8px;line-height:1.35;letter-spacing:.08em;text-transform:uppercase}
-.pipeline-tile>b{color:#1c2921;font:600 30px/1 var(--font-serif)}
+.pipeline-tile{min-height:96px;padding:12px 8px 9px;border-radius:10px;background:var(--surface-raised);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center}
+.pipeline-tile>span{max-width:100%;color:var(--muted);font-size:8px;line-height:1.35;letter-spacing:.08em;text-transform:uppercase}
+.pipeline-tile>b{color:var(--ink);font:600 30px/1 var(--font-serif)}
 .live-recent{margin-bottom:12px}
 .live-recent .live-panel-heading{margin-bottom:9px}
 .live-table th{padding-top:0;font-size:8px}
