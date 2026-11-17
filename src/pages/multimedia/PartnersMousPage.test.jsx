@@ -112,14 +112,11 @@ describe('PartnersMousPage', () => {
     expect(screen.queryByRole('button', { name: 'Add partner' })).not.toBeInTheDocument();
   });
 
-  it.each(['ROLE_ADMINISTRATOR', 'ROLE_DEPARTMENT_COORDINATOR'])(
-    'allows %s to create a partner',
-    (role) => {
-      renderPage([role]);
+  it('allows ROLE_FINANCE_OFFICER to create a partner', () => {
+    renderPage(['ROLE_FINANCE_OFFICER']);
 
-      expect(screen.getByRole('button', { name: 'Add partner' })).toBeInTheDocument();
-    },
-  );
+    expect(screen.getByRole('button', { name: 'Add partner' })).toBeInTheDocument();
+  });
 
   it('creates a partner through the API and refreshes the live overview', async () => {
     const user = userEvent.setup();
@@ -146,7 +143,7 @@ describe('PartnersMousPage', () => {
       }),
     );
 
-    renderPage(['ROLE_ADMINISTRATOR']);
+    renderPage(['ROLE_FINANCE_OFFICER']);
 
     await screen.findByText('Live API Partner 1');
     await user.click(screen.getByRole('button', { name: 'Add partner' }));
@@ -183,7 +180,7 @@ describe('PartnersMousPage', () => {
       ),
     );
 
-    renderPage(['ROLE_ADMINISTRATOR']);
+    renderPage(['ROLE_FINANCE_OFFICER']);
 
     await screen.findByText('Live API Partner 1');
     await user.click(screen.getByRole('button', { name: 'Add partner' }));

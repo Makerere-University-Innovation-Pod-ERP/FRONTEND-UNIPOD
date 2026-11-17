@@ -4,6 +4,8 @@ export const ROLE_INNOVATION_COORDINATOR = 'ROLE_INNOVATION_COORDINATOR';
 export const ROLE_TEXTILE_DOMAIN_OWNER = 'ROLE_TEXTILE_DOMAIN_OWNER';
 export const ROLE_TELECOMS_DOMAIN_OWNER = 'ROLE_TELECOMS_DOMAIN_OWNER';
 export const ROLE_RECEPTIONIST = 'ROLE_RECEPTIONIST';
+export const ROLE_FINANCE_OFFICER = 'ROLE_FINANCE_OFFICER';
+export const ROLE_MULTIMEDIA_OFFICER = 'ROLE_MULTIMEDIA_OFFICER';
 
 export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
@@ -48,4 +50,14 @@ export const REVIEWER_CANNOT_ASSIGN_REASON = 'Reviewers cannot assign reviewers 
 /** Reception screens (Assignment 3): home, check & forward, missing documents. */
 export function isReceptionist(roles) {
   return roles.includes(ROLE_RECEPTIONIST);
+}
+
+/** Finance & Partners shared modules (Assignment 6): price list, invoices, payment checks, receipts, partners. */
+export function isFinanceOfficer(roles) {
+  return roles.includes(ROLE_FINANCE_OFFICER);
+}
+
+/** Multimedia domain (Assignments 7-8): services, quoting, scheduling, skilling, equipment and contracts. */
+export function isMultimediaOfficer(roles) {
+  return roles.includes(ROLE_MULTIMEDIA_OFFICER);
 }

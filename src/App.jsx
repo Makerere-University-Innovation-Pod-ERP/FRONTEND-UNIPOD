@@ -13,9 +13,10 @@ import {
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
+  isFinanceOfficer,
+  isMultimediaOfficer,
   isReceptionist,
   isInnovationCoordinator,
-  isReceptionist,
   isReviewer,
   isTelecomsDomainOwner,
   isTextileDomainOwner,
@@ -106,20 +107,6 @@ function OtherModulePage({ title }) {
   );
 }
 
-const DEFAULT_TELECOMS_SESSION = {
-  accessToken: 'mock-telecoms-token',
-  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-  subject: 'Eng. Kaddu',
-  roles: ['ROLE_TELECOMS_DOMAIN_OWNER'],
-};
-
-const DEFAULT_COORDINATOR_SESSION = {
-  accessToken: 'mock-coordinator-token',
-  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-  subject: 'Grace Namuli',
-  roles: ['ROLE_DEPARTMENT_COORDINATOR'],
-};
-
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
 }
@@ -134,6 +121,9 @@ function AuthenticatedApp({
   const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
   const canReception = isReceptionist(session.roles);
+  const canFinance = isFinanceOfficer(session.roles);
+  const canMultimedia = isMultimediaOfficer(session.roles);
+  const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const mayCreateSubmission = canCreateSubmission(session.roles);
   const reception = (Page) => (canReception
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
@@ -141,7 +131,13 @@ function AuthenticatedApp({
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
-  const canTelecoms = isTelecomsDomainOwner(session.roles) || session.roles.includes('ROLE_ADMINISTRATOR');
+  const finance = (Page) => (canFinance
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />);
+  const multimedia = (Page) => (canMultimedia
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Multimedia screens are only available to the Multimedia officer." />);
+  const canTelecoms = isTelecomsDomainOwner(session.roles) || isAdministrator;
   const telecoms = (Page) => (canTelecoms
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
@@ -175,35 +171,38 @@ function AuthenticatedApp({
           ) : (
             <>
               {TEXTILE_ONLY ? null : <>
-              {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
-          <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          {TEXTILE_ONLY ? null : <>
-          <Route path="/" element={session.roles.includes('ROLE_SUBMITTER')
-            ? <Navigate to="/my-submissions" replace />
+          <Route path="/" element={
+            session.roles.includes('ROLE_SUBMITTER') ? <Navigate to="/my-submissions" replace />
+            : canReception ? <Navigate to="/reception/home" replace />
+            : canFactFind ? <Navigate to="/fact-finding/queue" replace />
+            : canReview ? <Navigate to="/reviewer/workspace" replace />
+            : canCoordinate ? <Navigate to="/coordinator" replace />
+            : canFinance ? <Navigate to="/finance/overview" replace />
+            : canMultimedia ? <Navigate to="/multimedia/media" replace />
+            : canTextile ? <Navigate to="/textile/board" replace />
             : <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
-          <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/price-lists" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
+          <Route path="/finance" element={finance(FinanceOverviewPage)} />
+          <Route path="/multimedia/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/operations/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/multimedia/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/operations/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/multimedia/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/operations/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/finance/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/finance/invoices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/finance/prices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/invoices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/price-lists" element={finance(PriceListsInvoicesPage)} />
 
           {/* Submissions & Queues */}
-          <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/submissions/student" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
-          <Route path="/submissions/general" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" />} />
+          <Route path="/submissions" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
+          <Route path="/submissions/student" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
+          <Route path="/submissions/general" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
@@ -271,7 +270,6 @@ function AuthenticatedApp({
 function App() {
   const [session, setSession] = useState(() => {
     const saved = loadSession();
-    return saved || DEFAULT_TELECOMS_SESSION;
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
     if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
