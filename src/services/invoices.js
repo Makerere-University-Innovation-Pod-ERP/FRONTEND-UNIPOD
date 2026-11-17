@@ -112,12 +112,14 @@ const toInvoiceViewModel = (invoice) => ({
 
 export const invoicesApi = {
   async getOverview(token, signal) {
-    const [summaryResponse, invoicePage] = await Promise.all([
+    const [summaryResponse, invoicePage, priceListResponse] = await Promise.all([
       request('/finance/summary', { token, signal }),
       request('/invoices?size=100', { token, signal }),
+      request('/finance/price-list', { token, signal }),
     ]);
     const summary = financeSummarySchema.parse(summaryResponse);
     const invoices = (invoicePage.items ?? []).map(toInvoiceViewModel);
+    const priceList = priceListResponse.items ?? [];
 
     return invoicesOverviewSchema.parse({
       eyebrow: 'FINANCE',
@@ -174,7 +176,7 @@ export const invoicesApi = {
           icon: 'DollarSign',
         },
       ],
-      priceList: [],
+      priceList,
       invoices,
     });
   },

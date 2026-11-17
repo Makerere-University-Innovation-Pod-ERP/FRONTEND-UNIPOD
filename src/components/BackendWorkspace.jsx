@@ -1,24 +1,21 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft, ChevronRight,
+  ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown, ChevronLeft, ChevronRight,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
-  Workflow, Wrench, X,
+  List, LogOut, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { canCreateSubmission, displayRole } from '@/lib/auth';
-import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { displayRole } from '@/lib/auth';
+import { canCreateSubmission, displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import {
   isFactFindingOfficer,
+  isFinanceOfficer,
+  isMultimediaOfficer,
   isReceptionist,
   isInnovationCoordinator,
-  isReceptionist,
   isReviewer,
   isTelecomsDomainOwner,
   isTextileDomainOwner,
@@ -108,13 +105,14 @@ export function BackendWorkspace({
   const receptionBadge = stageCounts.RECEIVED ?? 3;
   const factFindingBadge = stageCounts.FACT_FINDING ?? 2;
   const reviewBadge = stageCounts.UNDER_REVIEW ?? 1;
-  const routingBadge = stageCounts.FORWARDED ?? 1;
-  const refinementBadge = stageCounts.REFINEMENT_REQUESTED ?? 2;
 
   const textileLinks = buildTextileNavigation(session.roles);
   const telecomsLinks = buildTelecomsNavigation(session.roles);
 
   const isTelecoms = isTelecomsDomainOwner(session.roles);
+  const canReview = isReviewer(session.roles);
+  const isFinance = isFinanceOfficer(session.roles);
+  const isMultimedia = isMultimediaOfficer(session.roles);
 
   const telecomsNavGroups = [
     {
@@ -145,43 +143,41 @@ export function BackendWorkspace({
   ];
 
   const standardNavGroups = [
-    {
+    ...(isSubmitter ? [{
+      heading: 'MY WORKSPACE',
       items: [
-        { label: 'All Submissions', href: '/submissions', icon: Boxes },
-        { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
-        { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
-        ...(isSubmitter ? [{ label: 'My Submissions', href: '/my-submissions', icon: Boxes }] : []),
+        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
       ],
-    },
+    }] : []),
     {
       heading: 'INNOVATION PIPELINE',
       items: [
-        { label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge },
+        ...(session.roles.some((r) => SUBMISSION_INTAKE_ROLES.includes(r))
+          ? [{ label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge }]
+          : []),
         ...(isReceptionist(session.roles) ? [
           { label: 'Reception Home', href: '/reception/home', icon: ClipboardList },
           { label: 'Missing Documents', href: '/reception/missing-documents', icon: FileText },
           { label: 'Walk-in Submission', href: '/reception/walk-in', icon: Plus },
         ] : []),
-        { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
-        ...(isFactFindingOfficer(session.roles) ? [{ label: 'Department Queue', href: '/fact-finding/department', icon: ClipboardList }] : []),
-        { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge },
+        ...(isFactFindingOfficer(session.roles) ? [
+          { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
+          { label: 'Department Queue', href: '/fact-finding/department', icon: ClipboardList },
+        ] : []),
+        ...(canReview ? [{ label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge }] : []),
         ...(isInnovationCoordinator(session.roles) ? [
           { label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow },
           { label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight },
         ] : []),
-        { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: routingBadge },
-        { label: 'Refinement', href: '/refinement', icon: Workflow, badge: refinementBadge },
       ],
     },
-    {
-      heading: 'OPERATIONS',
+    ...(isMultimedia ? [{
+      heading: 'MULTIMEDIA OPERATIONS',
       items: [
-        { label: 'Facilities & Bookings', href: '/operations/facilities', icon: Building2 },
-        { label: 'Assets & Equipment', href: '/operations/assets', icon: Wrench },
         { label: 'Training & Mentorship', href: '/multimedia/training', icon: GraduationCap },
         { label: 'Media Services', href: '/multimedia/media', icon: Video },
       ],
-    },
+    }] : []),
     ...(textileLinks.length > 0 ? [{
       heading: 'TEXTILE OPERATIONS',
       items: textileLinks,
@@ -190,22 +186,23 @@ export function BackendWorkspace({
       heading: 'TELECOMS OPERATIONS',
       items: telecomsLinks,
     }] : []),
-    {
+    ...(isFinance ? [{
       heading: 'FINANCE & PARTNERS',
       items: [
         { label: 'Price Lists & Invoices', href: '/finance/invoices', icon: Receipt },
         { label: 'Partners & MOUs', href: '/partners', icon: Handshake },
       ],
-    },
-    {
+    }] : []),
+    ...(isAdministrator ? [{
       heading: 'MANAGEMENT',
       items: [
         { label: 'Overview', href: '/', icon: LayoutDashboard },
-        { label: 'Reports & Analytics', href: '/reports', icon: BarChart3 },
-        { label: 'Activity History', href: '/activity', icon: Activity },
-        ...(isAdministrator ? [{ label: 'Settings', href: '/management', icon: Settings2 }] : []),
+        { label: 'All Submissions', href: '/submissions', icon: Boxes },
+        { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
+        { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
+        { label: 'Settings', href: '/management', icon: Settings2 },
       ],
-    },
+    }] : []),
   ];
 
   const navGroups = isTelecoms ? telecomsNavGroups : standardNavGroups;
@@ -273,8 +270,7 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
-    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
+    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
@@ -366,28 +362,9 @@ export function BackendWorkspace({
         )}
 
         {!collapsed && (
-          <div
-            style={{
-              margin: '12px 4px',
-              padding: '10px 12px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.09)',
-              borderRadius: '7px',
-              color: '#d6dfd7',
-              fontSize: '10px',
-              fontWeight: 700,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d7ef67', display: 'inline-block' }} />
-              <span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span>
-            </div>
-            <small style={{ display: 'block', fontSize: '9px', color: '#9db2a2', marginTop: '3px', fontWeight: 500 }}>
-              {isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}
-            </small>
           <div className="live-sidebar-notice">
-            <div><span className="dot" /><span>Demonstration workspace</span></div>
-            <small>Role-based prototype · sample data</small>
+            <div><span className="dot" /><span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span></div>
+            <small>{isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}</small>
           </div>
         )}
 
@@ -410,10 +387,7 @@ export function BackendWorkspace({
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
             <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
-            <span>Workspace</span>
-            <i>‹</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
@@ -476,7 +450,7 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
-            {mayCreateSubmission && (
+            {mayCreateSubmission && !isTelecoms && (
               <Link
                 to="/submissions/new"
                 className="top-register"
@@ -486,25 +460,6 @@ export function BackendWorkspace({
                 <span className="register-plus">+</span>
               </Link>
             )}
-            {!isTelecoms && (
-              <Link
-                to="/submissions/new"
-                className="top-register"
-                style={{ borderRadius: '9999px' }}
-                data-testid="link-register-top"
-              >
-                <span>Register submission</span>
-                <span className="register-plus">+</span>
-              </Link>
-            )}
-            <Link
-              to="/submissions/new"
-              className="top-register"
-              data-testid="link-register-top"
-            >
-              <span>Register submission</span>
-              <span className="register-plus">+</span>
-            </Link>
           </div>
         </header>
         <main className="live-content">{children}</main>

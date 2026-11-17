@@ -82,315 +82,71 @@ export function MediaServicesPage({ token }) {
   };
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Eyebrow & Title Area */}
-      <div style={{ marginBottom: '32px' }}>
-        <p
-          style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            letterSpacing: '0.14em',
-            color: '#1b5e43',
-            textTransform: 'uppercase',
-            margin: '0 0 8px 0',
-          }}
-        >
-          OPERATIONS
-        </p>
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(28px, 3.5vw, 34px)',
-            lineHeight: 1.15,
-            fontWeight: 600,
-            color: '#16221a',
-            margin: '0 0 8px 0',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Media Services
-        </h1>
-        <p
-          style={{
-            fontSize: '13px',
-            color: '#7a847b',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          Podcast, photography, filming and production requests from intake to delivery.
-        </p>
+    <div className="live-page page-enter">
+      <div className="live-page-heading">
+        <div>
+          <p className="eyebrow">OPERATIONS</p>
+          <h1>Media Services</h1>
+          <p>Podcast, photography, filming and production requests from intake to delivery.</p>
+        </div>
       </div>
 
-      {/* 4-column Kanban Grid */}
-      <section className="media-board-grid" aria-label="Media Services Kanban board">
+      <section className="ops-board" aria-label="Media Services Kanban board">
         {COLUMNS.map((column) => {
           const items = allRequests.filter((item) => item.status === column.key);
-          const count = items.length;
-
           return (
-            <div
-              key={column.key}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-              }}
-            >
-              {/* Column Header */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '16px',
-                  paddingLeft: '2px',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: '#7a847b',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {column.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    color: '#8c958d',
-                  }}
-                >
-                  {count}
-                </span>
+            <div key={column.key} className="ops-column">
+              <div className="ops-column-head">
+                <b>{column.label}</b>
+                <span>{items.length}</span>
               </div>
-
-              {/* Cards list */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}
-              >
-                {items.map((item) => (
-                  <article
-                    key={item.id}
-                    data-testid={`media-card-${item.id}`}
-                    onClick={() => setSelectedRequest(item)}
-                    className="media-card"
-                  >
-                    <h2
-                      style={{
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#16221a',
-                        margin: '0 0 10px 0',
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {item.title}
-                    </h2>
-
-                    <p
-                      style={{
-                        fontSize: '12px',
-                        color: '#7a847b',
-                        margin: '0 0 3px 0',
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {item.studio && item.studio.trim() ? item.studio : '—'}
-                    </p>
-
-                    <p
-                      style={{
-                        fontSize: '12px',
-                        color: '#7a847b',
-                        margin: 0,
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {item.assignee}
-                    </p>
-                  </article>
-                ))}
-              </div>
+              {items.length === 0 && <p className="ops-column-empty">Nothing here.</p>}
+              {items.map((item) => (
+                <article
+                  key={item.id}
+                  data-testid={`media-card-${item.id}`}
+                  onClick={() => setSelectedRequest(item)}
+                  className="ops-card"
+                >
+                  <h2>{item.title}</h2>
+                  <p>{item.studio && item.studio.trim() ? item.studio : '—'}</p>
+                  <p>{item.assignee}</p>
+                </article>
+              ))}
             </div>
           );
         })}
       </section>
 
-      {/* Interactive Media Request Detail Modal */}
       {selectedRequest && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '16px',
-          }}
-          onClick={() => setSelectedRequest(null)}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '520px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}
-            >
+        <div role="dialog" aria-modal="true" className="ops-modal-overlay" onClick={() => setSelectedRequest(null)}>
+          <div className="ops-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="ops-modal-head">
               <div>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    color: '#1b5e43',
-                    marginBottom: '4px',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  Media Request
-                </span>
-                <h3
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: '22px',
-                    fontWeight: 600,
-                    margin: 0,
-                    color: '#16221a',
-                  }}
-                >
-                  {selectedRequest.title}
-                </h3>
+                <span className="ops-modal-eyebrow">Media Request</span>
+                <h3>{selectedRequest.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedRequest(null)}
-                style={{
-                  border: 'none',
-                  background: '#f2f4ee',
-                  borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#414842',
-                }}
-              >
+              <button type="button" onClick={() => setSelectedRequest(null)} className="ops-modal-close" aria-label="Close">
                 <X size={16} />
               </button>
             </div>
 
-            <div
-              style={{
-                background: '#fafbfa',
-                borderRadius: '12px',
-                padding: '14px',
-                border: '1px solid #eef0eb',
-                marginBottom: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <User size={14} color="#7a847b" />
-                <span>
-                  <strong>Assignee:</strong> {selectedRequest.assignee}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <MapPin size={14} color="#7a847b" />
-                <span>
-                  <strong>Studio / Venue:</strong> {selectedRequest.studio || '—'}
-                </span>
-              </div>
+            <div className="ops-modal-facts">
+              <div className="ops-modal-fact"><User size={14} color="var(--muted)" /><span><strong>Assignee:</strong> {selectedRequest.assignee}</span></div>
+              <div className="ops-modal-fact"><MapPin size={14} color="var(--muted)" /><span><strong>Studio / Venue:</strong> {selectedRequest.studio || '—'}</span></div>
               {selectedRequest.date && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                  <Calendar size={14} color="#7a847b" />
-                  <span>
-                    <strong>Scheduled Slot:</strong> {selectedRequest.date}
-                  </span>
-                </div>
+                <div className="ops-modal-fact"><Calendar size={14} color="var(--muted)" /><span><strong>Scheduled Slot:</strong> {selectedRequest.date}</span></div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <FileText size={14} color="#7a847b" />
-                <span>
-                  <strong>Stage:</strong> {selectedRequest.status.replace('_', ' ')}
-                </span>
-              </div>
+              <div className="ops-modal-fact"><FileText size={14} color="var(--muted)" /><span><strong>Stage:</strong> {selectedRequest.status.replace('_', ' ')}</span></div>
             </div>
 
-            {selectedRequest.description && (
-              <p style={{ fontSize: '12px', color: '#555e56', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-                {selectedRequest.description}
-              </p>
-            )}
+            {selectedRequest.description && <p className="ops-modal-desc">{selectedRequest.description}</p>}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedRequest(null)}
-                style={{
-                  background: '#eef0ea',
-                  color: '#414842',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '8px 16px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Close
-              </button>
-
+            <div className="ops-modal-actions">
+              <button type="button" className="btn btn-outline" onClick={() => setSelectedRequest(null)}>Close</button>
               {selectedRequest.status !== 'DELIVERED' && (
-                <button
-                  type="button"
-                  onClick={() => handleAdvanceStatus(selectedRequest)}
-                  style={{
-                    background: '#1b5e43',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '9999px',
-                    padding: '8px 16px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span>Advance Stage</span>
-                  <ArrowRight size={14} />
+                <button type="button" className="btn btn-primary" onClick={() => handleAdvanceStatus(selectedRequest)}>
+                  Advance Stage<ArrowRight size={14} />
                 </button>
               )}
             </div>

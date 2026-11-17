@@ -122,9 +122,7 @@ export function PartnersMousPage({ token, roles = [] }) {
     notes: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const canCreatePartner = roles.some((role) =>
-    ['ROLE_ADMINISTRATOR', 'ROLE_DEPARTMENT_COORDINATOR'].includes(role),
-  );
+  const canCreatePartner = roles.includes('ROLE_FINANCE_OFFICER');
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPartners = overview?.partners.filter((partner) => {
     if (!normalizedSearch) return true;
