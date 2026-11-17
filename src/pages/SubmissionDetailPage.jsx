@@ -154,28 +154,50 @@ export function SubmissionDetailPage({
   if (!caseFile) return <div className="live-page"><Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
 
   const submission = caseFile.submission;
+  const caseReference = caseFile.reference || submission.code || 'DRAFT';
+  const categoryLabel = submission.category === 'student' ? 'Student project' : 'General innovation';
+  const receivedLabel = submission.receivedAt
+    ? `Received ${formatDate(submission.receivedAt)}`
+    : 'Awaiting intake';
+  const reviewerTeam = Array.isArray(caseFile.reviewPanel?.reviewerTeam)
+    ? caseFile.reviewPanel.reviewerTeam
+    : [];
+  const ipPanel = Array.isArray(caseFile.reviewPanel?.ipPanel)
+    ? caseFile.reviewPanel.ipPanel
+    : null;
+  const completedStepCount = caseFile.stepper.filter((step) => step.state === 'COMPLETE').length;
+  const nextStepIndex = caseFile.stepper.findIndex((step) => step.state === 'UPCOMING');
   const disabledCapabilities = [
     { label: 'Next step', capability: caseFile.capabilities.nextStep },
     { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
     { label: 'Update document status', capability: caseFile.capabilities.updateDocumentStatus },
   ].filter(({ capability }) => !capability.enabled && capability.reason);
   return (
-    <div className="live-page page-enter">
-      <Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>
-      <div className="live-page-heading detail-heading">
-        <div><p className="eyebrow">CASE FILE · {caseFile.reference || submission.code || 'DRAFT'}</p><h1>{submission.title}</h1><p>{submission.category === 'student' ? 'Student project' : 'General innovation'} · Received {submission.receivedAt ? formatDate(submission.receivedAt) : 'not yet'}</p></div>
-        <div className="detail-heading-actions">
+    <div className="live-page page-enter case-detail-page">
+      <Link to={backHref} className="back-link case-detail-back-link"><ArrowLeft size={15} />{backLabel}</Link>
+      <header className="case-hero">
+        <div className="case-hero-copy">
+          <p className="case-hero-kicker"><span />CASE FILE <i>{caseReference}</i></p>
+          <h1>{submission.title}</h1>
+          <p className="case-hero-description">Here’s the idea, its journey, and what comes next.</p>
+          <div className="case-hero-meta">
+            <span>{categoryLabel}</span>
+            <span>{receivedLabel}</span>
+          </div>
+        </div>
+        <div className="case-hero-actions">
+          <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
           {(caseFile.reference || submission.code) && <button className="btn btn-outline" onClick={async () => {
             try {
-              await navigator.clipboard.writeText(caseFile.reference || submission.code || '');
+              await navigator.clipboard.writeText(caseReference);
               setCopyFeedback('Reference copied.');
             } catch {
               setError('Could not copy the reference. Copy it directly from the case heading.');
             }
           }}><Copy size={14} />Copy reference</button>}
-          <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
         </div>
-      </div>
+        <span className="case-hero-decoration" aria-hidden="true" />
+      </header>
       {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
@@ -187,20 +209,37 @@ export function SubmissionDetailPage({
           </div>
         </section>
       )}
-      {disabledCapabilities.length > 0 && <section className="live-panel capability-notice" aria-label="Case permissions">
+      {disabledCapabilities.length > 0 && !session.roles.includes('ROLE_SUBMITTER') && <section className="live-panel capability-notice" aria-label="Case permissions">
         <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
         {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
         <ul>{disabledCapabilities.map(({ label, capability }) => <li key={label}><b>{label}:</b> {capability.reason}</li>)}</ul>
       </section>}
-      {caseFile.stepper.length > 0 && <section className="live-panel case-stepper" aria-label="Case progress">
-        <p className="eyebrow">PIPELINE PROGRESS</p>
-        <ol>{caseFile.stepper.map((step) => <li className={`step-${step.state.toLowerCase()}`} key={step.stage}>
-          <span>{step.state === 'COMPLETE' ? '✓' : ''}</span><b>{formatStage(step.stage)}</b>
-        </li>)}</ol>
+      {caseFile.stepper.length > 0 && <section className="live-panel case-stepper case-pipeline" aria-label="Pipeline progress">
+        <div className="case-pipeline-heading">
+          <div>
+            <p className="eyebrow">PIPELINE PROGRESS</p>
+            <h2>Your idea, in motion</h2>
+            <p>Every milestone, from first review to what comes next.</p>
+          </div>
+          <div className="case-pipeline-current">
+            <small>Current stage</small>
+            <strong>{formatStage(submission.stage)}</strong>
+            <span>{completedStepCount} of {caseFile.stepper.length} milestones complete</span>
+          </div>
+        </div>
+        <div className="case-journey-scroll" tabIndex={0} aria-label="Pipeline stages">
+          <ol className="case-journey">{caseFile.stepper.map((step, index) => <li className={`step-${step.state.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.state === 'CURRENT' ? 'step' : undefined}>
+            <span className="case-journey-node">{step.state === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
+            <div className="case-journey-copy">
+              <b>{formatStage(step.stage)}</b>
+              <span>{step.state === 'COMPLETE' ? 'Completed' : step.state === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
+            </div>
+          </li>)}</ol>
+        </div>
       </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
-          <div className="live-panel-heading"><div><p className="eyebrow">SUBMISSION</p><h2>Project summary</h2></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
+          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2><p className="case-section-note">The details behind this brief.</p></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
           <div className="case-fields">
             <Field label="Purpose" value={submission.purpose} />
             <Field label="Problem addressed" value={submission.problemAddressed} />
@@ -275,8 +314,8 @@ export function SubmissionDetailPage({
             <div className="live-panel-heading"><div><p className="eyebrow">REVIEW PANEL</p><h2>Reviewers & IP</h2></div></div>
             {caseFile.reviewPanel.availability === 'AVAILABLE' ? <>
               <Field label="Reviewer quorum" value={caseFile.reviewPanel.quorumMet ? 'Met' : caseFile.reviewPanel.quorumAvailable ? 'Not met' : 'Unavailable'} />
-              <Field label="Reviewer team" value={caseFile.reviewPanel.reviewerTeam.join(', ') || 'No reviewers assigned'} />
-              <Field label="IP panel" value={caseFile.reviewPanel.ipPanel.join(', ') || 'No IP panel assigned'} />
+              <Field label="Reviewer team" value={reviewerTeam.join(', ') || 'No reviewers assigned'} />
+              {ipPanel && <Field label="IP panel" value={ipPanel.join(', ') || 'No IP panel assigned'} />}
             </> : <p className="live-note">Reviewer and IP panel integration is not configured.</p>}
           </section>}
           {caseFile.activity && <section className="live-panel">
@@ -300,7 +339,6 @@ export function SubmissionDetailPage({
           </section>
         </aside>
       </div>
-      <p className="case-version">Record version {submission.version} · Your permissions are checked by the backend.</p>
     </div>
   );
 }

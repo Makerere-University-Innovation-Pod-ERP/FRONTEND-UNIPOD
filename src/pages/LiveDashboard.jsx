@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, CircleAlert, LoaderCircle, Plus, RefreshCw } 
 import { Link } from 'react-router-dom';
 import { SubmissionRows } from '@/components/SubmissionRows';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { canCreateSubmission } from '@/lib/auth';
 import { formatStage } from '@/lib/presentation';
 
 const PIPELINE_STAGES = [
@@ -56,7 +56,7 @@ export function LiveDashboard({
         <div><p className="eyebrow">MUTIC ERP · OVERVIEW</p><h1>Good work starts here.</h1><p>Your role-scoped view of submissions, workflow and cases needing attention.</p></div>
         <div className="heading-actions">
           <button className="btn btn-outline" onClick={() => { setLoading(true); setError(''); void load(); }} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''} />Refresh</button>
-          {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
+          {canCreateSubmission(roles) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
         </div>
       </div>
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}

@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown,
+  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft, ChevronRight,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
+  List, LogOut, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
   List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
@@ -10,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { canCreateSubmission, displayRole } from '@/lib/auth';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
 import { displayRole } from '@/lib/auth';
 import {
@@ -92,12 +94,14 @@ export function BackendWorkspace({
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
+  const mayCreateSubmission = canCreateSubmission(session.roles);
 
   // Dynamic logic badges derived from live dashboard / pipeline stage counts
   const { data: dashboard } = useQuery({
     queryKey: ['dashboard', 'overview'],
     queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
     staleTime: 1000 * 30,
+    enabled: isAdministrator || isInnovationCoordinator(session.roles),
   });
 
   const stageCounts = dashboard?.byStage ?? {};
@@ -291,6 +295,26 @@ export function BackendWorkspace({
               </>
             )}
           </Link>
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+          </button>
+          <button
+            type="button"
+            className="mobile-edge-nav-toggle"
+            onClick={() => setMobileOpen((value) => !value)}
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            title={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
+          </button>
         </div>
 
         {textileOnly ? (
@@ -380,26 +404,6 @@ export function BackendWorkspace({
           </button>
         </div>
       </aside>
-      <button
-        type="button"
-        className="sidebar-collapse"
-        onClick={() => setCollapsed((value) => !value)}
-        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        aria-expanded={!collapsed}
-      >
-        <Menu size={17} />
-      </button>
-      <button
-        type="button"
-        className="mobile-edge-nav-toggle"
-        onClick={() => setMobileOpen((value) => !value)}
-        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-        title={mobileOpen ? 'Close navigation' : 'Open navigation'}
-        aria-expanded={mobileOpen}
-      >
-        <Menu size={19} />
-      </button>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
         <header className="live-topbar">
@@ -409,7 +413,7 @@ export function BackendWorkspace({
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
             <span>Workspace</span>
             <i>‹</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
@@ -472,6 +476,16 @@ export function BackendWorkspace({
                 </div>
               )}
             </div>
+            {mayCreateSubmission && (
+              <Link
+                to="/submissions/new"
+                className="top-register"
+                data-testid="link-register-top"
+              >
+                <span>{isSubmitter ? 'Submit an idea' : 'Register submission'}</span>
+                <span className="register-plus">+</span>
+              </Link>
+            )}
             {!isTelecoms && (
               <Link
                 to="/submissions/new"
@@ -494,7 +508,7 @@ export function BackendWorkspace({
           </div>
         </header>
         <main className="live-content">{children}</main>
-        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span><Activity size={12} /> Live data from the backend</span></footer>
+        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span></span></footer>
       </div>
       {searchOpen && <div className="case-search-overlay" onMouseDown={(event) => {
         if (event.target === event.currentTarget) {

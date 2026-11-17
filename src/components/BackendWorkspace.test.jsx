@@ -14,12 +14,12 @@ const session = {
   roles: ['ROLE_FACT_FINDING_OFFICER'],
 };
 
-function renderShell() {
+function renderShell(currentSession = session) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <BackendWorkspace session={session} health="online" onLogout={vi.fn()}>
+        <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
           <p>Page content</p>
         </BackendWorkspace>
       </MemoryRouter>
@@ -35,24 +35,35 @@ describe('BackendWorkspace', () => {
     expect(sidebar).not.toHaveClass('collapsed');
 
     const collapseToggle = screen.getByRole('button', { name: /collapse navigation/i });
-    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-menu');
+    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
     await user.click(collapseToggle);
     expect(sidebar).toHaveClass('collapsed');
 
-    await user.click(screen.getByRole('button', { name: /expand navigation/i }));
+    const expandToggle = screen.getByRole('button', { name: /expand navigation/i });
+    expect(expandToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
+    await user.click(expandToggle);
     expect(sidebar).not.toHaveClass('collapsed');
   });
 
-  it('moves the mobile menu toggle out of the top bar and keeps it functional at the edge', async () => {
+  it('shows submitters the submission registration action', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
+
+    expect(screen.getByRole('link', { name: /submit an idea/i })).toHaveAttribute('href', '/submissions/new');
+  });
+
+  it('keeps the mobile menu toggle beside the brand and opens the sidebar', async () => {
     const user = userEvent.setup();
     const { container } = renderShell();
 
     expect(container.querySelector('.live-topbar .mobile-nav-toggle')).toBeNull();
     const menuToggle = screen.getByRole('button', { name: 'Open navigation' });
     expect(menuToggle).toHaveClass('mobile-edge-nav-toggle');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
+    expect(container.querySelector('.live-brand')).toContainElement(menuToggle);
 
     await user.click(menuToggle);
     expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
     expect(container.querySelector('.live-sidebar')).toHaveClass('mobile-open');
   });
 

@@ -5,6 +5,14 @@ export const SUBMISSION_INTAKE_ROLES = [
   'ROLE_RECEPTIONIST',
   'ROLE_FACT_FINDING_OFFICER',
 ];
+export const SUBMISSION_CREATION_ROLES = [
+  ...SUBMISSION_INTAKE_ROLES,
+  'ROLE_SUBMITTER',
+];
+
+export function canCreateSubmission(roles) {
+  return roles.some((role) => SUBMISSION_CREATION_ROLES.includes(role));
+}
 
 function decodePayload(token) {
   try {

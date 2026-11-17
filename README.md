@@ -156,6 +156,12 @@ from `GET /operations/partners/overview`. It does not seed or substitute
 fixture data: while the request is pending it shows a loading state, and if the
 backend request fails it shows the error and a retry action.
 
+Administrators and department coordinators can create partners with
+`POST /operations/partners`. They can record an MOU renewal with
+`PUT /operations/partners/{id}/mou`, including the new ISO-format `renewalDate`
+and an optional `documentReference`. Leaving the reference blank clears any
+previous saved reference.
+
 ### Administrator user and access management
 
 The administrator screen at `/management` supports staff account creation,

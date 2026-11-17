@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
-import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import {
+  clearSession,
+  canCreateSubmission,
+  createSession,
+  loadSession,
+  saveSession,
+  SUBMISSION_INTAKE_ROLES,
+} from '@/lib/auth';
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
@@ -127,6 +134,7 @@ function AuthenticatedApp({
   const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
   const canReception = isReceptionist(session.roles);
+  const mayCreateSubmission = canCreateSubmission(session.roles);
   const reception = (Page) => (canReception
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="The Reception screens are only available to reception staff." />);
@@ -183,10 +191,10 @@ function AuthenticatedApp({
           <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
           <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -199,8 +207,8 @@ function AuthenticatedApp({
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
-          <Route path="/submissions/new" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot create submissions." />} />
-          <Route path="/submissions/new/confirmation" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <BriefSubmittedPage /> : <AccessRestricted label="Your account cannot create submissions." />} />
+          <Route path="/submissions/new" element={mayCreateSubmission ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
+          <Route path="/submissions/new/confirmation" element={mayCreateSubmission ? <BriefSubmittedPage isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
           <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           {/* Reception (Assignment 3 - Peter Arnold Mukasa) */}
