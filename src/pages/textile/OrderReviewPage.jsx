@@ -9,7 +9,8 @@ import { formatDate } from '@/lib/presentation';
 import {
   useOrderTransition, usePriceList, useRequestDetails, useSendBack, useSendQuote, useStock, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
+import { DemoPaymentButton } from './DemoPaymentButton';
 import { useUnauthorizedRedirect } from './helpers';
 
 export function OrderReviewPage({ token, onUnauthorized }) {
@@ -116,7 +117,9 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
       ? 'Enter a quantity to price.'
       : !expectedCompletion
         ? 'Set an expected completion date.'
-        : materials.length === 0
+        : expectedCompletion < todayIso()
+          ? 'The expected completion date cannot be in the past.'
+          : materials.length === 0
           ? 'Add at least one estimated material.'
           : shortfall
             ? 'Not enough stock for every material — receive stock or ask the customer first.'
@@ -147,7 +150,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
           <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
           <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
           <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-          <div><dt>Reference photo</dt><dd>{order.photo?.name ?? 'None'}</dd></div>
+          <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
         </dl>
         {order.status === 'AWAITING_DETAILS' && (
           <p className="tx-inline-note">Waiting for the customer: {order.history.at(-1)?.note}</p>
@@ -198,7 +201,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
                 <input type="number" min="1" step="1" value={priceQuantity} onChange={(event) => setPriceQuantity(Number(event.target.value))} />
               </label>
               <label>Expected completion
-                <input type="date" value={expectedCompletion} onChange={(event) => setExpectedCompletion(event.target.value)} />
+                <input type="date" min={todayIso()} value={expectedCompletion} onChange={(event) => setExpectedCompletion(event.target.value)} />
               </label>
             </div>
             {lateForCustomer && <p className="tx-quote-warn">Completes after the customer’s date needed ({formatDate(order.dateNeeded)}).</p>}
@@ -217,6 +220,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
               Finance confirms payment against reference <b>{order.code}</b>
               {order.payment.reference ? ` (payment ${order.payment.reference})` : ''}. The order reaches Scheduled only after that.
             </p>
+            <DemoPaymentButton token={token} order={order} />
           </div>
         )}
 

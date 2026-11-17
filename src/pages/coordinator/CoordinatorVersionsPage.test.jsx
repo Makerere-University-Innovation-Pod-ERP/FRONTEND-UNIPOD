@@ -43,8 +43,11 @@ describe('CoordinatorVersionsPage — reading', () => {
   it('shows the brief summary and how many versions are on record', async () => {
     renderVersions();
     expect(await screen.findByText('Maternal Health Follow-up Platform')).toBeInTheDocument();
-    expect(screen.getByText('Brian Ssekandi')).toBeInTheDocument();
-    expect(screen.getByText('v2')).toBeInTheDocument();
+    // The submitter's name and the version number also appear per-entry in
+    // the version history further down the page — scope to the summary panel.
+    const summary = screen.getByText('Applicant').closest('section');
+    expect(within(summary).getByText('Brian Ssekandi')).toBeInTheDocument();
+    expect(within(summary).getByText('v2')).toBeInTheDocument();
   });
 
   it('compares the latest two versions side by side by default', async () => {

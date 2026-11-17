@@ -113,7 +113,11 @@ describe('CoordinatorDecisionPage', () => {
 
   it('saves a needs-more-improvement outcome without generating a code', async () => {
     const user = userEvent.setup();
-    renderDecision();
+    // A different brief than the default (IH-26024, UNDER_REVIEW, 1 of 1
+    // review complete) — the "generates and displays the project code"
+    // test above genuinely records a decision against IH-26024, which
+    // persists in the shared in-memory fixture for the rest of this file.
+    renderDecision('/coordinator/briefs/IH-26028/decision');
     await user.click(await screen.findByRole('radio', { name: /Needs more improvement/ }));
     await user.click(screen.getByRole('button', { name: /save decision/i }));
     expect(await screen.findByText('The decision has been recorded.')).toBeInTheDocument();

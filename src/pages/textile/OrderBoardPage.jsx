@@ -1,15 +1,33 @@
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { groupOrdersByColumn } from '@/lib/textile';
+import { collectionDeadline, groupOrdersByColumn, isOrderOverdue, todayIso } from '@/lib/textile';
+import { formatDate } from '@/lib/presentation';
 import { useTextileOrders } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, StatusDot } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
+
+/** Overdue flag for unfinished work, and the collection countdown for Ready orders. */
+function DeadlineTags({ order, today }) {
+  const collection = collectionDeadline(order, today);
+  if (isOrderOverdue(order, today)) return <span className="tx-card-tags"><StatusDot tone="danger">Overdue</StatusDot></span>;
+  if (collection?.warn) {
+    return (
+      <span className="tx-card-tags">
+        <StatusDot tone={collection.daysLeft < 0 ? 'danger' : 'attention'}>
+          {collection.daysLeft < 0 ? 'Collection limit passed' : `Collect by ${formatDate(collection.deadline)}`}
+        </StatusDot>
+      </span>
+    );
+  }
+  return null;
+}
 
 export function OrderBoardPage({ token, onUnauthorized }) {
   const orders = useTextileOrders(token);
   useUnauthorizedRedirect(onUnauthorized, orders.error);
   const columns = groupOrdersByColumn(orders.data ?? []);
   const sentBack = (orders.data ?? []).filter((order) => order.status === 'RETURNED').length;
+  const today = todayIso();
 
   return (
     <div className="live-page page-enter">
@@ -33,6 +51,8 @@ export function OrderBoardPage({ token, onUnauthorized }) {
                   <b>{order.whatIsWanted}</b>
                   <small className="tx-mono">{order.code}</small>
                   <small>{order.customerName} · {order.customerType}</small>
+                  {order.dateNeeded && <small>Needed {formatDate(order.dateNeeded)}</small>}
+                  <DeadlineTags order={order} today={today} />
                   {column.id === 'new' && order.status !== 'NEW' && (
                     <span className="tx-card-tags">
                       {order.status === 'QUOTED' ? <PaymentStatus status={order.payment.status} /> : <OrderStatus status={order.status} />}

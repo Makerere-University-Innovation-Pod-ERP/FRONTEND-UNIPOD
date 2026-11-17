@@ -128,7 +128,7 @@ describe('review progress', () => {
   it('phrases the progress line', () => {
     expect(reviewProgressLabel(panel(2, 1))).toBe('1 of 2 reviews done');
     expect(reviewProgressLabel(panel(1, 1))).toBe('1 of 1 review done');
-    expect(reviewProgressLabel(panel(0, 0))).toBe('No reviewers assigned yet.');
+    expect(reviewProgressLabel(panel(0, 0))).toBe('Awaiting reviewer assignment.');
   });
 
   it('explains why the decision is locked', () => {

@@ -244,6 +244,22 @@ export const textileHandlers = [
     return HttpResponse.json(order);
   }),
 
+  /*
+   * DEMO ONLY — not part of the /textile contract and never sent to the real
+   * backend. Stands in for the shared Finance screens (Assignment 6), which
+   * confirm payment against the order code, so a quoted order can be taken
+   * through Scheduled → Collected in mock mode.
+   */
+  http.post(`${API_BASE_URL}/__demo__/finance/confirm-payment`, async ({ request }) => {
+    const { orderId } = await request.json();
+    const order = findOrder(orderId);
+    if (!order) return problem(404, 'Order not found.');
+    if (order.status !== ORDER_STATUS.QUOTED) return problem(409, 'Only a quoted order can have its payment confirmed.');
+    order.payment = { status: 'CONFIRMED', reference: `FIN-DEMO-${order.code?.slice(-3) ?? '000'}`, confirmedAt: now() };
+    order.updatedAt = now();
+    return HttpResponse.json(order);
+  }),
+
   http.get(`${base}/price-list`, () => HttpResponse.json({ items: priceList })),
 
   http.get(`${base}/stock`, () => {
@@ -354,6 +370,17 @@ export const textileHandlers = [
     };
     bookings.push(booking);
     return HttpResponse.json(booking, { status: 201 });
+  }),
+
+  http.post(`${base}/bookings/:id/cancel`, async ({ params, request }) => {
+    const booking = bookings.find((candidate) => candidate.id === params.id);
+    if (!booking) return problem(404, 'Booking not found.');
+    if (booking.status === 'CANCELLED') return problem(409, 'This booking is already cancelled.');
+    const { reason } = await request.json();
+    if (!reason?.trim()) return problem(400, 'Give a reason for cancelling.');
+    booking.status = 'CANCELLED';
+    booking.cancellation = { reason: reason.trim(), by: actor(request), at: now() };
+    return HttpResponse.json(booking);
   }),
 
   http.post(`${base}/bookings/:id/attendees`, async ({ params, request }) => {

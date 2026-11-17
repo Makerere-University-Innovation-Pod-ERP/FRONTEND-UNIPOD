@@ -25,11 +25,11 @@ export const partnerSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.string(),
-  renewalDate: z.string(),
+  renewalDate: z.string().nullable(),
   status: partnerStatusSchema,
-  contactPerson: z.string().optional(),
-  contactEmail: z.string().optional(),
-  notes: z.string().optional(),
+  contactPerson: z.string().nullable().optional(),
+  contactEmail: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const partnersOverviewSchema = z.object({

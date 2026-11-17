@@ -6,6 +6,7 @@ import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAK
 import {
   COORDINATOR_ONLY_REASON,
   isFactFindingOfficer,
+  isReceptionist,
   isInnovationCoordinator,
   isReceptionist,
   isReviewer,
@@ -14,9 +15,10 @@ import {
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
+import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
-import { AdminManagementPage } from '@/pages/AdminManagementPage';
+import { AdminManagementPage } from '@/pages/admin/AdminManagementPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
@@ -74,10 +76,6 @@ const queryClient = new QueryClient();
 // no login, no dashboard, every other route redirects to the order board.
 const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
 const TEXTILE_HOME = '/textile/board';
-
-// Sign up is mock-only for now: the real backend has public registration
-// disabled (Reception QUESTIONS.md, Question 1).
-const SIGN_UP_ENABLED = import.meta.env.VITE_ENABLE_MOCKS === 'true';
 
 async function textileMockSession() {
   const { makeMockToken } = await import('@/mocks/jwt');
@@ -172,6 +170,11 @@ function AuthenticatedApp({
               {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          {TEXTILE_ONLY ? null : <>
+          <Route path="/" element={session.roles.includes('ROLE_SUBMITTER')
+            ? <Navigate to="/my-submissions" replace />
+            : <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
@@ -261,6 +264,10 @@ function App() {
   const [session, setSession] = useState(() => {
     const saved = loadSession();
     return saved || DEFAULT_TELECOMS_SESSION;
+    // In textile-only mode a saved non-textile session would only ever see
+    // "access restricted", so drop it and sign in as the textile owner instead.
+    if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
+    return saved;
   });
   const [health, setHealth] = useState('checking');
   const [showSignUp, setShowSignUp] = useState(false);
@@ -316,8 +323,8 @@ function App() {
   }, [session, acceptSession]);
 
   if (!session && TEXTILE_ONLY) return null;
-  if (!session && SIGN_UP_ENABLED && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} />;
-  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={SIGN_UP_ENABLED ? () => setShowSignUp(true) : undefined} />;
+  if (!session && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} onLogin={acceptSession} />;
+  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={() => setShowSignUp(true)} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 

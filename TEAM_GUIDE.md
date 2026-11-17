@@ -83,7 +83,57 @@ contrast notes, and known CSS gaps.
 - Before opening a PR: `npm run typecheck && npm run lint && npm run build && npm run test` must all pass.
 - A designated maintainer merges into `main` — don't self-merge into `main`.
 
-## 6. Two things the spec doc assumes that this repo does differently
+## 6. Resolving merge conflicts in the shared files
+
+Everyone's branch edits the same handful of files — `src/App.jsx` (routes),
+`src/components/BackendWorkspace.jsx` (sidebar nav), `src/mocks/handlers.js`
+(mock login + API handlers), `src/api.css` (design tokens). Conflicts here
+are expected, not a sign you did something wrong. Two things to know before
+you touch one:
+
+**The rule for all four: keep both sides' additions, never pick one.** A
+conflict here almost never means "mine vs. theirs" — it means "my new route
+*and* their new route both belong in the file." If you see
+`<<<<<<< HEAD` / `=======` / `>>>>>>>`:
+- **Imports**: merge into one import statement per module, dedupe anything
+  listed twice.
+- **Routes in `App.jsx`**: keep every `<Route>` from both sides. Only drop
+  one if it's a genuine duplicate of the exact same path.
+- **`mockUsers` in `handlers.js`**: it must stay **one** object literal.
+  Merge both sides' entries into it; never leave a second `{`/`};` pair
+  floating mid-file — that's valid-*looking* but broken JS (we've hit this
+  twice already).
+- **`:root{}` in `api.css`**: there must be exactly **one** active token
+  block. If you see a second `--forest:`/`--bg:`/etc. definition appear
+  further down in the same file, that's a leftover duplicate from a bad
+  merge, not an intentional override — delete it, don't keep both.
+
+**The dangerous case is the one git *doesn't* flag.** Several real breakages
+this week produced **no conflict markers at all** — git's line-based merge
+"succeeded" but left a second copy of `mockUsers`'s content stranded after
+unrelated code, or two copies of the whole token block concatenated
+together. Git can't always tell that two branches touching different lines
+of the *same logical object* actually collide. So:
+
+> **After every `git pull`, conflict or not, run:**
+> ```bash
+> npm run typecheck && npm run lint && npm run build && npm run test
+> ```
+> Don't skip this when the pull says "already up to date" or merges without
+> a single conflict marker — that's exactly when the silent kind slips through.
+
+If something's broken and you can't see why, check for duplicates directly:
+```bash
+grep -c "const mockUsers" src/mocks/handlers.js   # should be 1
+grep -c "^:root{" src/api.css                     # should match what you expect, not jump up by 1
+grep -c "YourRoleHelperName" src/App.jsx           # should appear once in the import, not twice
+```
+
+If you're stuck, say so rather than force-pushing past it — these exact
+failure modes have already come up and been fixed multiple times, so there's
+a fast path to getting it sorted.
+
+## 7. Two things the spec doc assumes that this repo does differently
 
 - **Tailwind**: the assignment doc says v3/PostCSS; this repo already runs
   **Tailwind v4, CSS-first** (`@tailwindcss/vite`, no `tailwind.config.js`,
@@ -93,7 +143,7 @@ contrast notes, and known CSS gaps.
   (`src/services/api-client.js`) uses `/api` with no version segment. Follow
   what's in `api-client.js`, not the doc's assumed prefix.
 
-## 7. Open items (Section 9 of the assignment doc)
+## 8. Open items (Section 9 of the assignment doc)
 
 Several real-world facts are still unconfirmed by department heads (prices,
 Textile/CNC/Telecoms workflows, review outcome list, whether student podcast

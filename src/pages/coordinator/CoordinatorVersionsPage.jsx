@@ -119,6 +119,12 @@ export function CoordinatorVersionsPage({ token, onUnauthorized }) {
 
 function VersionsView({ token, id, view }) {
   const { brief, versions, rounds, refinement, canRecordVersion, blockedReason } = view;
+  // Lifted above RecordVersionForm: recording a version makes the brief's
+  // refetched data report `canRecordVersion: false` (it's back under
+  // review), which would otherwise swap this component straight to the
+  // "Nothing to record right now" branch before the form's own local
+  // success state ever gets a chance to render.
+  const [justRecorded, setJustRecorded] = useState(null);
 
   return (
     <>
@@ -153,8 +159,10 @@ function VersionsView({ token, id, view }) {
 
       <VersionHistory versions={versions} rounds={rounds} />
 
-      {canRecordVersion ? (
-        <RecordVersionForm token={token} id={id} refinement={refinement} />
+      {justRecorded ? (
+        <RecordedVersion saved={justRecorded} />
+      ) : canRecordVersion ? (
+        <RecordVersionForm token={token} id={id} refinement={refinement} onSaved={setJustRecorded} />
       ) : (
         <section className="live-panel">
           <div className="live-panel-heading">
@@ -405,9 +413,36 @@ function VersionHistory({ versions, rounds }) {
   );
 }
 
-function RecordVersionForm({ token, id, refinement }) {
+function RecordedVersion({ saved }) {
+  return (
+    <section className="live-panel">
+      <div className="live-panel-heading">
+        <div>
+          <p className="eyebrow">IMPROVED VERSION RECORDED</p>
+          <h2>v{saved.brief.versions} is on record</h2>
+        </div>
+        <span className="stage-pill">{formatStage(saved.brief.stage)}</span>
+      </div>
+      <p className="coordinator-success" role="status">
+        <CheckCircle2 size={15} aria-hidden="true" />
+        The brief has returned to review. The previous round is archived against the earlier
+        version.
+      </p>
+      <p className="coordinator-locked-reason" style={{ marginTop: 12 }} role="note">
+        <CircleAlert size={14} aria-hidden="true" />
+        This version is awaiting reviewer assignment — assign reviewers on the brief page.
+      </p>
+      <div className="coordinator-next-step-actions" style={{ marginTop: 12 }}>
+        <Link className="btn btn-primary" to={`/coordinator/briefs/${saved.brief.id}`}>
+          Assign reviewers
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function RecordVersionForm({ token, id, refinement, onSaved }) {
   const recordVersion = useRecordVersion(token, id);
-  const [saved, setSaved] = useState(null);
 
   const {
     register,
@@ -426,38 +461,10 @@ function RecordVersionForm({ token, id, refinement }) {
   const onSubmit = (values) =>
     recordVersion
       .mutateAsync(values)
-      .then((view) => setSaved(view))
+      .then((view) => onSaved(view))
       .catch(() => {
         // Surfaced below; values are kept so it can be resubmitted.
       });
-
-  if (saved) {
-    return (
-      <section className="live-panel">
-        <div className="live-panel-heading">
-          <div>
-            <p className="eyebrow">IMPROVED VERSION RECORDED</p>
-            <h2>v{saved.brief.versions} is on record</h2>
-          </div>
-          <span className="stage-pill">{formatStage(saved.brief.stage)}</span>
-        </div>
-        <p className="coordinator-success" role="status">
-          <CheckCircle2 size={15} aria-hidden="true" />
-          The brief has returned to review. The previous round is archived against the earlier
-          version.
-        </p>
-        <p className="coordinator-locked-reason" style={{ marginTop: 12 }} role="note">
-          <CircleAlert size={14} aria-hidden="true" />
-          This version is awaiting reviewer assignment — assign reviewers on the brief page.
-        </p>
-        <div className="coordinator-next-step-actions" style={{ marginTop: 12 }}>
-          <Link className="btn btn-primary" to={`/coordinator/briefs/${saved.brief.id}`}>
-            Assign reviewers
-          </Link>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <form className="live-panel" onSubmit={handleSubmit(onSubmit)} noValidate>

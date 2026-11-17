@@ -6,8 +6,9 @@ import { formatDate } from '@/lib/presentation';
 import {
   useMachines, useOrderTransition, useRecordCollection, useSaveProduction, useSaveQuality, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
 import { formatDateTime, useUnauthorizedRedirect } from './helpers';
+import { DemoPaymentButton } from './DemoPaymentButton';
 
 const PRODUCTION_STATUSES = ['SCHEDULED', 'BEING_MADE', 'READY', 'COLLECTED'];
 const ignore = () => {};
@@ -60,9 +61,9 @@ function OrderView({ token, order, machines, onUnauthorized }) {
 
       <div className="detail-grid">
         <div className="tx-stack">
-          {inProduction
-            ? <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />
-            : <OrderSummary order={order} />}
+          {/* Always visible: the maker needs the size/design and date while producing. */}
+          <OrderSummary order={order} />
+          {inProduction && <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />}
           {inProduction && <QualityPanel token={token} order={order} onUnauthorized={onUnauthorized} />}
         </div>
         <div className="tx-stack">
@@ -75,6 +76,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
                 <div><dt>Payment</dt><dd><PaymentStatus status={order.payment.status} />{order.payment.reference ? ` ${order.payment.reference}` : ''}</dd></div>
               </dl>
             ) : <p className="live-empty">No quote sent yet.</p>}
+            <DemoPaymentButton token={token} order={order} />
           </section>
           <section className="live-panel">
             <h2 className="tx-panel-title">History</h2>
@@ -102,7 +104,7 @@ function OrderSummary({ order }) {
         <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
         <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
         <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-        <div><dt>Reference photo</dt><dd>{order.photo?.name ?? 'None'}</dd></div>
+        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
       </dl>
     </section>
   );
@@ -238,13 +240,17 @@ export function OrdersIndexPage({ token, onUnauthorized }) {
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · ORDERS" title="Order pages" intro="Open an order to record materials, machine, staff, quality checks and collection." />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" /> : !orders.data?.length ? (
+        <section className="live-panel">
+          <p className="live-empty">No orders yet. <Link to="/textile/orders/new">Create the first order</Link>.</p>
+        </section>
+      ) : (
         <section className="live-panel">
           <div className="live-table-wrap">
             <table className="live-table">
               <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Date needed</th><th>Updated</th></tr></thead>
               <tbody>
-                {(orders.data ?? []).map((order) => (
+                {[...(orders.data ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((order) => (
                   <tr key={order.id}>
                     <td><Link className="case-title" to={`/textile/orders/${encodeURIComponent(order.id)}`}><b>{order.whatIsWanted || 'Untitled order'}</b><small>{order.code ?? 'Draft'}</small></Link></td>
                     <td>{order.customerName} · {order.customerType}</td>

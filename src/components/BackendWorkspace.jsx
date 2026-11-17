@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft,
+  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
   List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -10,8 +11,10 @@ import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { displayRole } from '@/lib/auth';
 import {
   isFactFindingOfficer,
+  isReceptionist,
   isInnovationCoordinator,
   isReceptionist,
   isReviewer,
@@ -21,32 +24,6 @@ import {
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { formatDate } from '@/lib/presentation';
-
-function buildNavigation(roles) {
-  const items = [
-    { label: 'Overview', href: '/', icon: LayoutDashboard },
-    { label: 'Submissions', href: '/submissions', icon: Boxes },
-  ];
-  if (isFactFindingOfficer(roles)) {
-    items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
-    items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
-    items.push({ label: 'Department queue', href: '/fact-finding/department', icon: ClipboardList });
-  }
-  if (isReceptionist(roles)) {
-    items.push({ label: 'Reception Home', href: '/reception/home', icon: ClipboardList });
-    items.push({ label: 'Missing Documents', href: '/reception/missing-documents', icon: FileText });
-    items.push({ label: 'Walk-in Submission', href: '/reception/walk-in', icon: Plus });
-  }
-  if (isReviewer(roles)) {
-    items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
-    items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
-  }
-  if (isInnovationCoordinator(roles)) {
-    items.push({ label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow });
-    items.push({ label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight });
-  }
-  return items;
-}
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
@@ -111,12 +88,8 @@ export function BackendWorkspace({
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const isFinanceRoute = location.includes('/overview') || location.includes('/finance');
-  const effectiveSubject = isFinanceRoute && session.subject === 'Grace Namuli' ? 'Daniel Kato' : session.subject;
-  const effectiveRoles = isFinanceRoute && session.roles.includes('ROLE_DEPARTMENT_COORDINATOR') ? ['ROLE_FINANCE_OFFICER'] : session.roles;
-
-  const name = effectiveSubject.includes('@') ? effectiveSubject.split('@')[0] : effectiveSubject;
-  const role = effectiveRoles[0] ? displayRole(effectiveRoles[0]) : 'Authenticated user';
+  const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
+  const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
 
@@ -180,8 +153,18 @@ export function BackendWorkspace({
       heading: 'INNOVATION PIPELINE',
       items: [
         { label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge },
+        ...(isReceptionist(session.roles) ? [
+          { label: 'Reception Home', href: '/reception/home', icon: ClipboardList },
+          { label: 'Missing Documents', href: '/reception/missing-documents', icon: FileText },
+          { label: 'Walk-in Submission', href: '/reception/walk-in', icon: Plus },
+        ] : []),
         { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
+        ...(isFactFindingOfficer(session.roles) ? [{ label: 'Department Queue', href: '/fact-finding/department', icon: ClipboardList }] : []),
         { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge },
+        ...(isInnovationCoordinator(session.roles) ? [
+          { label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow },
+          { label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight },
+        ] : []),
         { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: routingBadge },
         { label: 'Refinement', href: '/refinement', icon: Workflow, badge: refinementBadge },
       ],
@@ -213,7 +196,7 @@ export function BackendWorkspace({
     {
       heading: 'MANAGEMENT',
       items: [
-        { label: 'Overview', href: '/overview', icon: LayoutDashboard },
+        { label: 'Overview', href: '/', icon: LayoutDashboard },
         { label: 'Reports & Analytics', href: '/reports', icon: BarChart3 },
         { label: 'Activity History', href: '/activity', icon: Activity },
         ...(isAdministrator ? [{ label: 'Settings', href: '/management', icon: Settings2 }] : []),
@@ -287,6 +270,7 @@ export function BackendWorkspace({
 
   return (
     <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
+    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
@@ -298,24 +282,15 @@ export function BackendWorkspace({
             ) : textileOnly ? (
               <>
                 <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
-                <span><b>UNIPOD ERP</b><small>Innovation & Operations</small></span>
+                <span><b>MUTIC ERP</b><small>Textile Operations</small></span>
               </>
             ) : (
               <>
-                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
-                <span><b>UNIPOD ERP</b><small style={{ color: '#9db2a2' }}>Innovation & Operations</small></span>
+                <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
+                <span><b>MUTIC ERP</b><small>Makerere Innovation Center</small></span>
               </>
             )}
           </Link>
-          <button
-            type="button"
-            className="sidebar-collapse"
-            onClick={() => setCollapsed((value) => !value)}
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          >
-            <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
-          </button>
         </div>
 
         {textileOnly ? (
@@ -341,53 +316,26 @@ export function BackendWorkspace({
             ))}
           </nav>
         ) : (
-          <nav className="live-nav" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: '1 1 auto', overflowY: 'auto' }}>
+          <nav className="live-nav" aria-label="Main navigation">
             {navGroups.map((group, groupIdx) => (
-              <div key={groupIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {group.heading && !collapsed && (
-                  <p className="live-nav-heading" style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--sidebar-muted)', padding: '0 11px 5px', margin: 0 }}>
-                    {group.heading}
-                  </p>
+              <div key={groupIdx} className="live-nav-section">
+                {group.heading && (
+                  <p className={`live-nav-heading ${groupIdx > 0 ? 'live-nav-subheading' : ''}`}>{group.heading}</p>
                 )}
-                {group.items.map(({ label, href, icon: Icon, badge }) => {
-                  const isActive = isActiveLink(href, location);
-                  return (
-                    <Link
-                      key={href}
-                      to={href}
-                      title={collapsed ? label : undefined}
-                      onClick={() => setMobileOpen(false)}
-                      className={`live-nav-link ${isActive ? 'active' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: collapsed ? 'center' : 'space-between',
-                        padding: '0 11px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                        <Icon size={16} style={{ flexShrink: 0 }} />
-                        {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
-                      </div>
-                      {!collapsed && badge !== undefined && badge > 0 && (
-                        <span
-                          style={{
-                            background: '#d9f27a',
-                            color: '#21422f',
-                            borderRadius: '10px',
-                            padding: '1px 6px',
-                            fontSize: '9px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            marginLeft: 'auto',
-                          }}
-                        >
-                          {badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+                {group.items.map(({ label, href, icon: Icon, badge }) => (
+                  <Link
+                    key={href}
+                    to={href}
+                    title={collapsed ? label : undefined}
+                    onClick={() => setMobileOpen(false)}
+                    className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                  >
+                    <Icon size={16} /><span>{label}</span>
+                    {badge !== undefined && badge > 0 && (
+                      <em className="live-nav-count" aria-label={`${badge} waiting`}>{badge}</em>
+                    )}
+                  </Link>
+                ))}
               </div>
             ))}
           </nav>
@@ -413,35 +361,55 @@ export function BackendWorkspace({
             <small style={{ display: 'block', fontSize: '9px', color: '#9db2a2', marginTop: '3px', fontWeight: 500 }}>
               {isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}
             </small>
+          <div className="live-sidebar-notice">
+            <div><span className="dot" /><span>Demonstration workspace</span></div>
+            <small>Role-based prototype · sample data</small>
           </div>
         )}
 
-        <div className="live-profile" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 6px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
-            <span className="avatar" style={{ background: '#d7ef67', color: '#17241b', fontWeight: 800 }}>
-              {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
-            </span>
-            <span className="live-profile-copy" style={{ minWidth: 0 }}>
-              <b style={{ color: '#fff', fontSize: '13px', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
-              <small style={{ color: '#9db2a2', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                {role}
-                <ChevronDown size={11} style={{ opacity: 0.7 }} />
-              </small>
-            </span>
-          </div>
-          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out" style={{ color: '#c6d4c9' }}>
+        <div className="live-profile">
+          <span className="avatar">
+            {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+          </span>
+          <span className="live-profile-copy">
+            <b>{name}</b>
+            <small>{role}{!collapsed && <ChevronDown size={11} style={{ opacity: 0.7 }} />}</small>
+          </span>
+          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out">
             <LogOut size={16} />
           </button>
         </div>
       </aside>
+      <button
+        type="button"
+        className="sidebar-collapse"
+        onClick={() => setCollapsed((value) => !value)}
+        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        aria-expanded={!collapsed}
+      >
+        <Menu size={17} />
+      </button>
+      <button
+        type="button"
+        className="mobile-edge-nav-toggle"
+        onClick={() => setMobileOpen((value) => !value)}
+        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        title={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileOpen}
+      >
+        <Menu size={19} />
+      </button>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
-        <header className="live-topbar" style={{ borderBottom: '1px solid #e2e6dc' }}>
-          <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
+        <header className="live-topbar">
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
             <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <span>Workspace</span>
+            <i>‹</i>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
@@ -515,6 +483,14 @@ export function BackendWorkspace({
                 <span className="register-plus">+</span>
               </Link>
             )}
+            <Link
+              to="/submissions/new"
+              className="top-register"
+              data-testid="link-register-top"
+            >
+              <span>Register submission</span>
+              <span className="register-plus">+</span>
+            </Link>
           </div>
         </header>
         <main className="live-content">{children}</main>

@@ -95,7 +95,10 @@ export function areReviewsComplete(panel) {
 
 /** "1 of 2 reviews done" — the coordinator's progress line. */
 export function reviewProgressLabel(panel) {
-  if (!panel || !panel.requiredReviews) return 'No reviewers assigned yet.';
+  // Deliberately distinct wording from the "Reviewer assignments" section's
+  // own empty-state copy ("No reviewers assigned yet.") — this is a status
+  // line, not a list, and the two shouldn't read as the same message twice.
+  if (!panel || !panel.requiredReviews) return 'Awaiting reviewer assignment.';
   const required = Number(panel.requiredReviews);
   const completed = Number(panel.completedReviews ?? 0);
   return `${completed} of ${required} ${required === 1 ? 'review' : 'reviews'} done`;
