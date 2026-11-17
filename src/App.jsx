@@ -15,7 +15,9 @@ import {
   isFactFindingOfficer,
   isReceptionist,
   isInnovationCoordinator,
+  isReceptionist,
   isReviewer,
+  isTelecomsDomainOwner,
   isTextileDomainOwner,
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
@@ -56,6 +58,16 @@ import { StockMovementPage } from '@/pages/textile/StockMovementPage';
 import { MachineListPage } from '@/pages/textile/MachineListPage';
 import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
 import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
+import { NewRequestPage } from '@/pages/telecoms/NewRequestPage';
+import { RequestReviewPage } from '@/pages/telecoms/RequestReviewPage';
+import { RequestBoardPage } from '@/pages/telecoms/RequestBoardPage';
+import { RequestPage, RequestsIndexPage } from '@/pages/telecoms/RequestPage';
+import { LabBookingPage } from '@/pages/telecoms/LabBookingPage';
+import { EquipmentListPage } from '@/pages/telecoms/EquipmentListPage';
+import { EquipmentLendingPage } from '@/pages/telecoms/EquipmentLendingPage';
+import { BootcampSessionsPage } from '@/pages/telecoms/BootcampSessionsPage';
+import { StockListPage as TelecomsStockListPage } from '@/pages/telecoms/StockListPage';
+import { StockMovementPage as TelecomsStockMovementPage } from '@/pages/telecoms/StockMovementPage';
 import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
 import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
 import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
@@ -94,6 +106,20 @@ function OtherModulePage({ title }) {
   );
 }
 
+const DEFAULT_TELECOMS_SESSION = {
+  accessToken: 'mock-telecoms-token',
+  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+  subject: 'Eng. Kaddu',
+  roles: ['ROLE_TELECOMS_DOMAIN_OWNER'],
+};
+
+const DEFAULT_COORDINATOR_SESSION = {
+  accessToken: 'mock-coordinator-token',
+  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+  subject: 'Grace Namuli',
+  roles: ['ROLE_DEPARTMENT_COORDINATOR'],
+};
+
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
 }
@@ -115,12 +141,43 @@ function AuthenticatedApp({
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
+  const canTelecoms = isTelecomsDomainOwner(session.roles) || session.roles.includes('ROLE_ADMINISTRATOR');
+  const telecoms = (Page) => (canTelecoms
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
+
+  const isTelecoms = isTelecomsDomainOwner(session.roles);
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
+          {isTelecoms ? (
+            <>
+              {/* Telecoms Operations (Domain 6: Assignment 11) - Only Telecoms screens */}
+              <Route path="/" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/overview" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+              <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+              <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+              <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+              <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+              <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+              <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+              <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+              <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+              <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+              <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
+              <Route path="*" element={<Navigate to="/telecoms/requests" replace />} />
+            </>
+          ) : (
+            <>
+              {TEXTILE_ONLY ? null : <>
+              {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
+          <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
           {TEXTILE_ONLY ? null : <>
           <Route path="/" element={session.roles.includes('ROLE_SUBMITTER')
             ? <Navigate to="/my-submissions" replace />
@@ -185,11 +242,25 @@ function AuthenticatedApp({
           <Route path="/textile/machines" element={textile(MachineListPage)} />
           <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
           <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {/* Telecoms Operations (Domain 6: Assignment 11) */}
+          <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+          <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+          <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+          <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+          <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+          <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+          <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+          <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+          <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+          <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+          <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
           {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
             <Route key={href} path={href} element={<OtherModulePage title={label} />} />
           ))}
           {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
           {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
+            </>
+          )}
         </Routes>
       </BackendWorkspace>
       </BrowserRouter>
@@ -200,6 +271,7 @@ function AuthenticatedApp({
 function App() {
   const [session, setSession] = useState(() => {
     const saved = loadSession();
+    return saved || DEFAULT_TELECOMS_SESSION;
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
     if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;

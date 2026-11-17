@@ -13,6 +13,7 @@ import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
+import { telecomsHandlers } from './telecoms-handlers';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -22,6 +23,14 @@ const mockUsers = {
   'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
   ...coordinatorMockUsers,
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
+  'submitter@unipod.test': { subject: 'brian.s', roles: ['ROLE_SUBMITTER'] },
+  'textile@unipod.test': { subject: 'Faith Nabwire', roles: ['ROLE_TEXTILE_DOMAIN_OWNER'] },
+  'telecoms@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
+  'telecom@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
+  'kaddu@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
+  'eng.kaddu@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
+  'telecoms': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
+  'telecom': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
   ...receptionMockUsers,
 };
 
@@ -135,7 +144,10 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     const body = await request.json();
-    const account = (body.email && (mockUsers[body.email] ?? registeredMockUsers[body.email.toLowerCase()])) || mockUsers['factfinding@unipod.test'];
+    const rawEmail = (body.email || '').trim().toLowerCase();
+    const account = (rawEmail && (mockUsers[rawEmail] ?? registeredMockUsers[rawEmail]))
+      || mockUsers['telecoms@unipod.test']
+      || mockUsers['factfinding@unipod.test'];
     return HttpResponse.json({
       tokenType: 'Bearer',
       accessToken: makeMockToken(account.roles, account.subject),
@@ -971,4 +983,5 @@ export const handlers = [
     return HttpResponse.json(invoices[index]);
   }),
   ...textileHandlers,
+  ...telecomsHandlers,
 ];

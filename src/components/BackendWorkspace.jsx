@@ -3,6 +3,8 @@ import {
   Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft, ChevronRight,
   CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
   List, LogOut, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -10,10 +12,15 @@ import { useQuery } from '@tanstack/react-query';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { canCreateSubmission, displayRole } from '@/lib/auth';
+import { displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { displayRole } from '@/lib/auth';
 import {
   isFactFindingOfficer,
   isReceptionist,
   isInnovationCoordinator,
+  isReceptionist,
+  isReviewer,
+  isTelecomsDomainOwner,
   isTextileDomainOwner,
 } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
@@ -36,10 +43,30 @@ function buildTextileNavigation(roles) {
   ];
 }
 
+/** Telecoms Operations section (Assignment 11: service requests, lab booking, equipment lending, bootcamps, stock). */
+function buildTelecomsNavigation(roles) {
+  if (!isTelecomsDomainOwner(roles) && !roles.includes('ROLE_ADMINISTRATOR')) return [];
+  return [
+    { label: 'New Request', href: '/telecoms/requests/new', icon: Upload },
+    { label: 'Review & Quote', href: '/telecoms/review', icon: ClipboardList },
+    { label: 'Request Board', href: '/telecoms/board', icon: LayoutGrid },
+    { label: 'Requests', href: '/telecoms/requests', icon: FileText },
+    { label: 'Lab Booking', href: '/telecoms/lab-booking', icon: CalendarDays },
+    { label: 'Equipment Register', href: '/telecoms/equipment', icon: List },
+    { label: 'Equipment Lending', href: '/telecoms/equipment/lending', icon: ArrowLeftRight },
+    { label: 'Bootcamps & Training', href: '/telecoms/bootcamps', icon: Users },
+    { label: 'Stock List', href: '/telecoms/stock', icon: Boxes },
+    { label: 'Add/Use Stock', href: '/telecoms/stock/movements', icon: ArrowLeftRight },
+  ];
+}
+
 function isActiveLink(href, location) {
   if (location === href) return true;
   if (href === '/overview' && location === '/') return true;
   if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
+  if (href === '/telecoms/requests' && location.startsWith('/telecoms/requests/') && location !== '/telecoms/requests/new') return true;
+  if (href === '/telecoms/equipment') return location === '/telecoms/equipment';
+  if (href === '/telecoms/stock') return location === '/telecoms/stock';
   if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
   return false;
 }
@@ -85,8 +112,39 @@ export function BackendWorkspace({
   const refinementBadge = stageCounts.REFINEMENT_REQUESTED ?? 2;
 
   const textileLinks = buildTextileNavigation(session.roles);
+  const telecomsLinks = buildTelecomsNavigation(session.roles);
 
-  const navGroups = [
+  const isTelecoms = isTelecomsDomainOwner(session.roles);
+
+  const telecomsNavGroups = [
+    {
+      heading: 'REQUESTS & PIPELINE',
+      items: [
+        { label: 'All Requests', href: '/telecoms/requests', icon: FileText },
+        { label: 'New Request', href: '/telecoms/requests/new', icon: Upload },
+        { label: 'Review & Quote', href: '/telecoms/review', icon: ClipboardList },
+        { label: 'Request Board', href: '/telecoms/board', icon: LayoutGrid },
+      ],
+    },
+    {
+      heading: 'LAB & SKILLING',
+      items: [
+        { label: 'Lab Booking', href: '/telecoms/lab-booking', icon: CalendarDays },
+        { label: 'Bootcamps & Training', href: '/telecoms/bootcamps', icon: Users },
+      ],
+    },
+    {
+      heading: 'EQUIPMENT & STOCK',
+      items: [
+        { label: 'Equipment Register', href: '/telecoms/equipment', icon: List },
+        { label: 'Equipment Lending', href: '/telecoms/equipment/lending', icon: ArrowLeftRight },
+        { label: 'Stock Inventory', href: '/telecoms/stock', icon: Boxes },
+        { label: 'Add / Use Stock', href: '/telecoms/stock/movements', icon: ArrowLeftRight },
+      ],
+    },
+  ];
+
+  const standardNavGroups = [
     {
       items: [
         { label: 'All Submissions', href: '/submissions', icon: Boxes },
@@ -128,6 +186,10 @@ export function BackendWorkspace({
       heading: 'TEXTILE OPERATIONS',
       items: textileLinks,
     }] : []),
+    ...(telecomsLinks.length > 0 ? [{
+      heading: 'TELECOMS OPERATIONS',
+      items: telecomsLinks,
+    }] : []),
     {
       heading: 'FINANCE & PARTNERS',
       items: [
@@ -145,6 +207,8 @@ export function BackendWorkspace({
       ],
     },
   ];
+
+  const navGroups = isTelecoms ? telecomsNavGroups : standardNavGroups;
 
   const textileNavSections = [
     { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
@@ -209,11 +273,17 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
+    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
     <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
-          <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
-            {textileOnly ? (
+          <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
+            {isTelecoms ? (
+              <>
+                <div className="brand-mark" aria-hidden="true" style={{ background: '#d7ef67' }}><span /><span /><span /><span /></div>
+                <span><b>TELECOMS ERP</b><small style={{ color: '#9db2a2' }}>RF & IoT Operations</small></span>
+              </>
+            ) : textileOnly ? (
               <>
                 <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
                 <span><b>MUTIC ERP</b><small>Textile Operations</small></span>
@@ -296,6 +366,25 @@ export function BackendWorkspace({
         )}
 
         {!collapsed && (
+          <div
+            style={{
+              margin: '12px 4px',
+              padding: '10px 12px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.09)',
+              borderRadius: '7px',
+              color: '#d6dfd7',
+              fontSize: '10px',
+              fontWeight: 700,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d7ef67', display: 'inline-block' }} />
+              <span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span>
+            </div>
+            <small style={{ display: 'block', fontSize: '9px', color: '#9db2a2', marginTop: '3px', fontWeight: 500 }}>
+              {isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}
+            </small>
           <div className="live-sidebar-notice">
             <div><span className="dot" /><span>Demonstration workspace</span></div>
             <small>Role-based prototype · sample data</small>
@@ -319,14 +408,23 @@ export function BackendWorkspace({
       <div className="live-main">
         <header className="live-topbar">
           <div className="live-breadcrumb">
+            <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
+            <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
             <span>Workspace</span>
             <i>‹</i>
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
-              <Search size={14} /><span>Search submissions…</span><kbd>⌘K</kbd>
+              <Search size={14} /><span>{isTelecoms ? 'Search requests & equipment…' : 'Search submissions…'}</span><kbd>⌘K</kbd>
             </button>
+            {isTelecomsDomainOwner(session.roles) ? (
+              <Link to="/telecoms/requests/new" className="btn btn-primary topbar-action-btn">
+                <span>New request</span> <Plus size={15} />
+              </Link>
+            ) : null}
+            <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
             <div className="top-pop-wrap">
               <button className="top-circle-btn notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
                 <Bell size={15} />
@@ -388,6 +486,25 @@ export function BackendWorkspace({
                 <span className="register-plus">+</span>
               </Link>
             )}
+            {!isTelecoms && (
+              <Link
+                to="/submissions/new"
+                className="top-register"
+                style={{ borderRadius: '9999px' }}
+                data-testid="link-register-top"
+              >
+                <span>Register submission</span>
+                <span className="register-plus">+</span>
+              </Link>
+            )}
+            <Link
+              to="/submissions/new"
+              className="top-register"
+              data-testid="link-register-top"
+            >
+              <span>Register submission</span>
+              <span className="register-plus">+</span>
+            </Link>
           </div>
         </header>
         <main className="live-content">{children}</main>
