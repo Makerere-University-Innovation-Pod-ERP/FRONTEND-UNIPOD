@@ -75,489 +75,79 @@ export function TrainingMentorshipPage({ token }) {
   ];
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Eyebrow & Title Area */}
-      <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            letterSpacing: '0.14em',
-            color: '#1b5e43',
-            textTransform: 'uppercase',
-            margin: '0 0 8px 0',
-          }}
-        >
-          OPERATIONS
-        </p>
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(28px, 3.5vw, 34px)',
-            lineHeight: 1.15,
-            fontWeight: 600,
-            color: '#16221a',
-            margin: '0 0 8px 0',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Training & Mentorship
-        </h1>
-        <p
-          style={{
-            fontSize: '13px',
-            color: '#7a847b',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          Published sessions, registration capacity and mentorship follow-ups.
-        </p>
+    <div className="live-page page-enter">
+      <div className="live-page-heading">
+        <div>
+          <p className="eyebrow">OPERATIONS</p>
+          <h1>Training & Mentorship</h1>
+          <p>Published sessions, registration capacity and mentorship follow-ups.</p>
+        </div>
       </div>
 
-      {/* 3 KPI Metric Cards with 16px corner radius */}
-      <section className="training-overview-grid" aria-label="Training KPI metrics">
-        {/* Card 1: UPCOMING SESSIONS */}
-        <article className="training-metric-card">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                color: '#7a847b',
-                textTransform: 'uppercase',
-              }}
-            >
-              UPCOMING SESSIONS
-            </span>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: '#eef5eb',
-                color: '#1b5e43',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <GraduationCap size={15} />
-            </div>
-          </div>
-          <strong
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '36px',
-              fontWeight: 500,
-              color: '#16221a',
-              display: 'block',
-              lineHeight: 1,
-            }}
-          >
-            {upcomingCount}
-          </strong>
-        </article>
-
-        {/* Card 2: SEATS FILLED */}
-        <article className="training-metric-card">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                color: '#7a847b',
-                textTransform: 'uppercase',
-              }}
-            >
-              SEATS FILLED
-            </span>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: '#eef5eb',
-                color: '#1b5e43',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <User size={15} />
-            </div>
-          </div>
-          <strong
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '36px',
-              fontWeight: 500,
-              color: '#16221a',
-              display: 'block',
-              lineHeight: 1,
-            }}
-          >
-            {seatsFilledCount}/{totalSeatsCount}
-          </strong>
-        </article>
-
-        {/* Card 3: MENTORSHIP FOLLOW-UPS */}
-        <article className="training-metric-card">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                color: '#7a847b',
-                textTransform: 'uppercase',
-              }}
-            >
-              MENTORSHIP FOLLOW-UPS
-            </span>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: '#eef5eb',
-                color: '#1b5e43',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Activity size={15} />
-            </div>
-          </div>
-          <strong
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '36px',
-              fontWeight: 500,
-              color: '#16221a',
-              display: 'block',
-              lineHeight: 1,
-            }}
-          >
-            {mentorshipCount}
-          </strong>
-        </article>
+      <section className="live-metrics tx-metrics" aria-label="Training KPI metrics">
+        <article className="live-metric"><p>UPCOMING SESSIONS <GraduationCap size={14} /></p><strong>{upcomingCount}</strong></article>
+        <article className="live-metric"><p>SEATS FILLED <User size={14} /></p><strong>{seatsFilledCount}/{totalSeatsCount}</strong></article>
+        <article className="live-metric"><p>MENTORSHIP FOLLOW-UPS <Activity size={14} /></p><strong>{mentorshipCount}</strong></article>
       </section>
 
-      {/* Sessions Data Table Container with 16px corner radius and overflow hidden */}
-      <section className="training-table-container">
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table
-            style={{
-              width: '100%',
-              minWidth: '640px',
-              borderCollapse: 'collapse',
-              textAlign: 'left',
-            }}
-          >
+      <section className="live-panel tx-table-panel">
+        <div className="live-table-wrap">
+          <table className="live-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid #eef0eb' }}>
-                <th
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: '#7a847b',
-                    textTransform: 'uppercase',
-                    padding: '16px 24px',
-                    width: '35%',
-                  }}
-                >
-                  SESSION
-                </th>
-                <th
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: '#7a847b',
-                    textTransform: 'uppercase',
-                    padding: '16px 24px',
-                    width: '28%',
-                  }}
-                >
-                  FACILITATOR
-                </th>
-                <th
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: '#7a847b',
-                    textTransform: 'uppercase',
-                    padding: '16px 24px',
-                    width: '22%',
-                  }}
-                >
-                  DATE
-                </th>
-                <th
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: '#7a847b',
-                    textTransform: 'uppercase',
-                    padding: '16px 24px',
-                    width: '15%',
-                  }}
-                >
-                  ENROLLED
-                </th>
+              <tr>
+                <th>SESSION</th>
+                <th>FACILITATOR</th>
+                <th>DATE</th>
+                <th>ENROLLED</th>
               </tr>
             </thead>
             <tbody>
-              {sessions.map((session, index) => {
-                const isLast = index === sessions.length - 1;
-                return (
-                  <tr
-                    key={session.id}
-                    data-testid={`session-row-${session.id}`}
-                    onClick={() => setSelectedSession(session)}
-                    style={{
-                      borderBottom: isLast ? 'none' : '1px solid #eff0eb',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.12s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fafbfa';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: '16px 24px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#16221a',
-                      }}
-                    >
-                      {session.title}
-                    </td>
-                    <td
-                      style={{
-                        padding: '16px 24px',
-                        fontSize: '12px',
-                        color: '#7a847b',
-                      }}
-                    >
-                      {session.facilitator}
-                    </td>
-                    <td
-                      style={{
-                        padding: '16px 24px',
-                        fontSize: '12px',
-                        color: '#7a847b',
-                      }}
-                    >
-                      {session.date}
-                    </td>
-                    <td
-                      style={{
-                        padding: '16px 24px',
-                        fontSize: '12px',
-                        color: '#7a847b',
-                      }}
-                    >
-                      {session.enrolledCount}/{session.capacity}
-                    </td>
-                  </tr>
-                );
-              })}
+              {sessions.map((session) => (
+                <tr key={session.id} data-testid={`session-row-${session.id}`} onClick={() => setSelectedSession(session)}>
+                  <td><b className="tx-strong">{session.title}</b></td>
+                  <td>{session.facilitator}</td>
+                  <td>{session.date}</td>
+                  <td>{session.enrolledCount}/{session.capacity}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </section>
 
-      {/* Interactive Session Inspection Modal */}
       {selectedSession && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '16px',
-          }}
-          onClick={() => setSelectedSession(null)}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '520px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}
-            >
+        <div role="dialog" aria-modal="true" className="ops-modal-overlay" onClick={() => setSelectedSession(null)}>
+          <div className="ops-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="ops-modal-head">
               <div>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    color: '#1b5e43',
-                    marginBottom: '4px',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  Training Session Details
-                </span>
-                <h3
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: '22px',
-                    fontWeight: 600,
-                    margin: 0,
-                    color: '#16221a',
-                  }}
-                >
-                  {selectedSession.title}
-                </h3>
+                <span className="ops-modal-eyebrow">Training Session Details</span>
+                <h3>{selectedSession.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedSession(null)}
-                style={{
-                  border: 'none',
-                  background: '#f2f4ee',
-                  borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#414842',
-                }}
-              >
+              <button type="button" onClick={() => setSelectedSession(null)} className="ops-modal-close" aria-label="Close">
                 <X size={16} />
               </button>
             </div>
 
-            <div
-              style={{
-                background: '#fafbfa',
-                borderRadius: '12px',
-                padding: '14px',
-                border: '1px solid #eef0eb',
-                marginBottom: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <User size={14} color="#7a847b" />
-                <span>
-                  <strong>Facilitator:</strong> {selectedSession.facilitator}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <Calendar size={14} color="#7a847b" />
-                <span>
-                  <strong>Date & Time:</strong> {selectedSession.date}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <MapPin size={14} color="#7a847b" />
-                <span>
-                  <strong>Location:</strong> {selectedSession.location || 'Innovation Hub Lab'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#414842' }}>
-                <Users size={14} color="#7a847b" />
-                <span>
-                  <strong>Enrolled:</strong> {selectedSession.enrolledCount} of {selectedSession.capacity} seats filled
-                </span>
-              </div>
+            <div className="ops-modal-facts">
+              <div className="ops-modal-fact"><User size={14} color="var(--muted)" /><span><strong>Facilitator:</strong> {selectedSession.facilitator}</span></div>
+              <div className="ops-modal-fact"><Calendar size={14} color="var(--muted)" /><span><strong>Date & Time:</strong> {selectedSession.date}</span></div>
+              <div className="ops-modal-fact"><MapPin size={14} color="var(--muted)" /><span><strong>Location:</strong> {selectedSession.location || 'Innovation Hub Lab'}</span></div>
+              <div className="ops-modal-fact"><Users size={14} color="var(--muted)" /><span><strong>Enrolled:</strong> {selectedSession.enrolledCount} of {selectedSession.capacity} seats filled</span></div>
             </div>
 
-            {selectedSession.description && (
-              <p style={{ fontSize: '12px', color: '#555e56', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-                {selectedSession.description}
-              </p>
-            )}
+            {selectedSession.description && <p className="ops-modal-desc">{selectedSession.description}</p>}
 
             {selectedSession.roster && selectedSession.roster.length > 0 && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <b style={{ fontSize: '11px', color: '#16221a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Participant Roster
-                  </b>
-                  <span style={{ fontSize: '11px', color: '#7a847b' }}>
-                    {selectedSession.roster.length} recorded
-                  </span>
-                </div>
-                <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #eef0eb', borderRadius: '8px' }}>
+                <div className="ops-roster-head"><b>Participant Roster</b><span>{selectedSession.roster.length} recorded</span></div>
+                <div className="ops-roster">
                   {selectedSession.roster.map((student, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        borderBottom: idx === selectedSession.roster.length - 1 ? 'none' : '1px solid #f2f4ef',
-                        fontSize: '11px',
-                      }}
-                    >
-                      <div>
-                        <strong style={{ color: '#16221a', display: 'block' }}>{student.name}</strong>
-                        <small style={{ color: '#7a847b' }}>{student.studentId}</small>
-                      </div>
+                    <div key={idx} className="ops-roster-row">
+                      <div><strong>{student.name}</strong><small>{student.studentId}</small></div>
                       <button
                         type="button"
+                        className={`partner-status ${student.status === 'Present' ? 'active' : 'renewal-due'}`}
+                        title="Click to toggle attendance"
                         onClick={async () => {
                           const nextStatus = student.status === 'Present' ? 'Absent' : 'Present';
                           try {
@@ -566,7 +156,6 @@ export function TrainingMentorshipPage({ token }) {
                               participantId: student.id || student.studentId,
                               attendance: nextStatus,
                             });
-                            // update local state
                             setSelectedSession((prev) => {
                               if (!prev) return prev;
                               const updatedRoster = (prev.roster || []).map((r, i) =>
@@ -578,17 +167,6 @@ export function TrainingMentorshipPage({ token }) {
                             console.warn('Attendance update failed:', e);
                           }
                         }}
-                        title="Click to toggle attendance"
-                        style={{
-                          background: student.status === 'Present' ? '#e3f0e6' : '#fff4da',
-                          color: student.status === 'Present' ? '#215f43' : '#b46a24',
-                          border: 'none',
-                          borderRadius: '9999px',
-                          padding: '2px 8px',
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
                       >
                         {student.status}
                       </button>
@@ -598,23 +176,8 @@ export function TrainingMentorshipPage({ token }) {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedSession(null)}
-                style={{
-                  background: '#1b5e43',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '8px 18px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Done
-              </button>
+            <div className="ops-modal-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setSelectedSession(null)}>Done</button>
             </div>
           </div>
         </div>
