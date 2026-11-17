@@ -11,6 +11,7 @@ import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartment
 import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment } from './fixtures/equipment';
 import { initialBookings, initialFacilities, initialTimetableBlocks } from './fixtures/bookings';
+import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
@@ -27,6 +28,7 @@ const mockUsers = {
   ...coordinatorMockUsers,
   'finance@unipod.test': { subject: 'Daniel Kato', roles: ['ROLE_FINANCE_OFFICER'] },
   'multimedia@unipod.test': { subject: 'Nkuru', roles: ['ROLE_MULTIMEDIA_OFFICER'] },
+  'cnc@unipod.test': { subject: 'Robinson', roles: ['ROLE_CNC_DOMAIN_OWNER'] },
   'telecoms@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
   'telecom@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
   'kaddu@unipod.test': { subject: 'Eng. Kaddu', roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] },
@@ -69,7 +71,9 @@ function updateTrainingParticipant(sessionId, participantId, change) {
 }
 let mediaRequests = [...initialMediaRequests];
 let multimediaEquipment = [...initialEquipment];
-const facilities = [...initialFacilities];
+let facilities = [...initialFacilities];
+let cncJobs = [...initialCncJobs];
+const CNC_STAGES = ['NEW', 'QUOTED', 'PAYMENT_GATE', 'SCHEDULED', 'IN_PRODUCTION', 'READY', 'COLLECTED'];
 let bookings = [...initialBookings];
 const timetableBlocks = [...initialTimetableBlocks];
 const BLOCKING = ['PENDING', 'APPROVED', 'CHECKED_IN', 'OUT'];
@@ -955,6 +959,89 @@ export const handlers = [
       if (!b.isEquipmentRequest || b.status !== 'OUT') return { error: [409, 'Only an out allocation can be returned.'] };
       return { ...b, status: 'RETURNED', conditionReturned: stored, returnedAt: body.returned_at, returnNotes: body.notes ?? null };
     });
+  }),
+
+  http.patch(`${API_BASE_URL}/facilities/:id/status`, async ({ params, request }) => {
+    const { status } = await request.json();
+    const index = facilities.findIndex((f) => f.id === params.id);
+    if (index === -1) return bookingProblem(404, 'Facility not found.');
+    if (!['AVAILABLE', 'BOOKED', 'MAINTENANCE'].includes(status)) return bookingProblem(400, 'Invalid facility status.');
+    facilities = facilities.map((f, i) => (i === index ? { ...f, status, updatedAt: new Date().toISOString() } : f));
+    return HttpResponse.json(facilities[index]);
+  }),
+
+  http.get(`${API_BASE_URL}/price-list-items`, ({ request }) => {
+    const departmentId = new URL(request.url).searchParams.get('departmentId');
+    return HttpResponse.json(initialCncPrices.filter((p) => !departmentId || p.departmentId === departmentId));
+  }),
+
+  // CNC & Carpentry orders
+  http.get(`${API_BASE_URL}/departments/cnc/orders`, () => {
+    const columns = Object.fromEntries(CNC_STAGES.map((stage) => [stage, cncJobs.filter((j) => j.stage === stage)]));
+    return HttpResponse.json({ department: 'CNC', columns, page: 0, size: 100, totalElements: cncJobs.length, totalPages: 1 });
+  }),
+
+  http.post(`${API_BASE_URL}/departments/cnc/orders`, async ({ request }) => {
+    const body = await request.json();
+    if (!body.title || !body.specs) return bookingProblem(400, 'title and specs are required.');
+    const now = new Date().toISOString();
+    const created = {
+      id: `cnc-${Date.now()}`,
+      code: `ORD-CNC-2026-${String(cncJobs.length + 1).padStart(6, '0')}`,
+      department: 'CNC',
+      customerId: 'cnc@unipod.test',
+      title: body.title,
+      quantity: body.quantity ?? 1,
+      dateNeeded: body.date_needed ?? null,
+      acceptedRulesVersion: body.accepted_rules_version ?? null,
+      stage: 'NEW',
+      specs: body.specs,
+      quote: null, quoteSubmittedAt: null, quotedBy: null, invoiceId: null, invoiceStatus: null,
+      materialsUsed: null, paymentConfirmedAt: null, machineTimeUsed: null, qualityChecklist: null, collectionSignature: null,
+      stageHistory: [{ stage: 'NEW', at: now, by: 'cnc@unipod.test', notes: 'Order created' }],
+      createdBy: 'cnc@unipod.test', createdAt: now, updatedAt: now,
+    };
+    cncJobs = [created, ...cncJobs];
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.post(`${API_BASE_URL}/departments/cnc/orders/:id/quote`, async ({ params, request }) => {
+    const { quote } = await request.json();
+    const current = cncJobs.find((j) => j.id === params.id);
+    if (!current) return bookingProblem(404, 'Order not found.');
+    if (!quote || !(quote.amount > 0)) return bookingProblem(400, 'quote.amount must be > 0.');
+    const updated = { ...current, quote, quoteSubmittedAt: new Date().toISOString(), quotedBy: 'cnc@unipod.test', invoiceId: `inv-${current.id}`, invoiceStatus: 'WAITING_FOR_PROOF' };
+    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
+    return HttpResponse.json(updated);
+  }),
+
+  http.patch(`${API_BASE_URL}/departments/cnc/orders/:id/stage`, async ({ params, request }) => {
+    const body = await request.json();
+    const current = cncJobs.find((j) => j.id === params.id);
+    if (!current) return bookingProblem(404, 'Order not found.');
+    const target = String(body.stage ?? '').toUpperCase();
+    if (!CNC_STAGES.includes(target)) return bookingProblem(400, `Invalid stage '${target}' for department CNC.`);
+    if (CNC_STAGES.indexOf(target) < CNC_STAGES.indexOf(current.stage) && !['READY', 'COLLECTED'].includes(target)) {
+      return bookingProblem(409, `Cannot move order backwards from ${current.stage} to ${target}.`);
+    }
+    if (target === 'SCHEDULED' && !current.quote) return bookingProblem(400, 'A quote must be submitted before scheduling.');
+    const paid = ['PAID', 'RECEIPTED'].includes(current.invoiceStatus);
+    if (['SCHEDULED', 'IN_PRODUCTION', 'READY', 'COLLECTED'].includes(target) && !paid) {
+      return bookingProblem(409, `Payment is required before moving to ${target}.`);
+    }
+    const now = new Date().toISOString();
+    const completion = ['READY', 'COLLECTED'].includes(target)
+      ? { materialsUsed: body.materials_used ?? null, machineTimeUsed: body.machine_time_used ?? null, qualityChecklist: body.quality_checklist ?? null, collectionSignature: body.collection_signature ?? null }
+      : {};
+    const updated = {
+      ...current,
+      ...completion,
+      stage: target,
+      stageHistory: [...current.stageHistory, { stage: target, at: now, by: 'cnc@unipod.test', notes: body.notes ?? null }],
+      updatedAt: now,
+    };
+    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
+    return HttpResponse.json(updated);
   }),
 
   http.get(`${API_BASE_URL}/timetable/blocks`, ({ request }) => {

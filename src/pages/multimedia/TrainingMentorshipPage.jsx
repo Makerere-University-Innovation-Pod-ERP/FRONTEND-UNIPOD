@@ -35,7 +35,7 @@ function errorMessage(reason, fallback) {
   return reason instanceof Error ? reason.message : fallback;
 }
 
-export function TrainingMentorshipPage({ token }) {
+export function TrainingMentorshipPage({ token, variant = 'training' }) {
   const overviewQuery = useTrainingOverview(token);
   const departmentsQuery = useTrainingDepartments(token);
   const createSessionMutation = useCreateSession(token);
@@ -51,9 +51,15 @@ export function TrainingMentorshipPage({ token }) {
   const [newParticipant, setNewParticipant] = useState(NEW_PARTICIPANT_DEFAULTS);
   const [rosterError, setRosterError] = useState('');
 
+  const safety = variant === 'safety';
   const overview = overviewQuery.data;
-  const sessions = overview?.sessions ?? [];
   const departments = departmentsQuery.data ?? [];
+  const cncDepartmentId = departments.find((department) => /cnc|carpentry/i.test(department.name))?.id ?? '';
+  const sessions = (overview?.sessions ?? []).filter((session) => !safety || session.safetyCourse);
+  const passedCount = sessions.reduce((total, session) => total + session.participants.filter((p) => p.passed).length, 0);
+  const seatsFilled = sessions.reduce((total, session) => total + session.enrolledCount, 0);
+  const totalSeats = sessions.reduce((total, session) => total + session.capacity, 0);
+  const upcomingCount = sessions.filter((session) => session.status === 'UPCOMING' || session.status === 'IN_PROGRESS').length;
   const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null;
 
   function setSessionField(field) {
@@ -142,12 +148,18 @@ export function TrainingMentorshipPage({ token }) {
     <div className="live-page page-enter">
       <div className="live-page-heading">
         <div>
-          <p className="eyebrow">OPERATIONS</p>
-          <h1>Training & Mentorship</h1>
-          <p>Published sessions, registration capacity and mentorship follow-ups.</p>
+          <p className="eyebrow">{safety ? 'OPERATIONS · CNC & CARPENTRY' : 'OPERATIONS'}</p>
+          <h1>{safety ? 'Safety Course' : 'Training & Mentorship'}</h1>
+          <p>{safety
+            ? 'Safety sessions, sign-up, attendance and passes. A pass unlocks machine booking.'
+            : 'Published sessions, registration capacity and mentorship follow-ups.'}</p>
         </div>
         <div className="heading-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => {
+            setNewSession(safety ? { ...NEW_SESSION_DEFAULTS, safetyCourse: true, departmentId: cncDepartmentId } : NEW_SESSION_DEFAULTS);
+            setCreateError('');
+            setShowCreateForm(true);
+          }}>
             <Plus size={15} />New session
           </button>
         </div>
@@ -156,9 +168,11 @@ export function TrainingMentorshipPage({ token }) {
       <ErrorBanner error={overviewQuery.error} fallback="Could not load training sessions." />
 
       <section className="live-metrics tx-metrics" aria-label="Training KPI metrics">
-        <article className="live-metric"><p>UPCOMING SESSIONS <GraduationCap size={14} /></p><strong>{overview?.upcomingSessions ?? 0}</strong></article>
-        <article className="live-metric"><p>SEATS FILLED <User size={14} /></p><strong>{overview?.seatsFilled ?? 0}/{overview?.totalSeats ?? 0}</strong></article>
-        <article className="live-metric"><p>MENTORSHIP FOLLOW-UPS <Activity size={14} /></p><strong>{overview?.mentorshipFollowUps ?? 0}</strong></article>
+        <article className="live-metric"><p>UPCOMING SESSIONS <GraduationCap size={14} /></p><strong>{upcomingCount}</strong></article>
+        <article className="live-metric"><p>SEATS FILLED <User size={14} /></p><strong>{seatsFilled}/{totalSeats}</strong></article>
+        {safety
+          ? <article className="live-metric"><p>PASSED <Activity size={14} /></p><strong>{passedCount}</strong></article>
+          : <article className="live-metric"><p>MENTORSHIP FOLLOW-UPS <Activity size={14} /></p><strong>{overview?.mentorshipFollowUps ?? 0}</strong></article>}
       </section>
 
       <section className="live-panel tx-table-panel">
@@ -187,7 +201,7 @@ export function TrainingMentorshipPage({ token }) {
                   </tr>
                 ))}
                 {sessions.length === 0 && !overviewQuery.error && (
-                  <tr><td colSpan={5} className="live-empty">No training sessions published yet.</td></tr>
+                  <tr><td colSpan={5} className="live-empty">{safety ? 'No safety sessions published yet.' : 'No training sessions published yet.'}</td></tr>
                 )}
               </tbody>
             </table>

@@ -2,6 +2,7 @@ export const initialFacilities = [
   { id: 'fac-studio-a', name: 'Multimedia Studio A', location: 'Block C', capacity: 8, status: 'AVAILABLE', department: 'Multimedia', requiresSafetyPass: false, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z' },
   { id: 'fac-podcast', name: 'Podcast Studio', location: 'Block C', capacity: 6, status: 'AVAILABLE', department: 'Multimedia', requiresSafetyPass: false, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z' },
   { id: 'fac-cnc', name: 'CNC & Carpentry Bay', location: 'Workshop Yard', capacity: 10, status: 'AVAILABLE', department: 'CNC & Carpentry', requiresSafetyPass: true, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z' },
+  { id: 'fac-laser', name: 'Laser Cutter — Trotec', location: 'Workshop Yard', capacity: 2, status: 'AVAILABLE', department: 'CNC & Carpentry', requiresSafetyPass: false, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z' },
 ];
 
 const base = {
