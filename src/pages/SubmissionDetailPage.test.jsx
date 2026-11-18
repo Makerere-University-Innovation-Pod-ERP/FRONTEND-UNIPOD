@@ -49,7 +49,7 @@ describe('SubmissionDetailPage', () => {
             path="/submissions/:id"
             element={(
               <SubmissionDetailPage
-                session={{ accessToken: 'test-token', roles: ['ROLE_SUBMITTER'] }}
+                session={{ accessToken: 'test-token', roles: ['ROLE_REVIEWER'] }}
                 onUnauthorized={vi.fn()}
               />
             )}
@@ -59,11 +59,15 @@ describe('SubmissionDetailPage', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Community solar dryer' })).toBeInTheDocument();
+    expect(screen.getAllByText('Dry crops with solar energy.').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('region', { name: 'Pipeline progress' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Your idea, in motion' })).toBeInTheDocument();
     expect(screen.getByText('0 of 2 milestones complete')).toBeInTheDocument();
     expect(screen.getByText('In progress')).toBeInTheDocument();
     expect(screen.getByText('Up next')).toBeInTheDocument();
+    expect(screen.getByText('Project overview')).toBeInTheDocument();
+    expect(screen.getByText('Registration')).toBeInTheDocument();
+    expect(screen.getByText('Assignment')).toBeInTheDocument();
     expect(screen.getByText('No reviewers assigned')).toBeInTheDocument();
     expect(screen.queryByText('IP panel')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Case permissions' })).not.toBeInTheDocument();

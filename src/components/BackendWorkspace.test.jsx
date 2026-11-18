@@ -35,12 +35,12 @@ describe('BackendWorkspace', () => {
     expect(sidebar).not.toHaveClass('collapsed');
 
     const collapseToggle = screen.getByRole('button', { name: /collapse navigation/i });
-    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
+    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-menu');
     await user.click(collapseToggle);
     expect(sidebar).toHaveClass('collapsed');
 
     const expandToggle = screen.getByRole('button', { name: /expand navigation/i });
-    expect(expandToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
+    expect(expandToggle.querySelector('svg')).toHaveClass('lucide-menu');
     await user.click(expandToggle);
     expect(sidebar).not.toHaveClass('collapsed');
   });
@@ -58,12 +58,12 @@ describe('BackendWorkspace', () => {
     expect(container.querySelector('.live-topbar .mobile-nav-toggle')).toBeNull();
     const menuToggle = screen.getByRole('button', { name: 'Open navigation' });
     expect(menuToggle).toHaveClass('mobile-edge-nav-toggle');
-    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-menu');
     expect(container.querySelector('.live-brand')).toContainElement(menuToggle);
 
     await user.click(menuToggle);
     expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
-    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-x');
     expect(container.querySelector('.live-sidebar')).toHaveClass('mobile-open');
   });
 
