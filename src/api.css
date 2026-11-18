@@ -288,7 +288,8 @@
 .mobile-edge-nav-toggle{display:none}
 .live-sidebar.collapsed .live-brand-link>span:last-child,.live-sidebar.collapsed .live-nav-heading,.live-sidebar.collapsed .live-nav-link span,.live-sidebar.collapsed .live-connection,.live-sidebar.collapsed .live-profile-copy{display:none}
 .live-sidebar.collapsed .live-nav-link{justify-content:center}
-.live-sidebar.collapsed .live-profile{justify-content:center}
+.live-sidebar.collapsed .live-profile{flex-direction:column;justify-content:center;gap:8px;padding:12px 0 1px}
+.live-sidebar.collapsed .live-profile .icon-button{width:30px;height:30px}
 .brand-crest{height:34px;width:auto;flex:none;display:block}
 .login-brand .brand-crest{height:46px}
 .live-nav-heading{font-size:9px;letter-spacing:.14em;font-weight:800;color:var(--sidebar-muted);padding:0 11px 9px;margin:0}

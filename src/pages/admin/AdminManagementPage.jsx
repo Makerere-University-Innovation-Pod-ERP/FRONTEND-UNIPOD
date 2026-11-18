@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Building2,
   CircleAlert,
   LoaderCircle,
   Plus,
   RefreshCw,
   Save,
-  ShieldCheck,
   Trash2,
   UserPlus,
-  Users,
 } from 'lucide-react';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './AdminManagementPage.css';
@@ -362,7 +359,7 @@ export function AdminManagementPage({
       {notice && <p className="management-notice" role="status">{notice}</p>}
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div><UserPlus size={19} /></div>
+        <div className="live-panel-heading"><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div>
         <p className="management-help">Create an active staff account and assign its initial role and department. Passwords are never returned by the API.</p>
         <form className="management-form" onSubmit={createUser}>
           <label className="form-field">Full name<input required maxLength={160} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
@@ -376,7 +373,7 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">STAFF DIRECTORY</p><h2>Users and account lifecycle</h2></div><Users size={19} /></div>
+        <div className="live-panel-heading"><div><p className="eyebrow">STAFF DIRECTORY</p><h2>Users and account lifecycle</h2></div></div>
         <p className="management-help">Change a staff member’s role or department, or deactivate/reactivate their account. Deactivation preserves account history.</p>
         <label className="form-field management-search">Search staff<input type="search" value={userFilter} onChange={(event) => setUserFilter(event.target.value)} placeholder="Name, email, or role" /></label>
         {loadingAdmin
@@ -408,7 +405,7 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Manage departments</h2></div><Building2 size={19} /></div>
+        <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Manage departments</h2></div></div>
         <p className="management-help">Departments can be deactivated without deleting staff or historical records.</p>
         <label className="form-field">Existing department<select value={departmentId} onChange={(event) => selectDepartment(event.target.value)}><option value="">Create a new department…</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (inactive)'}</option>)}</select></label>
         <form className="management-form" onSubmit={saveDepartment}>
@@ -419,7 +416,7 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div><ShieldCheck size={19} /></div>
+        <div className="live-panel-heading"><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div></div>
         <p className="management-help">Configure permissions for each role. Administrator access is protected. The backend must enforce every permission on each request.</p>
         {loadingAdmin
           ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading roles…</div>
