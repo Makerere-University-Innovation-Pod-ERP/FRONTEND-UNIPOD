@@ -630,6 +630,11 @@
 .management-form .form-actions{grid-column:1/-1}
 .management-checkbox{display:flex;align-items:center;gap:8px;margin:2px 0 14px;color:var(--ink-soft);font-size:10px;font-weight:650}
 .management-checkbox input{accent-color:var(--forest)}
+.rules-acceptance-list{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.rules-acceptance-item{padding:12px 14px;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--surface-raised)}
+.rules-acceptance-item b{display:block;color:var(--ink);font-size:12px;margin-bottom:4px}
+.rules-acceptance-item p{margin:0 0 8px;color:var(--ink-soft);font-size:11px;line-height:1.55}
+.rules-acceptance-item .management-checkbox{margin:0}
 .management-notice,.management-success{padding:10px 12px;border:1px solid var(--green);border-radius:var(--r-xs);background:var(--green-bg);color:var(--green);font-size:11px;line-height:1.5}
 .management-notice{margin:0 0 14px}
 .management-success{margin:0}
