@@ -171,11 +171,6 @@ export function SubmissionDetailPage({
   }));
   const completedStepCount = normalizedSteps.filter((step) => step.normalizedState === 'COMPLETE').length;
   const nextStepIndex = normalizedSteps.findIndex((step) => ['UPCOMING', 'PENDING'].includes(step.normalizedState));
-  const disabledCapabilities = [
-    { label: 'Next step', capability: caseFile.capabilities.nextStep },
-    { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
-    { label: 'Update document status', capability: caseFile.capabilities.updateDocumentStatus },
-  ].filter(({ capability }) => !capability.enabled && capability.reason);
   return (
     <div className="live-page page-enter case-detail-page">
       <Link to={backHref} className="back-link case-detail-back-link"><ArrowLeft size={15} />{backLabel}</Link>
@@ -213,11 +208,6 @@ export function SubmissionDetailPage({
           </div>
         </section>
       )}
-      {disabledCapabilities.length > 0 && !session.roles.includes('ROLE_SUBMITTER') && <section className="live-panel capability-notice" aria-label="Case permissions">
-        <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
-        {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
-        <ul>{disabledCapabilities.map(({ label, capability }) => <li key={label}><b>{label}:</b> {capability.reason}</li>)}</ul>
-      </section>}
       {caseFile.stepper.length > 0 && <section className="live-panel case-stepper case-pipeline" aria-label="Pipeline progress">
         <div className="case-pipeline-heading">
           <div>
