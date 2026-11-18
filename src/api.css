@@ -4064,3 +4064,135 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   .case-pipeline-current strong{font-size:10px}
   .case-pipeline-current>span{max-width:100px}
 }
+
+/* Compact milestone status tracker */
+.case-stepper.case-pipeline{
+  overflow:hidden !important;
+  padding:18px 18px 16px;
+  border:1px solid #e7e9e1;
+  border-radius:13px;
+  background:#fff;
+  box-shadow:none;
+}
+.case-pipeline-heading{
+  display:none;
+}
+.case-journey-scroll{
+  width:100%;
+  max-width:none;
+  overflow:hidden !important;
+  padding:0;
+  scrollbar-width:none;
+}
+.case-journey-scroll::-webkit-scrollbar,
+.case-stepper.case-pipeline::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
+}
+.case-journey{
+  display:grid !important;
+  grid-template-columns:repeat(var(--milestone-count, 6), minmax(0, 1fr)) !important;
+  width:100% !important;
+  min-width:100% !important;
+  gap:0;
+  align-items:start;
+  padding:0 0 2px;
+}
+.case-pipeline .case-journey li{
+  width:100%;
+  flex:1 1 0;
+  min-width:0;
+  grid-template-rows:28px auto;
+  justify-items:center;
+  gap:7px;
+  padding:0 4px;
+  text-align:center;
+}
+.case-pipeline .case-journey li::after{
+  top:13px;
+  left:calc(50% + 15px);
+  right:calc(-50% + 15px);
+  height:2px;
+  background:#e3e6df;
+}
+.case-pipeline .case-journey li.step-complete::after{
+  background:#8dbab1;
+}
+.case-pipeline .step-current::after{
+  background:#dce9bb;
+}
+.case-pipeline .case-journey-node{
+  width:24px;
+  height:24px;
+  border:1px solid #dfe3dc;
+  background:#fff;
+  color:#a3aaa2;
+  box-shadow:none;
+  font-size:7px;
+  font-weight:700;
+}
+.case-pipeline .step-complete .case-journey-node{
+  border-color:#2d7f70;
+  background:#2d7f70;
+  color:#fff;
+  font-size:11px;
+  box-shadow:none;
+}
+.case-pipeline .step-current .case-journey-node{
+  border:0;
+  background:#FDB515;
+  color:#ffffff;
+  box-shadow:none;
+  font-size:8px;
+  font-weight:800;
+}
+.case-pipeline .step-next .case-journey-node{
+  border:1px solid #dfe3dc;
+  background:#f8f9f6;
+  color:#a3aaa2;
+  box-shadow:none;
+  font-size:8px;
+  font-weight:700;
+}
+.case-pipeline .case-journey-copy{
+  justify-items:center;
+  gap:0;
+  width:100%;
+}
+.case-pipeline .case-journey-copy b{
+  max-width:112px;
+  color:#59625a;
+  font-size:8px;
+  font-weight:650;
+  line-height:1.25;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+.case-pipeline .case-journey-copy span{
+  display:none;
+}
+.case-pipeline .step-complete .case-journey-copy b{
+  color:#59625a;
+  font-weight:650;
+}
+.case-pipeline .step-current .case-journey-copy b,
+.case-pipeline .step-next .case-journey-copy b{
+  color:#59625a;
+  font-weight:800;
+}
+@media(max-width:720px){
+  .case-stepper.case-pipeline{
+    overflow:hidden !important;
+    padding:16px 10px 14px;
+  }
+  .case-journey-scroll{
+    overflow:hidden !important;
+  }
+  .case-journey{
+    min-width:0;
+  }
+  .case-pipeline .case-journey-copy b{
+    font-size:7px;
+  }
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, MessageCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
@@ -165,8 +165,12 @@ export function SubmissionDetailPage({
   const ipPanel = Array.isArray(caseFile.reviewPanel?.ipPanel)
     ? caseFile.reviewPanel.ipPanel
     : null;
-  const completedStepCount = caseFile.stepper.filter((step) => step.state === 'COMPLETE').length;
-  const nextStepIndex = caseFile.stepper.findIndex((step) => step.state === 'UPCOMING');
+  const normalizedSteps = caseFile.stepper.map((step) => ({
+    ...step,
+    normalizedState: String(step.state || '').toUpperCase(),
+  }));
+  const completedStepCount = normalizedSteps.filter((step) => step.normalizedState === 'COMPLETE').length;
+  const nextStepIndex = normalizedSteps.findIndex((step) => ['UPCOMING', 'PENDING'].includes(step.normalizedState));
   const disabledCapabilities = [
     { label: 'Next step', capability: caseFile.capabilities.nextStep },
     { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
@@ -228,11 +232,16 @@ export function SubmissionDetailPage({
           </div>
         </div>
         <div className="case-journey-scroll" tabIndex={0} aria-label="Pipeline stages">
-          <ol className="case-journey">{caseFile.stepper.map((step, index) => <li className={`step-${step.state.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.state === 'CURRENT' ? 'step' : undefined}>
-            <span className="case-journey-node">{step.state === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
+          <ol className="case-journey" style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${normalizedSteps.length}, minmax(0, 1fr))`,
+            width: '100%',
+            minWidth: 0,
+          }}>{normalizedSteps.map((step, index) => <li className={`step-${step.normalizedState.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.normalizedState === 'CURRENT' ? 'step' : undefined}>
+            <span className="case-journey-node">{step.normalizedState === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
             <div className="case-journey-copy">
               <b>{formatStage(step.stage)}</b>
-              <span>{step.state === 'COMPLETE' ? 'Completed' : step.state === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
+              <span>{step.normalizedState === 'COMPLETE' ? 'Completed' : step.normalizedState === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
             </div>
           </li>)}</ol>
         </div>
@@ -251,7 +260,6 @@ export function SubmissionDetailPage({
             {submission.responsibleSectorWhatsapp && (
               <p className="live-note">
                 <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
-                  <MessageCircle size={13} style={{ verticalAlign: 'text-bottom', marginRight: 4 }} />
                   Message {submission.responsibleSectorName} on WhatsApp
                 </a>
               </p>
