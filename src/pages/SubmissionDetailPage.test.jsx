@@ -49,7 +49,7 @@ describe('SubmissionDetailPage', () => {
             path="/submissions/:id"
             element={(
               <SubmissionDetailPage
-                session={{ accessToken: 'test-token', roles: ['ROLE_SUBMITTER'] }}
+                session={{ accessToken: 'test-token', roles: ['ROLE_REVIEWER'] }}
                 onUnauthorized={vi.fn()}
               />
             )}
