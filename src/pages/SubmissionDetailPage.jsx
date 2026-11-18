@@ -25,7 +25,6 @@ export function SubmissionDetailPage({
   const [documentStatus, setDocumentStatus] = useState('SUBMITTED');
   const [fileReference, setFileReference] = useState('');
   const [error, setError] = useState('');
-  const [copyFeedback, setCopyFeedback] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const canIntake = session.roles.some((role) => INTAKE_ROLES.includes(role));
@@ -178,18 +177,17 @@ export function SubmissionDetailPage({
         <div className="case-hero-copy">
           <p className="case-hero-kicker"><span />CASE FILE <i>{caseReference}</i></p>
           <h1>{submission.title}</h1>
-          <p className="case-hero-description">Here’s the idea, its journey, and what comes next.</p>
+          {submission.purpose && <p className="case-hero-description">{submission.purpose}</p>}
+        </div>
+        <div className="case-hero-actions">
           <div className="case-hero-meta">
             <span>{categoryLabel}</span>
             <span>{receivedLabel}</span>
           </div>
-        </div>
-        <div className="case-hero-actions">
           <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
           {(caseFile.reference || submission.code) && <button className="btn btn-outline" onClick={async () => {
             try {
               await navigator.clipboard.writeText(caseReference);
-              setCopyFeedback('Reference copied.');
             } catch {
               setError('Could not copy the reference. Copy it directly from the case heading.');
             }
@@ -197,7 +195,6 @@ export function SubmissionDetailPage({
         </div>
         <span className="case-hero-decoration" aria-hidden="true" />
       </header>
-      {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
         <section className="live-panel capability-notice" aria-label="Open request">
@@ -238,22 +235,47 @@ export function SubmissionDetailPage({
       </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
-          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2><p className="case-section-note">The details behind this brief.</p></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
+          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
           <div className="case-fields">
-            <Field label="Purpose" value={submission.purpose} />
-            <Field label="Problem addressed" value={submission.problemAddressed} />
-            <div className="form-grid"><Field label="Registered by" value={submission.registeredBy} /><Field label="Receiving officer" value={submission.receivingOfficer || 'Not assigned'} /></div>
-            <Field label="Submitter ID" value={submission.submitterId || 'Not linked'} />
-            {submission.category === 'student' && <div className="form-grid"><Field label="Student number" value={submission.studentNumber || '—'} /><Field label="Programme" value={submission.programme || '—'} /></div>}
-            {submission.category === 'student' && <Field label="Supervisor" value={submission.supervisor || '—'} />}
-            <div className="form-grid"><Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} /><Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} /></div>
-            {submission.responsibleSectorWhatsapp && (
-              <p className="live-note">
-                <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
-                  Message {submission.responsibleSectorName} on WhatsApp
-                </a>
-              </p>
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Project overview</p>
+              <div className="case-summary-two-column">
+                <Field label="Purpose" value={submission.purpose} />
+                <Field label="Problem addressed" value={submission.problemAddressed} />
+              </div>
+            </section>
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Registration</p>
+              <div className="case-summary-two-column">
+                <Field label="Registered by" value={submission.registeredBy} />
+                <Field label="Receiving officer" value={submission.receivingOfficer || 'Not assigned'} />
+                <Field label="Submitter ID" value={submission.submitterId || 'Not linked'} />
+              </div>
+            </section>
+            {submission.category === 'student' && (
+              <section className="case-summary-section">
+                <p className="case-summary-heading">Student details</p>
+                <div className="case-summary-three-column">
+                  <Field label="Student number" value={submission.studentNumber || '—'} />
+                  <Field label="Programme" value={submission.programme || '—'} />
+                  <Field label="Supervisor" value={submission.supervisor || '—'} />
+                </div>
+              </section>
             )}
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Assignment</p>
+              <div className="case-summary-two-column">
+                <Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} />
+                <Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} />
+              </div>
+              {submission.responsibleSectorWhatsapp && (
+                <p className="live-note">
+                  <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
+                    Message {submission.responsibleSectorName} on WhatsApp
+                  </a>
+                </p>
+              )}
+            </section>
           </div>
           {canIntake && submission.stage === 'DRAFT' && <div className="case-action">
             <p className="form-section-title">Draft actions</p>
@@ -268,7 +290,7 @@ export function SubmissionDetailPage({
             <label className="form-field">Reviewer subject<input maxLength={255} value={reviewerSubject} onChange={(event) => setReviewerSubject(event.target.value)} placeholder="Leave blank to clear assignment" /></label>
             <button className="btn btn-outline" type="submit" disabled={busy}>Save reviewer</button>
           </form>}
-          {canIntake && <form className="case-action" onSubmit={addDocument}>
+          {canIntake && <form className="case-action document-action" onSubmit={addDocument}>
             <p className="form-section-title">Add document record</p>
             <label className="form-field">Document name<input required maxLength={255} value={documentName} onChange={(event) => setDocumentName(event.target.value)} /></label>
             <div className="form-grid">
@@ -277,7 +299,7 @@ export function SubmissionDetailPage({
             </div>
             <button className="btn btn-outline" type="submit" disabled={busy}><Send size={14} />Add document</button>
           </form>}
-          {canIntake && <form className="case-action" onSubmit={(event) => void uploadDocument(event)}>
+          {canIntake && <form className="case-action document-action" onSubmit={(event) => void uploadDocument(event)}>
             <p className="form-section-title">Upload a supporting file</p>
             <label className="form-field">Document name<input name="name" required maxLength={255} /></label>
             <label className="form-field">Status<select name="status" defaultValue="SUBMITTED">{['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <option value={value} key={value}>{formatStage(value)}</option>)}</select></label>
