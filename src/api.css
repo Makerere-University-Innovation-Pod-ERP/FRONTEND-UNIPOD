@@ -4202,7 +4202,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 }
 .case-journey{
   display:grid !important;
-  grid-template-columns:repeat(var(--milestone-count, 6), minmax(0, 1fr)) !important;
+  grid-template-columns:repeat(var(--milestone-count, 6), minmax(0, 1fr));
   width:100% !important;
   min-width:100% !important;
   gap:0;
