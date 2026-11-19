@@ -151,6 +151,7 @@ export function BackendWorkspace({
       heading: 'MANAGEMENT',
       items: [
         { label: 'Overview', href: '/', icon: LayoutDashboard },
+        { label: 'Reports & Analytics', href: '/reports-analytics', icon: Grid2x2 },
         { label: 'All Submissions', href: '/submissions', icon: Boxes },
         { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },

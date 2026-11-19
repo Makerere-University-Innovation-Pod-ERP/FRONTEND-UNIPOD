@@ -57,6 +57,7 @@ import { ContractsPage } from '@/pages/multimedia/ContractsPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
+import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage';
 import { ReviewerCaseFile } from '@/pages/reviewer/ReviewerCaseFile';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
@@ -196,6 +197,7 @@ function AuthenticatedApp({
               ? <LiveDashboard token={session.accessToken} roles={session.roles} subject={session.subject} onUnauthorized={onLogout} />
               : <Navigate to={getRoleLandingPath(session.roles)} replace />
           } />
+          <Route path="/reports-analytics" element={isAdministrator ? <ReportsAnalyticsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Reports & Analytics is only available to administrators." />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
           <Route path="/finance" element={finance(FinanceOverviewPage)} />
