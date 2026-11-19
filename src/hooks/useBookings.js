@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '@/services/bookings';
+import { notificationKeys } from '@/hooks/useNotifications';
 
 const BOOKINGS_KEY = ['bookings'];
 const SUBMITTER_BOOKINGS_KEY = ['submitter', 'bookings'];
@@ -42,20 +43,34 @@ export function useSubmitterBooking(token, id, enabled = true) {
   });
 }
 
-function useSubmitterBookingMutation(mutationFn) {
+function useSubmitterBookingMutation(mutationFn, token, refreshNotifications = false) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: SUBMITTER_BOOKINGS_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUBMITTER_BOOKINGS_KEY });
+      if (refreshNotifications) {
+        queryClient.invalidateQueries({ queryKey: notificationKeys.list(token) });
+        queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount(token) });
+      }
+    },
   });
 }
 
 export function useCreateSubmitterBooking(token) {
-  return useSubmitterBookingMutation((body) => bookingsApi.createMyBooking(body, token));
+  return useSubmitterBookingMutation(
+    (body) => bookingsApi.createMyBooking(body, token),
+    token,
+    true,
+  );
 }
 
 export function useCancelSubmitterBooking(token) {
-  return useSubmitterBookingMutation((id) => bookingsApi.cancelMyBooking(id, token));
+  return useSubmitterBookingMutation(
+    (id) => bookingsApi.cancelMyBooking(id, token),
+    token,
+    true,
+  );
 }
 
 export function useTimetable(token, filters, enabled = true) {

@@ -99,15 +99,47 @@ function bookingProblem(status, detail) {
 function updateBooking(id, change) {
   const index = bookings.findIndex((b) => b.id === id);
   if (index === -1) return bookingProblem(404, 'Booking not found.');
-  const result = change(bookings[index]);
+  const previous = bookings[index];
+  const result = change(previous);
   if (result.error) return bookingProblem(...result.error);
   const updated = { ...result, decidedAt: result.decidedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
   bookings = bookings.map((b, i) => (i === index ? updated : b));
+  const statusNotifications = {
+    APPROVED: ['BOOKING_APPROVED', `Booking approved: ${updated.reference}`, `Your booking for ${updated.facilityName} has been approved.`],
+    REJECTED: ['BOOKING_REJECTED', `Booking rejected: ${updated.reference}`, `Your booking for ${updated.facilityName} was rejected.`],
+  };
+  const notification = statusNotifications[updated.status];
+  if (updated.status !== previous.status && notification) {
+    publishMockNotification(updated, ...notification);
+  }
   return HttpResponse.json(updated);
+}
+
+function publishMockNotification(booking, type, title, body) {
+  notificationRecords.unshift({
+    id: `00000000-0000-4000-8000-${String(nextNotificationNumber++).padStart(12, '0')}`,
+    type,
+    title,
+    body,
+    entityType: 'booking',
+    entityId: booking.id,
+    createdAt: new Date().toISOString(),
+    readAt: null,
+    read: false,
+    recipient: booking.requesterId?.toLocaleLowerCase(),
+  });
+}
+
+function notificationsForRequest(request) {
+  const email = mockSubmitterEmail(request);
+  return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
 }
 let eventContracts = [...initialContracts];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
+let notificationRecords = notifications.map((item) => ({ ...item }));
+let nextNotificationNumber = 704;
+let pushSubscriptions = new Map();
 const createSubmitterInvoiceMocks = () => initialSubmitterInvoices.map((invoice) => ({
   ...invoice,
   paymentProof: invoice.paymentProof ? { ...invoice.paymentProof } : null,
@@ -125,6 +157,12 @@ export function resetSubmitterInvoiceMocks() {
 export function resetSubmitterBookingMocks() {
   submitterBookings = createSubmitterBookingMocks();
   nextSubmitterBookingNumber = 1202;
+}
+
+export function resetNotificationMocks() {
+  notificationRecords = notifications.map((item) => ({ ...item }));
+  nextNotificationNumber = 704;
+  pushSubscriptions = new Map();
 }
 
 function mockSubmitterEmail(request) {
@@ -772,11 +810,62 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
-  http.get(`${API_BASE_URL}/notifications`, () => HttpResponse.json({ items: notifications })),
+  http.get(`${API_BASE_URL}/notifications`, ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    const page = Number(params.get('page') ?? 0);
+    const size = Number(params.get('size') ?? 25);
+    const unreadOnly = params.get('unread') === 'true';
+    const all = notificationsForRequest(request);
+    const filtered = unreadOnly ? all.filter((item) => !item.read) : all;
+    const items = filtered.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    });
+  }),
 
-  http.post(`${API_BASE_URL}/notifications/read-all`, () => {
-    for (const item of notifications) item.read = true;
+  http.get(`${API_BASE_URL}/notifications/unread-count`, ({ request }) => (
+    HttpResponse.json({ unread: notificationsForRequest(request).filter((item) => !item.read).length })
+  )),
+
+  http.get(`${API_BASE_URL}/notifications/push/config`, () => (
+    HttpResponse.json({ enabled: true, publicKey: 'B'.repeat(87) })
+  )),
+
+  http.put(`${API_BASE_URL}/notifications/push/subscriptions`, async ({ request }) => {
+    const body = await request.json();
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.set(`${email}:${body.endpoint}`, body);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete(`${API_BASE_URL}/notifications/push/subscriptions`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.delete(`${email}:${new URL(request.url).searchParams.get('endpoint')}`);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/:id/read`, ({ params, request }) => {
+    const notification = notificationsForRequest(request).find((item) => item.id === params.id);
+    if (!notification) return new HttpResponse(null, { status: 404 });
+    const updated = { ...notification, read: true, readAt: notification.readAt ?? new Date().toISOString() };
+    notificationRecords = notificationRecords.map((item) => item.id === params.id ? updated : item);
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/read-all`, ({ request }) => {
+    const current = notificationsForRequest(request);
+    const unreadIds = new Set(current.filter((item) => !item.read).map((item) => item.id));
+    const readAt = new Date().toISOString();
+    notificationRecords = notificationRecords.map((item) => unreadIds.has(item.id)
+      ? { ...item, read: true, readAt }
+      : item);
+    return HttpResponse.json({ marked: unreadIds.size });
   }),
 
   ...receptionHandlers,
@@ -1018,6 +1107,12 @@ export const handlers = [
       updatedAt: now,
     };
     submitterBookings = [created, ...submitterBookings];
+    publishMockNotification(
+      created,
+      'BOOKING_REQUESTED',
+      `Booking request received: ${created.reference}`,
+      `Your request for ${created.facilityName} has been submitted and is awaiting review.`,
+    );
     return HttpResponse.json(created, { status: 201 });
   }),
 
@@ -1036,6 +1131,12 @@ export const handlers = [
     }
     const updated = { ...result.booking, status: 'CANCELLED', updatedAt: new Date().toISOString() };
     submitterBookings = submitterBookings.map((item) => item.id === params.id ? updated : item);
+    publishMockNotification(
+      updated,
+      'BOOKING_CANCELLED',
+      `Booking cancelled: ${updated.reference}`,
+      `Your booking for ${updated.facilityName} has been cancelled.`,
+    );
     return HttpResponse.json(updated);
   }),
 

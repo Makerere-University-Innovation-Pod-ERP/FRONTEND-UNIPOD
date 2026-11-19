@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from './BackendWorkspace';
 import { submissions } from '@/mocks/fixtures/submissions';
 import { notifications } from '@/mocks/fixtures/notifications';
+import { resetNotificationMocks } from '@/mocks/handlers';
 
 const session = {
   accessToken: 'test-token',
@@ -26,6 +27,10 @@ function renderShell(currentSession = session, initialEntry = '/') {
     </QueryClientProvider>,
   );
 }
+
+beforeEach(() => {
+  resetNotificationMocks();
+});
 
 describe('BackendWorkspace', () => {
   it('toggles the sidebar collapsed state', async () => {
@@ -122,5 +127,28 @@ describe('BackendWorkspace', () => {
     for (const item of notifications) {
       expect(await screen.findByText(item.title)).toBeInTheDocument();
     }
+  });
+
+  it('explains when this browser cannot receive background push notifications', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: /notifications/i }));
+
+    expect(await screen.findByText('Background push is not supported in this browser.')).toBeInTheDocument();
+  });
+
+  it('shows the unread count in the navbar and updates it when a notification is opened', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const bell = await screen.findByRole('button', { name: 'Notifications, 2 unread' });
+    expect(bell.querySelector('.notification-count')).toHaveTextContent('2');
+    await user.click(bell);
+    await user.click(await screen.findByRole('link', { name: /fact-finding assessment needed/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument();
+    });
   });
 });

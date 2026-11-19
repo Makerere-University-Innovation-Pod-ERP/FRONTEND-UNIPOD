@@ -25,6 +25,15 @@ import {
 } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   useCancelSubmitterBooking,
   useCreateSubmitterBooking,
@@ -969,6 +978,9 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
     }, {
       onSuccess: (booking) => {
         setNotice(`Request ${booking.reference} was submitted and is awaiting review.`);
+        toast.success('Booking request submitted', {
+          description: `${booking.reference} is awaiting review.`,
+        });
         setPage(0);
         setForm((current) => ({
           ...current,
@@ -976,6 +988,11 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           operator: '',
           attendees: '1',
         }));
+      },
+      onError: (error) => {
+        toast.error('Booking request failed', {
+          description: error instanceof Error ? error.message : 'Please try again.',
+        });
       },
     });
   }
@@ -985,12 +1002,21 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
     cancelBooking.mutate(id, {
       onSuccess: (booking) => {
         setNotice(`Booking ${booking.reference} was cancelled.`);
+        toast.success('Booking cancelled', {
+          description: `${booking.reference} has been cancelled.`,
+        });
         setCancelId(null);
+      },
+      onError: (error) => {
+        toast.error('Could not cancel booking', {
+          description: error instanceof Error ? error.message : 'Please try again.',
+        });
       },
     });
   }
 
   const list = bookingsQuery.data?.items ?? [];
+  const bookingToCancel = list.find((booking) => booking.id === cancelId);
   const actionError = createBooking.error || cancelBooking.error;
   const detailsQuery = useSubmitterBooking(token, detailsId, Boolean(detailsId));
   useEffect(() => {
@@ -1155,29 +1181,18 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                     >
                       {detailsId === booking.id ? 'Hide details' : 'Booking details'}
                     </button>
-                    {canCancel && (cancelId === booking.id ? (
-                      <>
-                        <span className="submitter-booking-card__confirm">Cancel this booking?</span>
-                        <button type="button" className="submitter-booking-button" onClick={() => setCancelId(null)}>Keep booking</button>
-                        <button
-                          type="button"
-                          className="submitter-booking-button submitter-booking-button--danger"
-                          disabled={cancelBooking.isPending}
-                          onClick={() => cancel(booking.id)}
-                        >
-                          {cancelBooking.isPending ? <LoaderCircle className="spin" size={14} /> : <Ban size={14} />}
-                          Confirm cancellation
-                        </button>
-                      </>
-                    ) : (
+                    {canCancel && (
                       <button
                         type="button"
                         className="submitter-booking-button submitter-booking-button--quiet"
-                        onClick={() => setCancelId(booking.id)}
+                        onClick={() => {
+                          cancelBooking.reset();
+                          setCancelId(booking.id);
+                        }}
                       >
                         Cancel booking
                       </button>
-                    ))}
+                    )}
                   </div>
                   {detailsId === booking.id && <SubmitterBookingDetails query={detailsQuery} />}
                 </article>
@@ -1199,6 +1214,50 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         )}
       </section>
+      <AlertDialog
+        open={Boolean(cancelId)}
+        onOpenChange={(open) => {
+          if (!open && !cancelBooking.isPending) setCancelId(null);
+        }}
+      >
+        <AlertDialogContent className="submitter-booking-cancel-dialog">
+          <AlertDialogHeader className="submitter-booking-cancel-dialog__header">
+            <span className="submitter-booking-cancel-dialog__icon"><Ban size={18} aria-hidden="true" /></span>
+            <AlertDialogTitle className="submitter-booking-cancel-dialog__title">
+              Cancel this booking?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="submitter-booking-cancel-dialog__description">
+              {bookingToCancel
+                ? `Are you sure you want to cancel ${bookingToCancel.reference} for ${bookingToCancel.facilityName}? This action cannot be undone.`
+                : 'Are you sure you want to cancel this booking? This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {cancelBooking.error && (
+            <p className="submitter-booking-cancel-dialog__error" role="alert">
+              {cancelBooking.error.message || 'The booking could not be cancelled. Please try again.'}
+            </p>
+          )}
+          <AlertDialogFooter className="submitter-booking-cancel-dialog__footer">
+            <button
+              type="button"
+              className="submitter-booking-button submitter-booking-button--quiet"
+              disabled={cancelBooking.isPending}
+              onClick={() => setCancelId(null)}
+            >
+              Keep booking
+            </button>
+            <button
+              type="button"
+              className="submitter-booking-button submitter-booking-button--danger"
+              disabled={cancelBooking.isPending || !cancelId}
+              onClick={() => cancel(cancelId)}
+            >
+              {cancelBooking.isPending ? <LoaderCircle className="spin" size={14} /> : <Ban size={14} />}
+              {cancelBooking.isPending ? 'Cancelling…' : 'Confirm cancellation'}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

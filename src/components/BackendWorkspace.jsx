@@ -6,7 +6,8 @@ import {
   Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { canCreateSubmission, displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
@@ -22,7 +23,15 @@ import {
   isCncDomainOwner,
 } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
-import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
+import { Toaster } from '@/components/ui/sonner';
+import {
+  notificationKeys,
+  useNotifications,
+  useUnreadNotificationCount,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+} from '@/hooks/useNotifications';
+import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
 import { formatDate } from '@/lib/presentation';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
@@ -82,6 +91,7 @@ export function BackendWorkspace({
 }) {
   const { pathname: location } = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openPopover, setOpenPopover] = useState(null);
@@ -290,9 +300,27 @@ export function BackendWorkspace({
   }, [searchOpen, searchQuery, session.accessToken, onLogout]);
 
   const notificationsQuery = useNotifications(session.accessToken);
+  const unreadCountQuery = useUnreadNotificationCount(session.accessToken);
   const markAllRead = useMarkAllNotificationsRead(session.accessToken);
+  const markRead = useMarkNotificationRead(session.accessToken);
+  const browserPush = useBrowserPushNotifications(session.accessToken);
   const notificationItems = notificationsQuery.data ?? [];
-  const hasUnread = notificationItems.some((item) => !item.read);
+  const unreadCount = unreadCountQuery.data
+    ?? notificationItems.filter((item) => !item.read).length;
+  const hasUnread = unreadCount > 0;
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+    const handlePushMessage = (event) => {
+      const notification = event.data?.notification;
+      if (event.data?.type !== 'PUSH_NOTIFICATION' || !notification) return;
+
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.list(session.accessToken) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount(session.accessToken) });
+    };
+    navigator.serviceWorker.addEventListener('message', handlePushMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+  }, [queryClient, session.accessToken]);
 
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
@@ -427,9 +455,17 @@ export function BackendWorkspace({
             ) : null}
             <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
             <div className="top-pop-wrap">
-              <button className="top-circle-btn notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
+              <button
+                className="top-circle-btn notification-btn"
+                onClick={() => togglePopover('notifications')}
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              >
                 <Bell size={15} />
-                {hasUnread && <span className="notification-mark" />}
+                {hasUnread && (
+                  <span className="notification-count" aria-hidden="true">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {openPopover === 'notifications' && (
                 <div className="notification-popover">
@@ -439,24 +475,87 @@ export function BackendWorkspace({
                       <CheckCheck size={12} /> Mark all read
                     </button>
                   </div>
+                  <div className="notification-push">
+                    <div className="notification-push-copy">
+                      <b>Browser push</b>
+                      <small>
+                        {browserPush.loading
+                          ? 'Checking push availability…'
+                          : !browserPush.supported
+                            ? 'Background push is not supported in this browser.'
+                            : !browserPush.enabled
+                              ? 'Push alerts are not configured on the server.'
+                              : browserPush.permission === 'denied'
+                                ? 'Blocked in browser site settings.'
+                                : browserPush.subscribed
+                                  ? 'Enabled on this browser.'
+                                  : 'Opt in to alerts when the app is closed.'}
+                      </small>
+                    </div>
+                    {browserPush.enabled && browserPush.supported && browserPush.permission !== 'denied' && (
+                      <button
+                        type="button"
+                        className="notification-push-toggle"
+                        disabled={browserPush.working || browserPush.loading}
+                        onClick={async () => {
+                          const wasSubscribed = browserPush.subscribed;
+                          const succeeded = wasSubscribed
+                            ? await browserPush.disable()
+                            : await browserPush.enable();
+                          if (succeeded) {
+                            toast.success(wasSubscribed
+                              ? 'Browser push disabled'
+                              : 'Browser push enabled');
+                          }
+                        }}
+                      >
+                        {browserPush.working
+                          ? 'Updating…'
+                          : browserPush.subscribed
+                            ? 'Turn off'
+                            : 'Enable'}
+                      </button>
+                    )}
+                    {browserPush.error && <p role="alert">{browserPush.error}</p>}
+                    <small className="notification-push-privacy">
+                      Push alerts may appear when you are signed out.
+                    </small>
+                  </div>
                   <div className="notification-list">
                     {notificationsQuery.isLoading ? (
                       <p>Loading…</p>
-                    ) : notificationsQuery.isError ? (
-                      <p>Notifications aren't available for this account yet.</p>
+                    ) : notificationsQuery.isError || unreadCountQuery.isError ? (
+                      <p role="alert">
+                        Notifications could not be loaded.
+                        <button
+                          type="button"
+                          onClick={() => {
+                            notificationsQuery.refetch();
+                            unreadCountQuery.refetch();
+                          }}
+                        >
+                          Retry
+                        </button>
+                      </p>
                     ) : notificationItems.length ? (
                       notificationItems.map((item) => (
                         <Link
                           key={item.id}
                           to={item.link}
                           className={`notification-item ${item.read ? '' : 'unread'}`}
-                          onClick={() => setOpenPopover(null)}
+                          onClick={() => {
+                            if (!item.read) markRead.mutate(item.id);
+                            setOpenPopover(null);
+                          }}
                         >
                           <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
                         </Link>
                       ))
                     ) : (
                       <p>No notifications yet.</p>
+                    )}
+                    {(markRead.isError || markAllRead.isError || unreadCountQuery.isError) && (
+                      <p role="alert">The notification status could not be updated or loaded.</p>
                     )}
                   </div>
                 </div>
@@ -536,6 +635,7 @@ export function BackendWorkspace({
           </div>
         </section>
       </div>}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

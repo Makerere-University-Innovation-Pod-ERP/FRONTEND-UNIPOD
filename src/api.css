@@ -31,6 +31,7 @@
 @media(max-width:720px){.management-form{grid-template-columns:1fr}.management-member-form{align-items:stretch;flex-direction:column}.management-member-form>.btn{align-self:flex-start}}
 .global-search-trigger{height:36px;display:inline-flex;align-items:center;gap:8px;border:1px solid #e2e6dc;border-radius:9999px;background:#ffffff;padding:0 14px;color:#737d74;font-size:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.02)}.global-search-trigger:hover{border-color:#b8c5b9;background:#fafbf8}.global-search-trigger kbd{display:inline-flex;align-items:center;gap:3px;border:1px solid #e4e5df;background:#f7f8f4;border-radius:9999px;padding:2px 6px;color:#858c85;font:9px var(--font-mono);margin-left:4px}
 .top-circle-btn{width:36px;height:36px;border-radius:50%;border:1px solid #e2e6dc;background:#ffffff;color:#4b574d;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.02);transition:background .15s,border-color .15s,color .15s}.top-circle-btn:hover{background:#fafbf8;border-color:#b8c5b9;color:var(--forest)}
+.notification-btn{position:relative}.notification-count{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--surface);border-radius:999px;background:var(--rose);color:#fff;font-size:9px;font-weight:800;line-height:1}
 .top-register{height:36px;display:inline-flex;align-items:center;gap:10px;background:var(--forest);color:#ffffff;text-decoration:none;border-radius:9999px !important;padding:0 5px 0 16px;font-size:11px;font-weight:700;box-shadow:0 1px 3px rgba(23,107,82,.2);transition:background .16s}.top-register:hover{background:var(--forest-dim)}.register-plus{width:26px;height:26px;background:var(--lime);color:var(--lime-ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600}
 
 .partners-create-form .form-field input,
@@ -344,6 +345,15 @@
 .notification-item small{font-size:11px;color:var(--muted);display:block;margin-top:2px}
 .notification-item em{font-style:normal;font-size:10px;color:var(--muted);display:block;margin-top:3px}
 .notification-popover p{padding:14px;font-size:11px;color:var(--muted);margin:0}
+.notification-push{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border-soft)}
+.notification-push-copy{display:grid;gap:3px;flex:1;min-width:0}
+.notification-push-copy b{font-size:11px;color:var(--ink)}
+.notification-push-copy small,.notification-push-privacy{font-size:9px;color:var(--muted);line-height:1.45}
+.notification-push-privacy{flex-basis:100%}
+.notification-push{flex-wrap:wrap}
+.notification-push-toggle{flex:none;border:1px solid var(--border);border-radius:999px;background:var(--surface-raised);color:var(--forest);padding:6px 10px;font-size:9px;font-weight:750;cursor:pointer}
+.notification-push-toggle:disabled{opacity:.55;cursor:not-allowed}
+.notification-push>p[role="alert"]{flex-basis:100%;padding:0;color:var(--rose);font-size:10px}
 
 .live-content{width:100%;max-width:1600px;margin:0 auto;padding:30px 32px 60px;flex:1}
 .live-footer{display:flex;justify-content:space-between;gap:15px;padding:14px 32px;border-top:1px solid var(--border-soft);font-size:9px;color:var(--muted)}
@@ -4232,7 +4242,16 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 .submitter-booking-card__meta span{display:inline-flex;align-items:center;gap:5px}
 .submitter-booking-card__meta svg{color:var(--hub-hero-b)}
 .submitter-booking-card__actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.submitter-booking-card__confirm{color:#8e352d;font-size:8px;font-weight:650}
+.submitter-booking-cancel-dialog{width:min(440px,calc(100vw - 32px));gap:14px;padding:24px;border:1px solid hsl(var(--border));border-radius:18px;background:var(--surface);color:var(--ink);box-shadow:0 24px 80px rgba(13,38,25,.24)}
+.submitter-booking-cancel-dialog__header{align-items:flex-start;gap:8px;text-align:left}
+.submitter-booking-cancel-dialog__icon{display:grid;width:38px;height:38px;place-items:center;margin-bottom:2px;border-radius:12px;background:#fff2f0;color:#973d35}
+.submitter-booking-cancel-dialog__title{color:var(--ink);font-size:17px;font-weight:750;line-height:1.3}
+.submitter-booking-cancel-dialog__description{color:var(--muted);font-size:12px;line-height:1.6}
+.submitter-booking-cancel-dialog__error{margin:0;padding:9px 10px;border:1px solid #e8c1be;border-radius:9px;background:#fff2f0;color:#8e352d;font-size:11px;line-height:1.45}
+.submitter-booking-cancel-dialog__footer{gap:8px}
+.submitter-booking-cancel-dialog__footer .submitter-booking-button{min-height:36px;padding:0 13px;font-size:10px}
+.submitter-booking-cancel-dialog__footer .submitter-booking-button--danger{background:#fff7f6}
+.submitter-booking-cancel-dialog__footer .submitter-booking-button--danger:hover:not(:disabled){border-color:#973d35;background:#973d35;color:#fff}
 .submitter-booking-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;padding:12px 1px 1px;margin:12px 0 0;border-top:1px solid hsl(var(--border-soft))}
 .submitter-booking-details>div{display:grid;align-content:start;gap:4px;min-width:0}
 .submitter-booking-details .submitter-booking-details__wide{grid-column:1/-1}
