@@ -147,6 +147,16 @@ export function BackendWorkspace({
   ];
 
   const standardNavGroups = [
+    ...(isAdministrator ? [{
+      heading: 'MANAGEMENT',
+      items: [
+        { label: 'Overview', href: '/', icon: LayoutDashboard },
+        { label: 'All Submissions', href: '/submissions', icon: Boxes },
+        { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
+        { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
+        { label: 'Settings', href: '/management', icon: Settings2 },
+      ],
+    }] : []),
     ...(isSubmitter ? [{
       heading: 'MY WORKSPACE',
       items: [
@@ -212,16 +222,6 @@ export function BackendWorkspace({
       items: [
         { label: 'Price Lists & Invoices', href: '/finance/invoices', icon: Receipt },
         { label: 'Partners & MOUs', href: '/partners', icon: Handshake },
-      ],
-    }] : []),
-    ...(isAdministrator ? [{
-      heading: 'MANAGEMENT',
-      items: [
-        { label: 'Overview', href: '/', icon: LayoutDashboard },
-        { label: 'All Submissions', href: '/submissions', icon: Boxes },
-        { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
-        { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
-        { label: 'Settings', href: '/management', icon: Settings2 },
       ],
     }] : []),
   ];

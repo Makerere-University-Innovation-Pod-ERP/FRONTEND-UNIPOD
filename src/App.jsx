@@ -6,6 +6,7 @@ import {
   clearSession,
   canCreateSubmission,
   createSession,
+  getRoleLandingPath,
   loadSession,
   saveSession,
   SUBMISSION_INTAKE_ROLES,
@@ -191,16 +192,10 @@ function AuthenticatedApp({
             <>
               {TEXTILE_ONLY ? null : <>
           <Route path="/" element={
-            session.roles.includes('ROLE_SUBMITTER') ? <Navigate to="/my-submissions" replace />
-            : canReception ? <Navigate to="/reception/home" replace />
-            : canFactFind ? <Navigate to="/fact-finding/queue" replace />
-            : canReview ? <Navigate to="/reviewer/workspace" replace />
-            : canCoordinate ? <Navigate to="/coordinator" replace />
-            : canFinance ? <Navigate to="/finance/overview" replace />
-            : canMultimedia ? <Navigate to="/multimedia/media" replace />
-            : canTextile ? <Navigate to="/textile/board" replace />
-            : canCnc ? <Navigate to="/cnc/board" replace />
-            : <LiveDashboard token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+            getRoleLandingPath(session.roles) === '/'
+              ? <LiveDashboard token={session.accessToken} roles={session.roles} subject={session.subject} onUnauthorized={onLogout} />
+              : <Navigate to={getRoleLandingPath(session.roles)} replace />
+          } />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
           <Route path="/finance" element={finance(FinanceOverviewPage)} />

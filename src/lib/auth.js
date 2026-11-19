@@ -14,6 +14,21 @@ export function canCreateSubmission(roles) {
   return roles.some((role) => SUBMISSION_CREATION_ROLES.includes(role));
 }
 
+export function getRoleLandingPath(roles) {
+  if (roles.includes('ROLE_ADMINISTRATOR')) return '/';
+  if (roles.includes('ROLE_TELECOMS_DOMAIN_OWNER')) return '/telecoms/requests';
+  if (roles.includes('ROLE_SUBMITTER')) return '/my-submissions';
+  if (roles.includes('ROLE_RECEPTIONIST')) return '/reception/home';
+  if (roles.includes('ROLE_FACT_FINDING_OFFICER')) return '/fact-finding/queue';
+  if (roles.includes('ROLE_REVIEWER')) return '/reviewer/workspace';
+  if (roles.includes('ROLE_INNOVATION_COORDINATOR')) return '/coordinator';
+  if (roles.includes('ROLE_FINANCE_OFFICER')) return '/finance/overview';
+  if (roles.includes('ROLE_MULTIMEDIA_OFFICER')) return '/multimedia/media';
+  if (roles.includes('ROLE_TEXTILE_DOMAIN_OWNER')) return '/textile/board';
+  if (roles.includes('ROLE_CNC_DOMAIN_OWNER')) return '/cnc/board';
+  return '/';
+}
+
 function decodePayload(token) {
   try {
     const payload = token.split('.')[1];
