@@ -151,7 +151,7 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
   async function onSubmit(values) {
     setServerError('');
     try {
-      const session = createSession(await backendApi.signup(toRequestBody(values)));
+      const session = createSession(await backendApi.signup(toRequestBody(values)), values.email.trim());
       onLogin(session);
     } catch (reason) {
       setServerError(reason instanceof Error ? reason.message : 'Could not create the account.');

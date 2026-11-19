@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Receipt,
   Clock,
@@ -36,7 +36,7 @@ function downloadBlob(file, filename) {
  * verifying client bank payments, and issuing official gated receipts.
  */
 export function PriceListsInvoicesPage({ token, onUnauthorized }) {
-  const { data: overview, isLoading, error } = useInvoicesOverview(token);
+  const { data: overview, isLoading, error, refetch, isFetching } = useInvoicesOverview(token);
   const verifyMutation = useVerifyInvoice(token);
   const rejectMutation = useRejectInvoice(token);
   const receiptMutation = useReleaseReceipt(token);
@@ -49,15 +49,29 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   const [selectedPriceItem, setSelectedPriceItem] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  if (error?.status === 401) {
-    onUnauthorized?.();
-  }
+  useEffect(() => {
+    if (error?.status === 401) onUnauthorized?.();
+  }, [error, onUnauthorized]);
 
   if (isLoading && !overview) {
     return (
       <div className="live-panel" style={{ padding: '40px', textAlign: 'center' }}>
         <p className="eyebrow" style={{ color: '#1b5e43' }}>LOADING INVOICES</p>
         <p style={{ color: '#6b7280', marginTop: '8px' }}>Retrieving authorised price lists and invoice queue…</p>
+      </div>
+    );
+  }
+
+  if (error && !overview) {
+    return (
+      <div className="live-panel" role="alert" style={{ padding: '24px' }}>
+        <p className="eyebrow" style={{ color: '#9b2c2c' }}>PAYMENTS UNAVAILABLE</p>
+        <p style={{ color: '#6b7280', marginTop: '8px' }}>
+          {error.message || 'Could not load invoices and authorised prices from the backend.'}
+        </p>
+        <button type="button" className="btn btn-secondary" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? 'Retrying…' : 'Retry'}
+        </button>
       </div>
     );
   }
@@ -188,6 +202,14 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', paddingBottom: '32px' }}>
+      {error && (
+        <div role="alert" className="submitter-invoice-alert" style={{ marginBottom: '16px' }}>
+          <span>{error.message || 'The latest finance data could not be refreshed.'}</span>
+          <button type="button" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <p
@@ -702,7 +724,11 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
                   {selectedPriceItem.service}
                 </h3>
-                <small style={{ color: '#6b7280' }}>Category: {selectedPriceItem.category}</small>
+                <small style={{ color: '#6b7280' }}>
+                  {selectedPriceItem.category
+                    ? `Category: ${selectedPriceItem.category}`
+                    : `Effective from ${selectedPriceItem.effectiveFrom || 'date not provided'}`}
+                </small>
               </div>
               <button
                 type="button"
@@ -726,9 +752,11 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
               </div>
             </div>
 
-            <p style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              {selectedPriceItem.description}
-            </p>
+            {selectedPriceItem.description && (
+              <p style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+                {selectedPriceItem.description}
+              </p>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button

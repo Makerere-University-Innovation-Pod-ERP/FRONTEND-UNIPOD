@@ -28,36 +28,51 @@ function decodePayload(token) {
   }
 }
 
-export function createSession(response) {
+export function createSession(response, fallbackEmail) {
   const payload = decodePayload(response.accessToken);
   const roles = Array.isArray(payload?.roles) ? payload.roles : [];
   return {
     accessToken: response.accessToken,
     expiresAt: response.expiresAt,
+    refreshToken: response.refreshToken,
+    refreshExpiresAt: response.refreshExpiresAt,
     subject: payload?.name || payload?.email || payload?.sub || 'Signed-in user',
+    email: payload?.email || response.email || fallbackEmail,
     roles: roles.map((role) => role.startsWith('ROLE_') ? role : `ROLE_${role}`),
   };
 }
 
 export function saveSession(session) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
 export function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY);
 }
 
 export function loadSession() {
   try {
-    const saved = sessionStorage.getItem(SESSION_KEY);
+    const saved = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
     if (!saved) return null;
     const session = JSON.parse(saved);
     const payload = decodePayload(session.accessToken);
-    if (!payload?.exp || payload.exp * 1000 <= Date.now()) {
+    const accessTokenIsValid = payload?.exp && payload.exp * 1000 > Date.now();
+    const refreshExpiresAt = session.refreshExpiresAt
+      ? Date.parse(session.refreshExpiresAt)
+      : null;
+    const refreshTokenIsValid =
+      typeof session.refreshToken === 'string' &&
+      session.refreshToken.length > 0 &&
+      (refreshExpiresAt === null || (Number.isFinite(refreshExpiresAt) && refreshExpiresAt > Date.now()));
+    if (!accessTokenIsValid && !refreshTokenIsValid) {
       clearSession();
       return null;
     }
-    return session;
+    const restored = { ...session, email: session.email || payload?.email };
+    saveSession(restored);
+    return restored;
   } catch {
     clearSession();
     return null;

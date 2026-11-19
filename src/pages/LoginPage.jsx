@@ -26,7 +26,7 @@ export function LoginPage({ onLogin, onCreateAccount }) {
     setError('');
     setBusy(true);
     try {
-      const session = createSession(await backendApi.login(email.trim(), password));
+      const session = createSession(await backendApi.login(email.trim(), password), email.trim());
       saveSession(session);
       onLogin(session);
     } catch (reason) {

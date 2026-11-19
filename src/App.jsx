@@ -33,6 +33,11 @@ import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
 import { RespondToRequestPage } from '@/pages/RespondToRequestPage';
 import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
+import {
+  SubmitterBookingsPage,
+  SubmitterInvoicesPage,
+  SubmitterServiceRequestsPage,
+} from '@/pages/SubmitterSectionPage';
 import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
 import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
@@ -156,6 +161,9 @@ function AuthenticatedApp({
   const multimedia = (Page) => (canMultimedia
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Multimedia screens are only available to the Multimedia officer." />);
+  const submitter = (Page) => (session.roles.includes('ROLE_SUBMITTER')
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="This page is for submitter accounts." />);
   const canTelecoms = isTelecomsDomainOwner(session.roles) || isAdministrator;
   const telecoms = (Page) => (canTelecoms
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
@@ -230,6 +238,9 @@ function AuthenticatedApp({
           <Route path="/submissions/student" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
           <Route path="/submissions/general" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
+          <Route path="/my-submissions/service-requests" element={submitter(SubmitterServiceRequestsPage)} />
+          <Route path="/my-submissions/invoices" element={submitter(SubmitterInvoicesPage)} />
+          <Route path="/my-submissions/bookings" element={submitter(SubmitterBookingsPage)} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
           <Route path="/submissions/new" element={mayCreateSubmission ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
@@ -313,6 +324,14 @@ function App() {
   });
   const [health, setHealth] = useState('checking');
   const [showSignUp, setShowSignUp] = useState(false);
+
+  useEffect(() => {
+    const handleSessionRefreshed = (event) => {
+      if (event.detail?.accessToken) setSession(event.detail);
+    };
+    window.addEventListener('unipod:session-refreshed', handleSessionRefreshed);
+    return () => window.removeEventListener('unipod:session-refreshed', handleSessionRefreshed);
+  }, []);
 
   useEffect(() => {
     let active = true;
