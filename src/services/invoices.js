@@ -72,11 +72,12 @@ export const invoiceStatusSchema = z.enum([
 export const priceListItemSchema = z.object({
   id: z.string(),
   service: z.string(),
-  category: z.string(),
+  category: z.string().optional(),
   rate: z.string(),
   rateNumeric: z.number(),
   unit: z.string(),
   description: z.string().optional(),
+  effectiveFrom: z.string().optional(),
 });
 
 export const invoiceSchema = z.object({
@@ -130,6 +131,25 @@ const financeSummarySchema = z.object({
   outstandingUgx: z.number(),
   collectedUgx: z.number(),
 });
+
+const financePriceListItemSchema = z.object({
+  id: z.string().uuid(),
+  departmentId: z.string().uuid(),
+  service: z.string(),
+  unit: z.enum(['PER_SESSION', 'PER_ITEM', 'PER_HOUR', 'PER_DAY']),
+  priceUgx: z.number().int().nonnegative(),
+  effectiveFrom: z.string(),
+  status: z.enum(['PROPOSED', 'ACTIVE', 'RETIRED']),
+  proposedBy: z.string(),
+  updatedAt: z.string(),
+});
+
+const priceUnitLabels = {
+  PER_SESSION: 'per session',
+  PER_ITEM: 'per item',
+  PER_HOUR: 'per hour',
+  PER_DAY: 'per day',
+};
 
 const formatCurrency = (amount) => {
   const numericAmount = Number(amount ?? 0);
@@ -225,12 +245,21 @@ export const invoicesApi = {
   async getOverview(token, signal) {
     const [summaryResponse, invoicePage, priceListResponse] = await Promise.all([
       request('/finance/summary', { token, signal }),
-      request('/invoices?size=100', { token, signal }),
-      request('/finance/price-list', { token, signal }),
+      request('/invoices?page=0&size=100', { token, signal }),
+      request('/price-list-items?status=ACTIVE', { token, signal }),
     ]);
     const summary = financeSummarySchema.parse(summaryResponse);
     const invoices = (invoicePage.items ?? []).map(toInvoiceViewModel);
-    const priceList = priceListResponse.items ?? [];
+    const priceList = z.array(financePriceListItemSchema).parse(priceListResponse)
+      .filter((item) => item.status === 'ACTIVE')
+      .map((item) => ({
+        id: item.id,
+        service: item.service,
+        rate: formatCurrency(item.priceUgx),
+        rateNumeric: item.priceUgx,
+        unit: priceUnitLabels[item.unit],
+        effectiveFrom: item.effectiveFrom,
+      }));
 
     return invoicesOverviewSchema.parse({
       eyebrow: 'FINANCE',

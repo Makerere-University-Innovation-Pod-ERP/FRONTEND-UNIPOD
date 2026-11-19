@@ -1134,8 +1134,25 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/price-list-items`, ({ request }) => {
-    const departmentId = new URL(request.url).searchParams.get('departmentId');
-    return HttpResponse.json(initialCncPrices.filter((p) => !departmentId || p.departmentId === departmentId));
+    const params = new URL(request.url).searchParams;
+    const departmentId = params.get('departmentId');
+    const status = params.get('status');
+    const financePrices = initialPriceList.map((item, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 501).padStart(12, '0')}`,
+      departmentId: '00000000-0000-4000-8000-000000000900',
+      service: item.service,
+      unit: ['PER_SESSION', 'PER_HOUR', 'PER_ITEM', 'PER_SESSION'][index],
+      priceUgx: item.rateNumeric,
+      effectiveFrom: '2026-10-01',
+      status: 'ACTIVE',
+      proposedBy: 'finance@unipod.test',
+      updatedAt: '2026-10-01T08:00:00Z',
+    }));
+    const prices = departmentId ? initialCncPrices : financePrices;
+    return HttpResponse.json(prices.filter((item) => (
+      (!departmentId || item.departmentId === departmentId)
+      && (!status || item.status === status)
+    )));
   }),
 
   // CNC & Carpentry orders
@@ -1424,10 +1441,6 @@ export const handlers = [
       outstandingUgx: 340000,
       collectedUgx: 1620000,
     });
-  }),
-
-  http.get(`${API_BASE_URL}/finance/price-list`, () => {
-    return HttpResponse.json({ items: initialPriceList });
   }),
 
   http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
