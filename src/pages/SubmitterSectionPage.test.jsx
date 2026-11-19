@@ -221,7 +221,7 @@ describe('Submitter section pages', () => {
     renderPage(SubmitterInvoicesPage);
 
     const detailsButtons = await screen.findAllByRole('button', { name: 'Invoice details' });
-    await user.click(detailsButtons[2]);
+    await user.click(within(screen.getByText('INV-2026-184').closest('article')).getByRole('button', { name: 'Invoice details' }));
 
     expect(await screen.findByText('REC-2026-094')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download receipt PDF' })).toBeInTheDocument();
