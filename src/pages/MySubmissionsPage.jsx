@@ -1,26 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
-  CalendarDays,
   CircleAlert,
-  ClipboardList,
+  CircleHelp,
   FileText,
   Inbox,
   LoaderCircle,
   LockKeyhole,
-  Receipt,
   Search,
   X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
-
-const TABS = [
-  { id: 'briefs', label: 'Briefs', icon: FileText },
-  { id: 'service-requests', label: 'Service requests', icon: ClipboardList, reason: 'Service requests belong to the operational domains (Multimedia, Textile, CNC & Carpentry, Telecoms) — not yet built.' },
-  { id: 'invoices', label: 'Invoices and payments', icon: Receipt, reason: 'Invoices and payments are owned by the shared Finance module (Assignment 6) — not yet built.' },
-  { id: 'bookings', label: 'Bookings', icon: CalendarDays, reason: 'Bookings belong to the operational domains\' schedule/lab/workshop screens — not yet built.' },
-];
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function isSubmitterCapabilities(value) {
   return value !== null
@@ -44,7 +36,6 @@ export function MySubmissionsPage({
   const [result, setResult] = useState(null);
   const [capabilities, setCapabilities] = useState(null);
   const [page, setPage] = useState(0);
-  const [activeTab, setActiveTab] = useState('briefs');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -77,63 +68,45 @@ export function MySubmissionsPage({
     return [item.title, item.code, item.id, item.category, item.stage]
       .some((value) => String(value ?? '').toLocaleLowerCase().includes(normalizedSearch));
   });
-  const activeTabDetails = TABS.find((tab) => tab.id === activeTab);
 
   return (
     <div className="live-page page-enter my-submissions-page">
       <div className="live-page-heading">
-        <div><p className="eyebrow">MY WORKSPACE · SUBMITTER HOME</p><h1>My submissions</h1><p>Track cases linked to your account. Your case records are read-only.</p></div>
-      </div>
-      {capabilities && <section className="live-panel submitter-capabilities my-submissions-capabilities" aria-label="Account capabilities">
         <div>
-          <p className="eyebrow">ACCOUNT ACCESS</p>
-          <p>{capabilities.message}</p>
-        </div>
-        {capabilities.modules.some((module) => module.availability === 'NOT_CONFIGURED') && (
-          <div className="locked-modules">
-            {capabilities.modules
-              .filter((module) => module.availability === 'NOT_CONFIGURED')
-              .map((module) => <span key={module.key}><LockKeyhole size={13} />{module.label}</span>)}
+          <p className="eyebrow">MY WORKSPACE · SUBMITTER HOME</p>
+          <div className="my-submissions-title-row">
+            <h1>My submissions</h1>
+            {capabilities && (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="my-submissions-access-trigger" aria-label="Account access details">
+                      <CircleHelp size={15} aria-hidden="true" />
+                      <span>Account access</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="my-submissions-access-tooltip" side="bottom" align="start" sideOffset={8}>
+                    <div>
+                      <p className="eyebrow">ACCOUNT ACCESS</p>
+                      <p>{capabilities.message}</p>
+                      {capabilities.modules.some((module) => module.availability === 'NOT_CONFIGURED') && (
+                        <div className="locked-modules">
+                          {capabilities.modules
+                            .filter((module) => module.availability === 'NOT_CONFIGURED')
+                            .map((module) => <span key={module.key}><LockKeyhole size={13} />{module.label}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-        )}
-      </section>}
-      {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
-      <div className="my-submissions-tabs" role="tablist" aria-label="My submissions sections">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`my-submissions-panel-${tab.id}`}
-            id={`my-submissions-tab-${tab.id}`}
-            className="my-submissions-tab"
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <tab.icon size={16} aria-hidden="true" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
+          <p>Track cases linked to your account. Your case records are read-only.</p>
+        </div>
       </div>
-      {activeTab !== 'briefs' ? (
-        <section
-          className="my-submissions-panel my-submissions-coming-soon"
-          role="tabpanel"
-          id={`my-submissions-panel-${activeTab}`}
-          aria-labelledby={`my-submissions-tab-${activeTab}`}
-        >
-          <span className="my-submissions-empty-icon"><LockKeyhole size={21} /></span>
-          <p className="eyebrow">COMING SOON</p>
-          <h2>{activeTabDetails?.label}</h2>
-          <p>{activeTabDetails?.reason}</p>
-        </section>
-      ) : (
-        <section
-          className="my-submissions-panel"
-          role="tabpanel"
-          id="my-submissions-panel-briefs"
-          aria-labelledby="my-submissions-tab-briefs"
-        >
+      {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
+      <section className="my-submissions-panel">
           <div className="my-submissions-toolbar">
             <div className="my-submissions-table-heading">
               <span className="my-submissions-heading-icon"><FileText size={17} /></span>
@@ -220,8 +193,7 @@ export function MySubmissionsPage({
               )}
             </div>
           )}
-        </section>
-      )}
+      </section>
     </div>
   );
 }

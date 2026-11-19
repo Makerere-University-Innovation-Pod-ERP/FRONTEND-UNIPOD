@@ -1,6 +1,67 @@
 import { z } from 'zod';
 import { request, requestFile } from './api-client';
 
+export const SUBMITTER_INVOICE_STATUSES = [
+  'WAITING_FOR_PROOF',
+  'WAITING_FOR_CHECK',
+  'PAID',
+  'RECEIPTED',
+];
+
+export const MAX_PAYMENT_PROOF_SIZE = 15 * 1024 * 1024;
+
+const submitterPaymentProofSchema = z.object({
+  id: z.string().uuid(),
+  reference: z.string(),
+  amount: z.number().int(),
+  paidOn: z.string(),
+  contentType: z.string().nullable().optional(),
+  fileSize: z.number().int().nonnegative().optional(),
+  originalFilename: z.string().nullable().optional(),
+  status: z.enum(['PENDING', 'VERIFIED', 'REJECTED']),
+  rejectionReason: z.string().nullable().optional(),
+  uploadedBy: z.string(),
+  uploadedAt: z.string(),
+  verifiedBy: z.string().nullable().optional(),
+  verifiedAt: z.string().nullable().optional(),
+});
+
+export const submitterReceiptSchema = z.object({
+  id: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  receiptNumber: z.string(),
+  issuedBy: z.string(),
+  issuedAt: z.string(),
+});
+
+export const submitterInvoiceSchema = z.object({
+  id: z.string().uuid(),
+  number: z.string(),
+  customerEmail: z.string().email(),
+  customerName: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  description: z.string(),
+  amount: z.number().int().positive(),
+  currency: z.string(),
+  sourceType: z.enum(['REQUEST', 'BOOKING', 'SESSION', 'JOB']),
+  sourceId: z.string().nullable().optional(),
+  status: z.enum(SUBMITTER_INVOICE_STATUSES),
+  statusLabel: z.string(),
+  issuedBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  paymentProof: submitterPaymentProofSchema.nullable().optional(),
+  receipt: submitterReceiptSchema.nullable().optional(),
+});
+
+const submitterInvoicePageSchema = z.object({
+  items: z.array(submitterInvoiceSchema),
+  page: z.number().int().nonnegative(),
+  size: z.number().int().positive(),
+  totalElements: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+});
+
 export const invoiceStatusSchema = z.enum([
   'Pending evidence',
   'Awaiting verification',
@@ -111,6 +172,56 @@ const toInvoiceViewModel = (invoice) => ({
 });
 
 export const invoicesApi = {
+  async listMyInvoices(token, { page = 0, size = 25, status } = {}, signal) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (status) params.set('status', status);
+    return submitterInvoicePageSchema.parse(
+      await request(`/me/invoices?${params}`, { token, signal }),
+    );
+  },
+
+  async myInvoice(id, token, signal) {
+    return submitterInvoiceSchema.parse(
+      await request(`/me/invoices/${encodeURIComponent(id)}`, { token, signal }),
+    );
+  },
+
+  async uploadMyPaymentProof(id, { reference, amount, paidOn, file }, token, signal) {
+    const body = new FormData();
+    body.append('reference', reference);
+    body.append('amount', String(amount));
+    body.append('paidOn', paidOn);
+    body.append('file', file, file.name);
+    return submitterInvoiceSchema.parse(await request(`/me/invoices/${encodeURIComponent(id)}/proof`, {
+      method: 'POST',
+      body,
+      token,
+      signal,
+    }));
+  },
+
+  async myReceipt(id, token, signal) {
+    return submitterReceiptSchema.parse(
+      await request(`/me/invoices/${encodeURIComponent(id)}/receipt`, { token, signal }),
+    );
+  },
+
+  async downloadMyInvoicePdf(id, token, signal) {
+    return requestFile(`/me/invoices/${encodeURIComponent(id)}/pdf`, token, signal);
+  },
+
+  async downloadMyPaymentProof(id, token, signal) {
+    return requestFile(`/me/invoices/${encodeURIComponent(id)}/proof/file`, token, signal);
+  },
+
+  async downloadMyReceiptPdf(id, token, signal) {
+    return requestFile(`/me/invoices/${encodeURIComponent(id)}/receipt/pdf`, token, signal);
+  },
+
+  async downloadMyReceipt(id, token, signal) {
+    return requestFile(`/me/invoices/${encodeURIComponent(id)}/receipt/download`, token, signal);
+  },
+
   async getOverview(token, signal) {
     const [summaryResponse, invoicePage, priceListResponse] = await Promise.all([
       request('/finance/summary', { token, signal }),

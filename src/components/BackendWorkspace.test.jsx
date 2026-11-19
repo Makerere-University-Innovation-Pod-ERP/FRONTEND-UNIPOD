@@ -14,11 +14,11 @@ const session = {
   roles: ['ROLE_FACT_FINDING_OFFICER'],
 };
 
-function renderShell(currentSession = session) {
+function renderShell(currentSession = session, initialEntry = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
           <p>Page content</p>
         </BackendWorkspace>
@@ -35,12 +35,12 @@ describe('BackendWorkspace', () => {
     expect(sidebar).not.toHaveClass('collapsed');
 
     const collapseToggle = screen.getByRole('button', { name: /collapse navigation/i });
-    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-menu');
+    expect(collapseToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
     await user.click(collapseToggle);
     expect(sidebar).toHaveClass('collapsed');
 
     const expandToggle = screen.getByRole('button', { name: /expand navigation/i });
-    expect(expandToggle.querySelector('svg')).toHaveClass('lucide-menu');
+    expect(expandToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
     await user.click(expandToggle);
     expect(sidebar).not.toHaveClass('collapsed');
   });
@@ -51,6 +51,45 @@ describe('BackendWorkspace', () => {
     expect(screen.getByRole('link', { name: /submit an idea/i })).toHaveAttribute('href', '/submissions/new');
   });
 
+  it('omits empty navigation groups for submitter-only accounts', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
+
+    expect(screen.queryByText('INNOVATION PIPELINE')).not.toBeInTheDocument();
+  });
+
+  it('lists separate submitter pages after My Submissions and highlights the current page', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] }, '/my-submissions/bookings');
+
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    const links = Array.from(navigation.querySelectorAll('a'));
+    expect(links.map((link) => link.textContent.trim())).toEqual([
+      'My Submissions',
+      'Service Requests',
+      'Invoices and Payments',
+      'Bookings',
+    ]);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/my-submissions',
+      '/my-submissions/service-requests',
+      '/my-submissions/invoices',
+      '/my-submissions/bookings',
+    ]);
+    expect(screen.getByRole('link', { name: 'Bookings' })).toHaveClass('active');
+  });
+
+  it('keeps My Submissions first and shows the full email address', () => {
+    renderShell({
+      ...session,
+      subject: 'alvin69david',
+      email: 'alvin69david@gmail.com',
+      roles: ['ROLE_SUBMITTER', 'ROLE_ADMINISTRATOR'],
+    });
+
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(navigation.querySelector('a')).toHaveTextContent('My Submissions');
+    expect(screen.getByText('alvin69david@gmail.com')).toBeInTheDocument();
+  });
+
   it('keeps the mobile menu toggle beside the brand and opens the sidebar', async () => {
     const user = userEvent.setup();
     const { container } = renderShell();
@@ -58,12 +97,12 @@ describe('BackendWorkspace', () => {
     expect(container.querySelector('.live-topbar .mobile-nav-toggle')).toBeNull();
     const menuToggle = screen.getByRole('button', { name: 'Open navigation' });
     expect(menuToggle).toHaveClass('mobile-edge-nav-toggle');
-    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-menu');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
     expect(container.querySelector('.live-brand')).toContainElement(menuToggle);
 
     await user.click(menuToggle);
     expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
-    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-x');
+    expect(menuToggle.querySelector('svg')).toHaveClass('lucide-chevron-left');
     expect(container.querySelector('.live-sidebar')).toHaveClass('mobile-open');
   });
 

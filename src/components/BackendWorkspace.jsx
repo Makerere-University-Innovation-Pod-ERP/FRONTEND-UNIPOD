@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
-  CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  ArrowLeftRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
+  ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
+  List, LogOut, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -59,6 +59,7 @@ function buildTelecomsNavigation(roles) {
 }
 
 function isActiveLink(href, location) {
+  if (href === '/my-submissions' || href.startsWith('/my-submissions/')) return location === href;
   if (location === href) return true;
   if (href === '/overview' && location === '/') return true;
   if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
@@ -91,7 +92,7 @@ export function BackendWorkspace({
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
+  const name = session.email || session.subject;
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
@@ -151,6 +152,9 @@ export function BackendWorkspace({
       heading: 'MY WORKSPACE',
       items: [
         { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
       ],
     }] : []),
     {
@@ -226,7 +230,9 @@ export function BackendWorkspace({
     }] : []),
   ];
 
-  const navGroups = isTelecoms ? telecomsNavGroups : standardNavGroups;
+  const navGroups = isTelecoms
+    ? telecomsNavGroups
+    : standardNavGroups.filter((group) => group.items.length > 0);
 
   const textileNavSections = [
     { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
@@ -320,7 +326,7 @@ export function BackendWorkspace({
             title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             aria-expanded={!collapsed}
           >
-            <Menu size={17} />
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
           <button
             type="button"
@@ -330,7 +336,7 @@ export function BackendWorkspace({
             title={mobileOpen ? 'Close navigation' : 'Open navigation'}
             aria-expanded={mobileOpen}
           >
-            {mobileOpen ? <X size={19} /> : <Menu size={19} />}
+            {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
           </button>
         </div>
 
@@ -459,18 +465,6 @@ export function BackendWorkspace({
             <button className="top-circle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <div className="top-pop-wrap">
-              <button className="top-circle-btn" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={16} /></button>
-              {openPopover === 'help' && (
-                <div className="top-popover">
-                  <b>Workspace guide</b>
-                  <p>Stages are a flexible guide; exact roles and destinations remain configurable with the backend team.</p>
-                  <a href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" onClick={() => setOpenPopover(null)}>
-                    Check backend health <ArrowUpRight size={13} />
-                  </a>
-                </div>
-              )}
-            </div>
             {mayCreateSubmission && !isTelecoms && (
               <Link
                 to="/submissions/new"

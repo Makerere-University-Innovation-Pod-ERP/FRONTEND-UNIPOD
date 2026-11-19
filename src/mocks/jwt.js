@@ -11,11 +11,12 @@ function base64url(input) {
  * lib/auth.ts (which never verifies a signature) can derive a mock session.
  * Never used against the real backend.
  */
-export function makeMockToken(roles, subject) {
+export function makeMockToken(roles, subject, email) {
   const header = base64url({ alg: 'none', typ: 'JWT' });
   const payload = base64url({
     sub: subject,
     name: subject,
+    email,
     roles,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
   });
