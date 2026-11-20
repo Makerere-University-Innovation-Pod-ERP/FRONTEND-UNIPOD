@@ -27,6 +27,7 @@ import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
 import { AdminManagementPage } from '@/pages/admin/AdminManagementPage';
+import { RulesManagerPage } from '@/pages/RulesManagerPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
@@ -218,6 +219,7 @@ function AuthenticatedApp({
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
+          <Route path="/rules/manager" element={isAdministrator ? <RulesManagerPage token={session.accessToken} /> : <AccessRestricted label="The department rules manager is only available to administrators." />} />
           <Route path="/submissions/new" element={mayCreateSubmission ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/new/confirmation" element={mayCreateSubmission ? <BriefSubmittedPage isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />

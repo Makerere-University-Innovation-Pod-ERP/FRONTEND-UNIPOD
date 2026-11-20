@@ -12,6 +12,7 @@ import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment, initialEquipmentLoans } from './fixtures/equipment';
 import { initialPodcastSlots } from './fixtures/podcast';
 import { initialContracts } from './fixtures/contracts';
+import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
@@ -43,6 +44,7 @@ let multimediaEquipment = [...initialEquipment];
 let multimediaEquipmentLoans = [...initialEquipmentLoans];
 let podcastSlots = [...initialPodcastSlots];
 let eventContracts = [...initialContracts];
+let rules = [...initialRules];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 
@@ -925,6 +927,47 @@ export const handlers = [
     const body = await request.json();
     eventContracts[index] = { ...eventContracts[index], ...body };
     return HttpResponse.json(eventContracts[index]);
+  }),
+
+  // Department Rules Manager (Assignment 12)
+  http.get(`${API_BASE_URL}/rules`, () => {
+    return HttpResponse.json(rules);
+  }),
+
+  http.post(`${API_BASE_URL}/rules`, async ({ request }) => {
+    const body = await request.json();
+    const newRule = {
+      id: `rule-${Date.now()}`,
+      scope: 'GENERAL',
+      scopeId: null,
+      mustAccept: false,
+      published: false,
+      version: 1,
+      updatedAt: new Date().toISOString().slice(0, 10),
+      ...body,
+    };
+    rules = [...rules, newRule];
+    return HttpResponse.json(newRule, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/rules/:id`, async ({ params, request }) => {
+    const index = rules.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    rules[index] = {
+      ...rules[index],
+      ...body,
+      version: rules[index].version + 1,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    return HttpResponse.json(rules[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/rules/:id/retire`, ({ params }) => {
+    const index = rules.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    rules[index] = { ...rules[index], published: false, updatedAt: new Date().toISOString().slice(0, 10) };
+    return HttpResponse.json(rules[index]);
   }),
 
   // Operations / Multimedia - Partners & MOUs
