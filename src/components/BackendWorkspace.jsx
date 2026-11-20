@@ -167,6 +167,7 @@ export function BackendWorkspace({
         { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
         { label: 'Settings', href: '/management', icon: Settings2 },
+        { label: 'Department Rules', href: '/rules/manager', icon: FileText },
       ],
     }] : []),
     ...(isSubmitter ? [{

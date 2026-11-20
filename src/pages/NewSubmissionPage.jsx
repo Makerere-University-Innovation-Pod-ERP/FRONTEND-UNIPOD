@@ -17,6 +17,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useRules } from '@/hooks/useRules';
+import { allMustAcceptAccepted, RulesAcceptance } from '@/components/RulesAcceptance';
 
 const STEPS = ['Type', 'Details', 'Documents', 'Department rules', 'Check & submit'];
 const REGISTRATION_FLOW = [
@@ -79,10 +81,17 @@ export function NewSubmissionPage({
   const [recommendationLetterStatus, setRecommendationLetterStatus] = useState('submitted');
   const [documentFiles, setDocumentFiles] = useState({});
   const [previewFile, setPreviewFile] = useState(null);
-  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [acceptedRuleIds, setAcceptedRuleIds] = useState([]);
   const [attemptedAdvance, setAttemptedAdvance] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const rulesQuery = useRules(token);
+  const generalRules = useMemo(
+    () => (rulesQuery.data ?? []).filter((rule) => rule.scope === 'GENERAL' && rule.published),
+    [rulesQuery.data],
+  );
+  const rulesAccepted = allMustAcceptAccepted(generalRules, acceptedRuleIds);
 
   const documentRequirements = useMemo(
     () => documentRequirementsFor(category, recommendationLetterStatus),
@@ -335,16 +344,7 @@ export function NewSubmissionPage({
 
         {step === 3 && (
           <div className="form-section">
-            <p className="field-note" style={{ marginBottom: 10 }}>
-              General UniPod rules apply to every submission: work must be original or properly attributed, submissions must not infringe
-              existing intellectual property, and all participants must engage in good faith with the review process. Department-specific
-              rules aren't published yet — they will show here once the department rules manager (Assignment 12) ships, and will override
-              general rules where the two differ.
-            </p>
-            <label className="management-checkbox">
-              <input type="checkbox" checked={rulesAccepted} onChange={(event) => setRulesAccepted(event.target.checked)} />
-              I have read and accept the UniPod general rules for this submission.
-            </label>
+            <RulesAcceptance rules={generalRules} value={acceptedRuleIds} onChange={setAcceptedRuleIds} />
             {attemptedAdvance && !rulesAccepted && <p className="api-error" role="alert">You must accept the rules before continuing.</p>}
           </div>
         )}
