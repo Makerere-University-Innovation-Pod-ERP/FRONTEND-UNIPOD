@@ -20,6 +20,16 @@ function renderCaseFile(id) {
 }
 
 describe('ReviewerCaseFile', () => {
+  it('shows the published general rules as a read-only reference, with no accept checkboxes', async () => {
+    const pendingCase = reviewerCases['IH-26031'];
+    renderCaseFile(pendingCase.id);
+
+    await screen.findByRole('heading', { name: pendingCase.title });
+    expect(await screen.findByText(/originality and attribution/i)).toBeInTheDocument();
+    expect(screen.getByText(/good-faith participation/i)).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   it('shows exactly three decision options and blocks submit without a comment', async () => {
     const user = userEvent.setup();
     const pendingCase = reviewerCases['IH-26031'];

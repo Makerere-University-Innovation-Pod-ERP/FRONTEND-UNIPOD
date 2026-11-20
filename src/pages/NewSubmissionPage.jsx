@@ -91,7 +91,9 @@ export function NewSubmissionPage({
     () => (rulesQuery.data ?? []).filter((rule) => rule.scope === 'GENERAL' && rule.published),
     [rulesQuery.data],
   );
-  const rulesAccepted = allMustAcceptAccepted(generalRules, acceptedRuleIds);
+  // Fail closed: rules can only be "accepted" once they've actually loaded, so a slow or
+  // failed fetch can't be mistaken for "there's nothing to accept" and silently wave the step through.
+  const rulesAccepted = rulesQuery.isSuccess && allMustAcceptAccepted(generalRules, acceptedRuleIds);
 
   const documentRequirements = useMemo(
     () => documentRequirementsFor(category, recommendationLetterStatus),
@@ -148,6 +150,9 @@ export function NewSubmissionPage({
       title: title.trim(),
       purpose: purpose.trim(),
       problemAddressed: problemAddressed.trim(),
+      acceptedRules: generalRules
+        .filter((rule) => acceptedRuleIds.includes(rule.id))
+        .map((rule) => ({ id: rule.id, version: rule.version })),
       ...(!isSubmitter && submitterId.trim() ? { submitterId: submitterId.trim() } : {}),
       ...(category === 'student'
         ? {
@@ -344,7 +349,11 @@ export function NewSubmissionPage({
 
         {step === 3 && (
           <div className="form-section">
-            <RulesAcceptance rules={generalRules} value={acceptedRuleIds} onChange={setAcceptedRuleIds} />
+            {rulesQuery.isLoading && <p className="field-note">Loading the department rules…</p>}
+            {rulesQuery.isError && (
+              <div className="api-error api-error-banner" role="alert">Could not load the department rules. Try again before continuing.</div>
+            )}
+            {rulesQuery.isSuccess && <RulesAcceptance rules={generalRules} value={acceptedRuleIds} onChange={setAcceptedRuleIds} />}
             {attemptedAdvance && !rulesAccepted && <p className="api-error" role="alert">You must accept the rules before continuing.</p>}
           </div>
         )}

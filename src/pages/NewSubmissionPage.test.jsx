@@ -67,6 +67,7 @@ describe('NewSubmissionPage wizard', () => {
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(await screen.findByText(/step 04 of 05/i)).toBeInTheDocument();
+    expect(await screen.findByText(/originality and attribution/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/must accept the rules/i)).toBeInTheDocument();
 
@@ -138,6 +139,10 @@ describe('NewSubmissionPage wizard', () => {
     expect(await screen.findByText('confirmation screen')).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
+    expect(createSubmission.mock.calls[0][1].acceptedRules).toEqual([
+      { id: 'rule-general-1', version: 1 },
+      { id: 'rule-general-2', version: 1 },
+    ]);
     expect(uploadDocument).toHaveBeenCalledTimes(2);
     expect(maxActiveUploads).toBe(1);
     expect(uploadDocument).toHaveBeenNthCalledWith(1, 'test-token', 'brief-1', expect.any(FormData));
