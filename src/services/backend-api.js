@@ -11,8 +11,8 @@ export const backendApi = {
     request('/auth/passkeys/authentication/options', { body: {} }),
   finishPasskeyAuthentication: (body) =>
     request('/auth/passkeys/authentication/verify', { body }),
-  passkeyRegistrationOptions: (token) =>
-    request('/auth/passkeys/registration/options', { token, body: {} }),
+  passkeyRegistrationOptions: (token, password) =>
+    request('/auth/passkeys/registration/options', { token, body: { password } }),
   finishPasskeyRegistration: (token, body) =>
     request('/auth/passkeys/registration/verify', { token, body }),
   forgotPassword: (email) =>

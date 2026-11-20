@@ -15,7 +15,7 @@ describe('PasskeySetupPanel', () => {
     const user = userEvent.setup();
     const session = { accessToken: 'new-session-token' };
     const onDone = vi.fn();
-    vi.spyOn(backendApi, 'passkeyRegistrationOptions').mockResolvedValue({
+    const options = vi.spyOn(backendApi, 'passkeyRegistrationOptions').mockResolvedValue({
       challengeId: 'registration-challenge',
       options: { publicKey: {} },
     });
@@ -23,12 +23,15 @@ describe('PasskeySetupPanel', () => {
     const verify = vi.spyOn(backendApi, 'finishPasskeyRegistration').mockResolvedValue(undefined);
     render(<PasskeySetupPanel session={session} onDone={onDone} />);
 
+    await user.type(screen.getByLabelText('Confirm your password to set up a passkey'), 'correct-password');
     await user.click(screen.getByRole('button', { name: 'Set up passkey' }));
 
     await waitFor(() => expect(verify).toHaveBeenCalledWith('new-session-token', {
       challengeId: 'registration-challenge',
       credential: { id: 'new-credential' },
+      password: 'correct-password',
     }));
+    expect(options).toHaveBeenCalledWith('new-session-token', 'correct-password');
     expect(onDone).toHaveBeenCalledWith(session);
     expect(localStorage.getItem('unipod.access-token')).toContain('new-session-token');
   });
