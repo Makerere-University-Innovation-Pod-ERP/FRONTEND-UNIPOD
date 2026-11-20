@@ -45,7 +45,7 @@ export function MySubmissionsPage({
     setLoading(true);
     setError('');
     void Promise.all([
-      backendApi.submitterSubmissions(token, page, 25, controller.signal),
+      backendApi.submitterSubmissions(token, { page, size: 25 }, controller.signal),
       backendApi.submitterCapabilities(token, controller.signal),
     ]).then(([submissions, currentCapabilities]) => {
       if (!isSubmitterCapabilities(currentCapabilities)) {
@@ -147,17 +147,17 @@ export function MySubmissionsPage({
                   const stageClass = item.stage.toLowerCase().replaceAll('_', '-');
                   return (
                     <tr key={item.id}>
-                      <td>
+                      <td data-label="Submission">
                         <Link className="case-title" to={`/submissions/${item.id}`}>
                           <b>{item.title}</b>
                           <small>{item.code || 'Draft · no reference yet'}</small>
                         </Link>
                         {waitingOnYou && <Link to={`/submissions/${item.id}/respond`} className="decision-badge decision-changes_needed my-submissions-response">Waiting on you — respond</Link>}
                       </td>
-                      <td><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
-                      <td><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
-                      <td>{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
-                      <td>{formatDate(item.updatedAt)}</td>
+                      <td data-label="Category"><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
+                      <td data-label="Current stage"><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
+                      <td data-label="Received">{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
+                      <td data-label="Last updated">{formatDate(item.updatedAt)}</td>
                     </tr>
                   );
                 }) : (

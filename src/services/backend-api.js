@@ -68,8 +68,9 @@ export const backendApi = {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
     return request(`/submissions/mine?${query}`, { token });
   },
-  submitterSubmissions: (token, page = 0, size = 25, signal) => {
+  submitterSubmissions: (token, { page = 0, size = 25, tab } = {}, signal) => {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
+    if (tab) query.set('tab', tab);
     return request(`/me/submissions?${query}`, { token, signal });
   },
   submitterCapabilities: (token, signal) =>

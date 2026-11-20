@@ -325,7 +325,7 @@ export function BackendWorkspace({
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
+    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${isSubmitter && session.roles.length === 1 ? 'submitter-shell' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
@@ -435,6 +435,15 @@ export function BackendWorkspace({
             <LogOut size={16} />
           </button>
         </div>
+        <button
+          type="button"
+          className="mobile-signout-action"
+          onClick={onLogout}
+          aria-label="Sign out"
+        >
+          <LogOut size={15} aria-hidden="true" />
+          <span>Sign out</span>
+        </button>
       </aside>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
