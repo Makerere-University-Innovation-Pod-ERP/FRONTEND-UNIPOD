@@ -1,6 +1,6 @@
 import { CircleAlert, LoaderCircle } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
-import { EQUIPMENT_STATE_LABELS, LOAN_STATUS_LABELS } from '@/lib/equipment';
+import { EQUIPMENT_STATE_LABELS } from '@/lib/equipment';
 
 export function ErrorBanner({ error, fallback }) {
   if (!error || (error instanceof ApiError && error.status === 401)) return null;
@@ -30,14 +30,6 @@ const EQUIPMENT_TONE = {
   FAULTY: 'danger',
 };
 
-const LOAN_TONE = {
-  PENDING_APPROVAL: 'attention',
-  APPROVED: 'progress',
-  DECLINED: 'danger',
-  ACTIVE: 'positive',
-  RETURNED: 'neutral',
-};
-
 export function StatusDot({ tone, children }) {
   return (
     <span className={`tx-status tx-${tone}`}>
@@ -51,12 +43,16 @@ export function EquipmentStateBadge({ state }) {
   return <StatusDot tone={EQUIPMENT_TONE[state] ?? 'neutral'}>{EQUIPMENT_STATE_LABELS[state] ?? state}</StatusDot>;
 }
 
-export function LoanStatusBadge({ status, overdue }) {
-  return <StatusDot tone={overdue ? 'danger' : LOAN_TONE[status] ?? 'neutral'}>{overdue ? 'Overdue' : LOAN_STATUS_LABELS[status] ?? status}</StatusDot>;
+const ALLOCATION_TONE = { PENDING: 'attention', OUT: 'progress', RETURNED: 'positive', REJECTED: 'danger', CANCELLED: 'neutral' };
+const ALLOCATION_LABELS = { PENDING: 'Pending approval', OUT: 'Out', RETURNED: 'Returned', REJECTED: 'Declined', CANCELLED: 'Cancelled' };
+
+export function AllocationStatusBadge({ status, overdue }) {
+  if (overdue) return <StatusDot tone="danger">Overdue</StatusDot>;
+  return <StatusDot tone={ALLOCATION_TONE[status] ?? 'neutral'}>{ALLOCATION_LABELS[status] ?? status}</StatusDot>;
 }
 
-const CONTRACT_TONE = { DRAFT: 'attention', SIGNED: 'progress', COMPLETED: 'positive' };
-const CONTRACT_STATUS_LABELS = { DRAFT: 'Draft', SIGNED: 'Signed', COMPLETED: 'Completed' };
+const CONTRACT_TONE = { DRAFT: 'attention', SIGNED: 'progress', IN_PROGRESS: 'progress', COMPLETED: 'positive', CANCELLED: 'danger' };
+const CONTRACT_STATUS_LABELS = { DRAFT: 'Draft', SIGNED: 'Signed', IN_PROGRESS: 'In progress', COMPLETED: 'Completed', CANCELLED: 'Cancelled' };
 
 export function ContractStatusBadge({ status }) {
   return <StatusDot tone={CONTRACT_TONE[status] ?? 'neutral'}>{CONTRACT_STATUS_LABELS[status] ?? status}</StatusDot>;

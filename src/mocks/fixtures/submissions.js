@@ -59,10 +59,16 @@ export function toCaseFile(submission) {
       createdAt: submission.createdAt,
     }, ...(documentsBySubmission[submission.id] ?? [])],
     stageHistory: stageHistoryFor(submission),
-    stepper: ['RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'FORWARDED', 'COMPLETED'].map((stage) => ({
-      stage,
-      state: stage === submission.stage ? 'current' : 'pending',
-    })),
+    stepper: ['RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'FORWARDED', 'COMPLETED'].map((stage, index, stages) => {
+      const stageIndex = stages.indexOf(submission.stage);
+      const resolvedIndex = stageIndex === -1
+        ? (submission.stage === 'REFINEMENT_REQUESTED' ? stages.indexOf('UNDER_REVIEW') : stageIndex)
+        : stageIndex;
+      return {
+        stage,
+        state: index < resolvedIndex ? 'COMPLETE' : index === resolvedIndex ? 'CURRENT' : 'UPCOMING',
+      };
+    }),
     outcome: submission.stage === 'COMPLETED'
       ? { status: 'COMPLETED', decision: submission.outcomeDecision ?? 'Approved', note: submission.outcomeNote ?? null, decidedBy: null, decidedAt: null }
       : null,

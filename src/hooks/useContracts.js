@@ -14,17 +14,15 @@ export function useContracts(token) {
 export function useCreateContract(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body) => contractsApi.create(body, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CONTRACTS_KEY });
-    },
+    mutationFn: (contract) => contractsApi.create(contract, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CONTRACTS_KEY }),
   });
 }
 
-export function useUpdateContract(token) {
+export function useTransitionContract(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }) => contractsApi.update(id, body, token),
+    mutationFn: ({ id, status, signedContractDocId }) => contractsApi.transition(id, status, signedContractDocId, token),
     onSuccess: (updated) => {
       queryClient.setQueryData(CONTRACTS_KEY, (old) =>
         (old ?? []).map((item) => (item.id === updated.id ? updated : item)));

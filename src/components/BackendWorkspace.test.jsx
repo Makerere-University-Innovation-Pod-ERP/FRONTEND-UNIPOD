@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from './BackendWorkspace';
 import { submissions } from '@/mocks/fixtures/submissions';
 import { notifications } from '@/mocks/fixtures/notifications';
+import { resetNotificationMocks } from '@/mocks/handlers';
 
 const session = {
   accessToken: 'test-token',
@@ -14,11 +15,11 @@ const session = {
   roles: ['ROLE_FACT_FINDING_OFFICER'],
 };
 
-function renderShell(currentSession = session) {
+function renderShell(currentSession = session, initialEntry = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
           <p>Page content</p>
         </BackendWorkspace>
@@ -26,6 +27,10 @@ function renderShell(currentSession = session) {
     </QueryClientProvider>,
   );
 }
+
+beforeEach(() => {
+  resetNotificationMocks();
+});
 
 describe('BackendWorkspace', () => {
   it('toggles the sidebar collapsed state', async () => {
@@ -49,6 +54,45 @@ describe('BackendWorkspace', () => {
     renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
 
     expect(screen.getByRole('link', { name: /submit an idea/i })).toHaveAttribute('href', '/submissions/new');
+  });
+
+  it('omits empty navigation groups for submitter-only accounts', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
+
+    expect(screen.queryByText('INNOVATION PIPELINE')).not.toBeInTheDocument();
+  });
+
+  it('lists separate submitter pages after My Submissions and highlights the current page', () => {
+    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] }, '/my-submissions/bookings');
+
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    const links = Array.from(navigation.querySelectorAll('a'));
+    expect(links.map((link) => link.textContent.trim())).toEqual([
+      'My Submissions',
+      'Service Requests',
+      'Invoices and Payments',
+      'Bookings',
+    ]);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/my-submissions',
+      '/my-submissions/service-requests',
+      '/my-submissions/invoices',
+      '/my-submissions/bookings',
+    ]);
+    expect(screen.getByRole('link', { name: 'Bookings' })).toHaveClass('active');
+  });
+
+  it('keeps My Submissions first and shows the full email address', () => {
+    renderShell({
+      ...session,
+      subject: 'alvin69david',
+      email: 'alvin69david@gmail.com',
+      roles: ['ROLE_SUBMITTER', 'ROLE_ADMINISTRATOR'],
+    });
+
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(navigation.querySelector('a')).toHaveTextContent('My Submissions');
+    expect(screen.getByText('alvin69david@gmail.com')).toBeInTheDocument();
   });
 
   it('keeps the mobile menu toggle beside the brand and opens the sidebar', async () => {
@@ -83,5 +127,28 @@ describe('BackendWorkspace', () => {
     for (const item of notifications) {
       expect(await screen.findByText(item.title)).toBeInTheDocument();
     }
+  });
+
+  it('explains when this browser cannot receive background push notifications', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: /notifications/i }));
+
+    expect(await screen.findByText('Background push is not supported in this browser.')).toBeInTheDocument();
+  });
+
+  it('shows the unread count in the navbar and updates it when a notification is opened', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const bell = await screen.findByRole('button', { name: 'Notifications, 2 unread' });
+    expect(bell.querySelector('.notification-count')).toHaveTextContent('2');
+    await user.click(bell);
+    await user.click(await screen.findByRole('link', { name: /fact-finding assessment needed/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument();
+    });
   });
 });
