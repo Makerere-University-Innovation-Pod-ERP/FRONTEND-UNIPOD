@@ -5,7 +5,7 @@ import {
   Check,
   Clock3,
   FileText,
-  GraduationCap,
+  FolderOpen,
   Lightbulb,
   LoaderCircle,
   Eye,
@@ -19,6 +19,12 @@ import { ApiError, backendApi } from '@/services/backend-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STEPS = ['Type', 'Details', 'Documents', 'Department rules', 'Check & submit'];
+const REGISTRATION_FLOW = [
+  { label: 'Submission type', note: 'Choose a pathway', step: 0 },
+  { label: 'Project information', note: 'Capture the brief', step: 1 },
+  { label: 'Supporting documents', note: 'Keep evidence nearby', step: 2 },
+  { label: 'Review & register', note: 'Check before recording', step: 4 },
+];
 const STEP_COPY = [
   ['Choose your path', 'Start with the type of idea you want to share.'],
   ['Tell us about it', 'A little context helps the team understand your idea.'],
@@ -173,9 +179,8 @@ export function NewSubmissionPage({
       <Link to={onBehalfOf ? cancelPath : effectiveCancelPath} className="back-link"><ArrowLeft size={15} />{onBehalfOf ? 'Back to reception home' : isSubmitter ? 'Back to my submissions' : 'Back to submissions'}</Link>
       <div className="live-page-heading compact-heading submission-page-heading">
         <div>
-          <p className="eyebrow">{isSubmitter ? 'YOUR NEXT BIG IDEA STARTS HERE' : 'INTAKE · NEW CASE'}</p>
-          <h1>{isSubmitter ? 'Submit your idea.' : 'Register an idea.'}</h1>
-          <p>{isSubmitter ? 'Share what you’re building. We’ll help you take it further.' : 'Create a draft record in the live MUTIC ERP database.'}</p>
+          <h1>{isSubmitter ? 'Submit your idea.' : 'Register a submission'}</h1>
+          <p>{isSubmitter ? 'Share what you’re building. We’ll help you take it further.' : 'Record a student project or innovation with a clear, accountable starting point.'}</p>
         </div>
         <span className="submission-time-badge"><Clock3 size={15} /> About 5 minutes</span>
       </div>
@@ -186,6 +191,24 @@ export function NewSubmissionPage({
         </section>
       )}
       <div className={`submission-create-layout ${isSubmitter ? 'is-self-service' : ''}`}>
+        <aside className="submission-process-rail" aria-label="Submission process">
+          <p className="submission-process-title">A clear start<br />for good work.</p>
+          <ol className="submission-rail-steps">
+            {REGISTRATION_FLOW.map((item, index) => (
+              <li
+                key={item.label}
+                className={item.step === step || (item.step === 4 && step === 3) ? 'is-current' : item.step < step ? 'is-complete' : ''}
+                aria-current={item.step === step || (item.step === 4 && step === 3) ? 'step' : undefined}
+              >
+                <span>{item.step < step ? <Check size={15} aria-hidden="true" /> : String(index + 1).padStart(2, '0')}</span>
+                <span className="submission-rail-copy">
+                  <b>{item.label}</b>
+                  <small>{item.note}</small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </aside>
       <form className="live-panel create-form submission-create-form" onSubmit={(event) => event.preventDefault()}>
         <header className="submission-form-header">
           <div>
@@ -195,35 +218,29 @@ export function NewSubmissionPage({
               ? 'Fields marked * are required. Supervisor details can be added if your idea advances.'
               : STEP_COPY[step][1]}</p>
           </div>
-          <span className="submission-step-number">{String(step + 1).padStart(2, '0')}<i>/{String(STEPS.length).padStart(2, '0')}</i></span>
+          <div className="submission-progress" role="progressbar" aria-label="Submission progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(((step + 1) / STEPS.length) * 100)}>
+            <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+            <i><b style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></i>
+          </div>
         </header>
-        <ol className="submission-stepper" aria-label="Submission progress">
-          {STEPS.map((item, index) => (
-            <li
-              key={item}
-              className={index === step ? 'is-current' : index < step ? 'is-complete' : ''}
-              aria-current={index === step ? 'step' : undefined}
-            >
-              <span>{index < step ? <Check size={13} aria-hidden="true" /> : index + 1}</span>
-              <small>{item}</small>
-            </li>
-          ))}
-        </ol>
-
         {step === 0 && (
           <div className="form-section">
             <div className="category-options">
               <label className={`category-option ${category === 'student' ? 'selected' : ''}`}>
                 <input type="radio" name="category" value="student" checked={category === 'student'} onChange={() => setCategory('student')} />
-                <span className="category-option-icon"><GraduationCap size={19} aria-hidden="true" /></span>
+                <span className="category-option-icon"><FolderOpen size={22} aria-hidden="true" /></span>
                 <span className="category-option-copy"><b>Student project</b><small>Student-led work submitted through a programme or supervisor.</small></span>
                 <span className="category-option-check"><Check size={13} aria-hidden="true" /></span>
+                <span className="category-option-path"><small>PATHWAY 01</small><b>STUDENT PROJECT</b></span>
+                <ArrowRight className="category-option-arrow" size={16} aria-hidden="true" />
               </label>
               <label className={`category-option ${category === 'general' ? 'selected' : ''}`}>
                 <input type="radio" name="category" value="general" checked={category === 'general'} onChange={() => setCategory('general')} />
                 <span className="category-option-icon"><Lightbulb size={19} aria-hidden="true" /></span>
                 <span className="category-option-copy"><b>General innovation</b><small>Ideas and projects from the wider university community.</small></span>
                 <span className="category-option-check"><Check size={13} aria-hidden="true" /></span>
+                <span className="category-option-path"><small>PATHWAY 02</small><b>GENERAL INNOVATION</b></span>
+                <ArrowRight className="category-option-arrow" size={16} aria-hidden="true" />
               </label>
             </div>
           </div>
@@ -241,12 +258,15 @@ export function NewSubmissionPage({
                   <label className="form-field"><span className="submission-field-label">Student number <span className="submission-required-mark" aria-label="required">*</span></span><input required maxLength={80} value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} /></label>
                   <label className="form-field"><span className="submission-field-label">Programme <span className="submission-required-mark" aria-label="required">*</span></span><input required maxLength={200} value={programme} onChange={(event) => setProgramme(event.target.value)} /></label>
                 </div>
-                <div className="form-grid">
+                <div className={`form-grid ${!isSubmitter ? 'submission-supervisor-status-row' : ''}`}>
                   {!isSubmitter && <label className="form-field"><span className="submission-field-label">Supervisor</span><span className="field-note">Optional; can be added later.</span><input maxLength={255} value={supervisor} onChange={(event) => setSupervisor(event.target.value)} /></label>}
                   <div className="form-field">
                     <span id="recommendation-letter-status-label">Recommendation letter status <span className="submission-required-mark" aria-label="required">*</span></span>
                     <Select value={recommendationLetterStatus} onValueChange={setRecommendationLetterStatus}>
-                      <SelectTrigger aria-labelledby="recommendation-letter-status-label" className="submission-form-select-trigger">
+                      <SelectTrigger
+                        aria-labelledby="recommendation-letter-status-label"
+                        className={`submission-form-select-trigger ${!isSubmitter ? 'submission-recommendation-select' : ''}`}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="submission-form-select-content" sideOffset={6}>
@@ -352,7 +372,7 @@ export function NewSubmissionPage({
           {step > 0 && <button className="btn btn-outline" type="button" onClick={goBack} disabled={busy}>Back</button>}
           {step === 0 && <Link to={onBehalfOf ? cancelPath : effectiveCancelPath} className="btn btn-outline">Cancel</Link>}
           {step < STEPS.length - 1
-            ? <button className="btn btn-primary" type="button" onClick={goNext}>Next<ArrowRight size={15} /></button>
+            ? <button className="btn btn-primary" type="button" onClick={goNext}>{step === 0 ? 'Continue' : 'Next'}<ArrowRight size={15} /></button>
             : <button className="btn btn-primary" type="button" onClick={submit} disabled={busy || !rulesAccepted}>
                 {busy ? <LoaderCircle size={15} className="spin" /> : null}
                 {busy ? (isSubmitter ? 'Submitting brief…' : 'Saving draft…') : (isSubmitter ? 'Submit brief' : 'Create draft')}
