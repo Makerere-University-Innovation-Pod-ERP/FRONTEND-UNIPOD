@@ -37,6 +37,12 @@ origin by copying `.env.example` to `.env.local` and setting
 `VITE_API_BASE_URL`. For a local Java backend, set it to
 `http://localhost:8080/api`.
 
+Submitters can optionally register a passkey after sign-up and use it to sign
+in instead of entering their password. The device handles fingerprint, face,
+or screen-lock verification; UniPod does not receive or store biometric data.
+Email and password remain available as a fallback. Passkeys require HTTPS in
+production and a browser/device with WebAuthn support.
+
 ## Sign-in and sign-up
 
 The sign-in screen sends credentials to `POST /auth/login`. **Forgot password?**

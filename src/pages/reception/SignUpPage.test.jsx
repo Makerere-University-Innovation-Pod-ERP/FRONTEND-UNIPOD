@@ -116,6 +116,8 @@ describe('Sign up', () => {
     await user.click(screen.getByLabelText(/accept the UniPod general rules/));
     screen.getByLabelText('Confirm password').focus();
     await user.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { name: 'Set up a passkey?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue with password' }));
     await waitFor(() => {
       expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({
         roles: ['ROLE_SUBMITTER'],

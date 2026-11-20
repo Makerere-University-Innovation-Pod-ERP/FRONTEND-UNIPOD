@@ -7,6 +7,14 @@ export const backendApi = {
     request('/actuator/health', { signal }),
   login: (email, password) =>
     request('/auth/login', { body: { email, password } }),
+  passkeyAuthenticationOptions: () =>
+    request('/auth/passkeys/authentication/options', { body: {} }),
+  finishPasskeyAuthentication: (body) =>
+    request('/auth/passkeys/authentication/verify', { body }),
+  passkeyRegistrationOptions: (token) =>
+    request('/auth/passkeys/registration/options', { token, body: {} }),
+  finishPasskeyRegistration: (token, body) =>
+    request('/auth/passkeys/registration/verify', { token, body }),
   forgotPassword: (email) =>
     request('/auth/forgot-password', { body: { email } }),
   signup: (body) =>
