@@ -89,7 +89,7 @@ export const receptionHandlers = [
     registeredMockUsers[email] = { id, subject: body.fullName.trim(), roles: ['ROLE_SUBMITTER'] };
     return HttpResponse.json({
       tokenType: 'Bearer',
-      accessToken: makeMockToken(['ROLE_SUBMITTER'], body.fullName.trim()),
+      accessToken: makeMockToken(['ROLE_SUBMITTER'], body.fullName.trim(), email),
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
       mustChangePassword: false,
     }, { status: 201 });

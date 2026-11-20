@@ -33,10 +33,11 @@ describe('NewSubmissionPage wizard', () => {
     renderPage();
 
     expect(screen.getByText(/step 01 of 05/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/step 02 of 05/i)).toBeInTheDocument();
+    expect(screen.getByText('Submission type').closest('li').querySelector('svg')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/fill in every required field/i)).toBeInTheDocument();
     expect(screen.getByText(/step 02 of 05/i)).toBeInTheDocument();
   });
@@ -45,14 +46,14 @@ describe('NewSubmissionPage wizard', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Solar Dryer for Smallholder Farmers');
     await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'Reduce post-harvest crop loss.');
     await user.type(screen.getByPlaceholderText(/what problem or need/i), 'Farmers lack affordable drying equipment.');
     await user.type(screen.getByLabelText(/student number/i), 'S24/9999');
     await user.type(screen.getByLabelText(/^programme/i), 'BSc Engineering');
     await user.type(screen.getByLabelText(/supervisor/i), 'Dr. Example');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(await screen.findByText(/step 03 of 05/i)).toBeInTheDocument();
     await user.upload(
@@ -63,14 +64,14 @@ describe('NewSubmissionPage wizard', () => {
       screen.getByLabelText('Upload Recommendation letter'),
       new File(['Recommendation'], 'recommendation.pdf', { type: 'application/pdf' }),
     );
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(await screen.findByText(/step 04 of 05/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/must accept the rules/i)).toBeInTheDocument();
 
     await acceptAllRules(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/step 05 of 05/i)).toBeInTheDocument();
   }, 15000);
 
@@ -83,18 +84,18 @@ describe('NewSubmissionPage wizard', () => {
     const { container } = renderPage({ isSubmitter: true });
 
     await user.click(screen.getByRole('radio', { name: /general innovation/i }));
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Community solar dryer');
     await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'Dry crops with solar energy.');
     await user.type(screen.getByPlaceholderText(/what problem or need/i), 'Farmers lack affordable dryers.');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.upload(
       screen.getByLabelText('Upload Project brief or description document'),
       new File(['Brief contents'], 'brief.pdf', { type: 'application/pdf' }),
     );
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await acceptAllRules(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     fireEvent.submit(container.querySelector('form'));
 
@@ -120,18 +121,18 @@ describe('NewSubmissionPage wizard', () => {
 
     expect(screen.queryByLabelText(/submitter id/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: /general innovation/i }));
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Community solar dryer');
     await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'Dry crops with solar energy.');
     await user.type(screen.getByPlaceholderText(/what problem or need/i), 'Farmers lack affordable dryers.');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     const briefFile = new File(['A brief about the project'], 'brief.pdf', { type: 'application/pdf' });
     await user.upload(screen.getByLabelText('Upload Project brief or description document'), briefFile);
     const evidenceFile = new File(['A chart'], 'evidence.csv', { type: 'text/csv' });
     await user.upload(screen.getByLabelText('Upload Supporting evidence (data, photos, reports)'), evidenceFile);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await acceptAllRules(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.click(screen.getByRole('button', { name: /^submit brief$/i }));
 
     expect(await screen.findByText('confirmation screen')).toBeInTheDocument();
@@ -155,11 +156,11 @@ describe('NewSubmissionPage wizard', () => {
     const user = userEvent.setup();
     const { container } = renderPage({ isSubmitter: true });
     await user.click(screen.getByRole('radio', { name: /general innovation/i }));
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Community solar dryer');
     await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'Dry crops with solar energy.');
     await user.type(screen.getByPlaceholderText(/what problem or need/i), 'Farmers lack affordable dryers.');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     const briefFile = new File(['image data'], 'idea.png', { type: 'image/png' });
     await user.upload(screen.getByLabelText('Upload Project brief or description document'), briefFile);
@@ -170,14 +171,14 @@ describe('NewSubmissionPage wizard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Remove idea.png' }));
     expect(container.querySelector('.submission-upload-card.has-file')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(screen.getByText(/upload this required document to continue/i)).toBeInTheDocument();
   });
 
   it('does not let submitters mark a recommendation letter as verified', async () => {
     const user = userEvent.setup();
     const { container } = renderPage({ isSubmitter: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(screen.getByText(/fields marked \*/i)).toBeInTheDocument();
     expect(container.querySelectorAll('.submission-required-mark')).toHaveLength(6);

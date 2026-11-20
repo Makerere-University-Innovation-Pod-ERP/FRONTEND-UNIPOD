@@ -63,7 +63,7 @@ export function LiveSubmissions({
   return (
     <div className="live-page page-enter">
       <div className="live-page-heading">
-        <div><p className="eyebrow">WORKSPACE · CASE REGISTER</p><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
+        <div><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
         {canCreateSubmission(roles) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
       </div>
       <section className="live-panel">

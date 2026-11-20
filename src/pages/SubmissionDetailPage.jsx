@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, MessageCircle, RefreshCw, Send, Workflow } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw, Send, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
@@ -25,7 +25,6 @@ export function SubmissionDetailPage({
   const [documentStatus, setDocumentStatus] = useState('SUBMITTED');
   const [fileReference, setFileReference] = useState('');
   const [error, setError] = useState('');
-  const [copyFeedback, setCopyFeedback] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const canIntake = session.roles.some((role) => INTAKE_ROLES.includes(role));
@@ -165,13 +164,12 @@ export function SubmissionDetailPage({
   const ipPanel = Array.isArray(caseFile.reviewPanel?.ipPanel)
     ? caseFile.reviewPanel.ipPanel
     : null;
-  const completedStepCount = caseFile.stepper.filter((step) => step.state === 'COMPLETE').length;
-  const nextStepIndex = caseFile.stepper.findIndex((step) => step.state === 'UPCOMING');
-  const disabledCapabilities = [
-    { label: 'Next step', capability: caseFile.capabilities.nextStep },
-    { label: 'Save outcome', capability: caseFile.capabilities.saveOutcome },
-    { label: 'Update document status', capability: caseFile.capabilities.updateDocumentStatus },
-  ].filter(({ capability }) => !capability.enabled && capability.reason);
+  const normalizedSteps = caseFile.stepper.map((step) => ({
+    ...step,
+    normalizedState: String(step.state || '').toUpperCase(),
+  }));
+  const completedStepCount = normalizedSteps.filter((step) => step.normalizedState === 'COMPLETE').length;
+  const nextStepIndex = normalizedSteps.findIndex((step) => ['UPCOMING', 'PENDING'].includes(step.normalizedState));
   return (
     <div className="live-page page-enter case-detail-page">
       <Link to={backHref} className="back-link case-detail-back-link"><ArrowLeft size={15} />{backLabel}</Link>
@@ -179,18 +177,17 @@ export function SubmissionDetailPage({
         <div className="case-hero-copy">
           <p className="case-hero-kicker"><span />CASE FILE <i>{caseReference}</i></p>
           <h1>{submission.title}</h1>
-          <p className="case-hero-description">Here’s the idea, its journey, and what comes next.</p>
+          {submission.purpose && <p className="case-hero-description">{submission.purpose}</p>}
+        </div>
+        <div className="case-hero-actions">
           <div className="case-hero-meta">
             <span>{categoryLabel}</span>
             <span>{receivedLabel}</span>
           </div>
-        </div>
-        <div className="case-hero-actions">
           <span className={`stage-pill stage-${submission.stage.toLowerCase()}`}>{formatStage(submission.stage)}</span>
           {(caseFile.reference || submission.code) && <button className="btn btn-outline" onClick={async () => {
             try {
               await navigator.clipboard.writeText(caseReference);
-              setCopyFeedback('Reference copied.');
             } catch {
               setError('Could not copy the reference. Copy it directly from the case heading.');
             }
@@ -198,7 +195,6 @@ export function SubmissionDetailPage({
         </div>
         <span className="case-hero-decoration" aria-hidden="true" />
       </header>
-      {copyFeedback && <p className="live-note" role="status">{copyFeedback}</p>}
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
         <section className="live-panel capability-notice" aria-label="Open request">
@@ -209,11 +205,6 @@ export function SubmissionDetailPage({
           </div>
         </section>
       )}
-      {disabledCapabilities.length > 0 && !session.roles.includes('ROLE_SUBMITTER') && <section className="live-panel capability-notice" aria-label="Case permissions">
-        <p className="eyebrow">{canTransition ? 'WORKFLOW AVAILABILITY' : 'READ-ONLY ACCESS'}</p>
-        {!canTransition && <p className="capability-summary">Your role can view this case but cannot make workflow changes.</p>}
-        <ul>{disabledCapabilities.map(({ label, capability }) => <li key={label}><b>{label}:</b> {capability.reason}</li>)}</ul>
-      </section>}
       {caseFile.stepper.length > 0 && <section className="live-panel case-stepper case-pipeline" aria-label="Pipeline progress">
         <div className="case-pipeline-heading">
           <div>
@@ -228,34 +219,63 @@ export function SubmissionDetailPage({
           </div>
         </div>
         <div className="case-journey-scroll" tabIndex={0} aria-label="Pipeline stages">
-          <ol className="case-journey">{caseFile.stepper.map((step, index) => <li className={`step-${step.state.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.state === 'CURRENT' ? 'step' : undefined}>
-            <span className="case-journey-node">{step.state === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
+          <ol className="case-journey" style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${normalizedSteps.length}, minmax(0, 1fr))`,
+            width: '100%',
+            minWidth: 0,
+          }}>{normalizedSteps.map((step, index) => <li className={`step-${step.normalizedState.toLowerCase()} ${index === nextStepIndex ? 'step-next' : ''}`} key={step.stage} aria-current={step.normalizedState === 'CURRENT' ? 'step' : undefined}>
+            <span className="case-journey-node">{step.normalizedState === 'COMPLETE' ? '✓' : String(index + 1).padStart(2, '0')}</span>
             <div className="case-journey-copy">
               <b>{formatStage(step.stage)}</b>
-              <span>{step.state === 'COMPLETE' ? 'Completed' : step.state === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
+              <span>{step.normalizedState === 'COMPLETE' ? 'Completed' : step.normalizedState === 'CURRENT' ? 'In progress' : index === nextStepIndex ? 'Up next' : 'Upcoming'}</span>
             </div>
           </li>)}</ol>
         </div>
       </section>}
       <div className="detail-grid">
         <section className="live-panel case-summary">
-          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2><p className="case-section-note">The details behind this brief.</p></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
+          <div className="live-panel-heading"><div><p className="eyebrow">THE IDEA</p><h2>Project summary</h2></div><button className="icon-button" onClick={() => { setError(''); setLoading(true); void load(); }} aria-label="Refresh case"><RefreshCw size={15} /></button></div>
           <div className="case-fields">
-            <Field label="Purpose" value={submission.purpose} />
-            <Field label="Problem addressed" value={submission.problemAddressed} />
-            <div className="form-grid"><Field label="Registered by" value={submission.registeredBy} /><Field label="Receiving officer" value={submission.receivingOfficer || 'Not assigned'} /></div>
-            <Field label="Submitter ID" value={submission.submitterId || 'Not linked'} />
-            {submission.category === 'student' && <div className="form-grid"><Field label="Student number" value={submission.studentNumber || '—'} /><Field label="Programme" value={submission.programme || '—'} /></div>}
-            {submission.category === 'student' && <Field label="Supervisor" value={submission.supervisor || '—'} />}
-            <div className="form-grid"><Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} /><Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} /></div>
-            {submission.responsibleSectorWhatsapp && (
-              <p className="live-note">
-                <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
-                  <MessageCircle size={13} style={{ verticalAlign: 'text-bottom', marginRight: 4 }} />
-                  Message {submission.responsibleSectorName} on WhatsApp
-                </a>
-              </p>
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Project overview</p>
+              <div className="case-summary-two-column">
+                <Field label="Purpose" value={submission.purpose} />
+                <Field label="Problem addressed" value={submission.problemAddressed} />
+              </div>
+            </section>
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Registration</p>
+              <div className="case-summary-two-column">
+                <Field label="Registered by" value={submission.registeredBy} />
+                <Field label="Receiving officer" value={submission.receivingOfficer || 'Not assigned'} />
+                <Field label="Submitter ID" value={submission.submitterId || 'Not linked'} />
+              </div>
+            </section>
+            {submission.category === 'student' && (
+              <section className="case-summary-section">
+                <p className="case-summary-heading">Student details</p>
+                <div className="case-summary-three-column">
+                  <Field label="Student number" value={submission.studentNumber || '—'} />
+                  <Field label="Programme" value={submission.programme || '—'} />
+                  <Field label="Supervisor" value={submission.supervisor || '—'} />
+                </div>
+              </section>
             )}
+            <section className="case-summary-section">
+              <p className="case-summary-heading">Assignment</p>
+              <div className="case-summary-two-column">
+                <Field label="Responsible sector" value={submission.responsibleSectorName || 'Not assigned'} />
+                <Field label="Recommendation letter" value={submission.recommendationLetterStatus ? formatStage(submission.recommendationLetterStatus) : '—'} />
+              </div>
+              {submission.responsibleSectorWhatsapp && (
+                <p className="live-note">
+                  <a href={`https://wa.me/${submission.responsibleSectorWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer">
+                    Message {submission.responsibleSectorName} on WhatsApp
+                  </a>
+                </p>
+              )}
+            </section>
           </div>
           {canIntake && submission.stage === 'DRAFT' && <div className="case-action">
             <p className="form-section-title">Draft actions</p>
@@ -270,7 +290,7 @@ export function SubmissionDetailPage({
             <label className="form-field">Reviewer subject<input maxLength={255} value={reviewerSubject} onChange={(event) => setReviewerSubject(event.target.value)} placeholder="Leave blank to clear assignment" /></label>
             <button className="btn btn-outline" type="submit" disabled={busy}>Save reviewer</button>
           </form>}
-          {canIntake && <form className="case-action" onSubmit={addDocument}>
+          {canIntake && <form className="case-action document-action" onSubmit={addDocument}>
             <p className="form-section-title">Add document record</p>
             <label className="form-field">Document name<input required maxLength={255} value={documentName} onChange={(event) => setDocumentName(event.target.value)} /></label>
             <div className="form-grid">
@@ -279,7 +299,7 @@ export function SubmissionDetailPage({
             </div>
             <button className="btn btn-outline" type="submit" disabled={busy}><Send size={14} />Add document</button>
           </form>}
-          {canIntake && <form className="case-action" onSubmit={(event) => void uploadDocument(event)}>
+          {canIntake && <form className="case-action document-action" onSubmit={(event) => void uploadDocument(event)}>
             <p className="form-section-title">Upload a supporting file</p>
             <label className="form-field">Document name<input name="name" required maxLength={255} /></label>
             <label className="form-field">Status<select name="status" defaultValue="SUBMITTED">{['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <option value={value} key={value}>{formatStage(value)}</option>)}</select></label>

@@ -1,7 +1,11 @@
+import { clearSession, createSession, loadSession, saveSession } from '@/lib/auth';
+
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 export const API_BASE_URL = (
   configuredApiUrl || 'https://backend-unipod.onrender.com/api'
 ).replace(/\/+$/, '');
+const SESSION_REFRESHED_EVENT = 'unipod:session-refreshed';
+let refreshInFlight;
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -11,7 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function request(
+async function performRequest(
   path,
   { token, signal, body, method = body === undefined ? 'GET' : 'POST' } = {},
 ) {
@@ -79,8 +83,68 @@ export async function request(
   return payload;
 }
 
+async function refreshSession(token) {
+  if (refreshInFlight) {
+    const refreshed = await refreshInFlight;
+    if (refreshed) return refreshed;
+  }
+
+  const renew = async () => {
+    const current = loadSession();
+    if (!current) return null;
+    if (current.accessToken !== token) return current;
+    if (!current.refreshToken) return null;
+
+    const response = await request('/auth/refresh', {
+      body: { refreshToken: current.refreshToken },
+    });
+    if (!response.refreshToken) {
+      clearSession();
+      throw new ApiError('Your session could not be renewed. Sign in again.', 401);
+    }
+
+    const nextSession = createSession(response, current.email);
+    saveSession(nextSession);
+    window.dispatchEvent(new CustomEvent(SESSION_REFRESHED_EVENT, { detail: nextSession }));
+    return nextSession;
+  };
+  const runWithLock = () => (
+    typeof navigator !== 'undefined' && navigator.locks?.request
+      ? navigator.locks.request('unipod-auth-refresh', renew)
+      : renew()
+  );
+  refreshInFlight = runWithLock();
+
+  try {
+    return await refreshInFlight;
+  } catch (reason) {
+    if (reason instanceof ApiError && reason.status === 401) clearSession();
+    throw reason;
+  } finally {
+    refreshInFlight = null;
+  }
+}
+
+export async function request(path, options = {}) {
+  try {
+    return await performRequest(path, options);
+  } catch (reason) {
+    if (!(reason instanceof ApiError) || reason.status !== 401 || !options.token) throw reason;
+
+    let refreshed;
+    try {
+      refreshed = await refreshSession(options.token);
+    } catch (refreshError) {
+      if (refreshError instanceof ApiError && refreshError.status === 401) throw reason;
+      throw refreshError;
+    }
+    if (!refreshed) throw reason;
+    return performRequest(path, { ...options, token: refreshed.accessToken });
+  }
+}
+
 /** Fetches a binary file (e.g. a document download) as a Blob, with the same auth/error handling as request(). */
-export async function requestFile(path, token, signal) {
+async function performRequestFile(path, token, signal) {
   const headers = new Headers();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
@@ -104,4 +168,22 @@ export async function requestFile(path, token, signal) {
   }
 
   return response.blob();
+}
+
+export async function requestFile(path, token, signal) {
+  try {
+    return await performRequestFile(path, token, signal);
+  } catch (reason) {
+    if (!(reason instanceof ApiError) || reason.status !== 401 || !token) throw reason;
+
+    let refreshed;
+    try {
+      refreshed = await refreshSession(token);
+    } catch (refreshError) {
+      if (refreshError instanceof ApiError && refreshError.status === 401) throw reason;
+      throw refreshError;
+    }
+    if (!refreshed) throw reason;
+    return performRequestFile(path, refreshed.accessToken, signal);
+  }
 }

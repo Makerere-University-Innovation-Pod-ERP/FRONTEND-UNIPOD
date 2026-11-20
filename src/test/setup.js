@@ -62,6 +62,23 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from '@/mocks/server';
 
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = function (media) {
+    return {
+      matches: false,
+      media,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() {
+        return false;
+      },
+    };
+  };
+}
+
 configure({ asyncUtilTimeout: 3000 });
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

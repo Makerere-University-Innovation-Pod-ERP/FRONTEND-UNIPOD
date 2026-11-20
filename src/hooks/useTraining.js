@@ -1,92 +1,96 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trainingApi } from '@/services/training';
-import { initialMentorshipFollowUps, initialTrainingSessions } from '@/mocks/fixtures/training';
 
 const TRAINING_OVERVIEW_KEY = ['training', 'overview'];
-const MENTORSHIP_FOLLOW_UPS_KEY = ['training', 'mentorship-followups'];
-
-const fallbackOverview = {
-  upcomingSessions: initialTrainingSessions.filter((s) => s.status === 'Upcoming' || s.status === 'UPCOMING').length,
-  seatsFilled: initialTrainingSessions.reduce((acc, s) => acc + s.enrolledCount, 0),
-  totalSeats: initialTrainingSessions.reduce((acc, s) => acc + s.capacity, 0),
-  mentorshipFollowUps: initialMentorshipFollowUps.length,
-  sessions: initialTrainingSessions,
-  followUps: initialMentorshipFollowUps,
-};
 
 export function useTrainingOverview(token) {
   return useQuery({
     queryKey: TRAINING_OVERVIEW_KEY,
     queryFn: ({ signal }) => trainingApi.getOverview(token, signal),
-    initialData: fallbackOverview,
     staleTime: 1000 * 30,
   });
 }
 
-export function useTrainingSession(id, token) {
+export function useTrainingDepartments(token) {
   return useQuery({
-    queryKey: ['training', 'session', id],
-    queryFn: ({ signal }) => (id ? trainingApi.getSession(id, token, signal) : Promise.reject(new Error('No ID'))),
-    enabled: Boolean(id),
+    queryKey: ['training', 'departments'],
+    queryFn: ({ signal }) => trainingApi.departments(token, signal),
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-export function useMarkAttendance(token) {
+function useSessionUpdater() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ sessionId, participantId, attendance }) =>
-      trainingApi.markAttendance(sessionId, participantId, attendance, token),
-    onSuccess: (updatedSession) => {
-      queryClient.setQueryData(TRAINING_OVERVIEW_KEY, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          sessions: old.sessions.map((s) => (s.id === updatedSession.id ? updatedSession : s)),
-        };
-      });
-      queryClient.setQueryData(['training', 'session', updatedSession.id], updatedSession);
-    },
-  });
-}
-
-export function useRegisterParticipant(token) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ sessionId, participant }) =>
-      trainingApi.registerParticipant(sessionId, participant, token),
-    onSuccess: (_, { sessionId }) => {
-      queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY });
-      queryClient.invalidateQueries({ queryKey: ['training', 'session', sessionId] });
-    },
-  });
-}
-
-export function useMentorshipFollowUps(token) {
-  return useQuery({
-    queryKey: MENTORSHIP_FOLLOW_UPS_KEY,
-    queryFn: ({ signal }) => trainingApi.getMentorshipFollowUps(token, signal),
-    initialData: initialMentorshipFollowUps,
-    staleTime: 1000 * 30,
-  });
-}
-
-export function useUpdateMentorshipFollowUp(token) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...body }) => trainingApi.updateMentorshipFollowUp(id, body, token),
-    onSuccess: (updatedFollowUp) => {
-      queryClient.setQueryData(MENTORSHIP_FOLLOW_UPS_KEY, (old) =>
-        (old ?? []).map((item) => (item.id === updatedFollowUp.id ? updatedFollowUp : item)));
-    },
-  });
+  return (updatedSession) => {
+    queryClient.setQueryData(TRAINING_OVERVIEW_KEY, (old) => (old
+      ? { ...old, sessions: old.sessions.map((s) => (s.id === updatedSession.id ? updatedSession : s)) }
+      : old));
+    queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY });
+  };
 }
 
 export function useCreateSession(token) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body) => trainingApi.createSession(body, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY }),
+  });
+}
+
+export function useRegisterParticipant(token) {
+  const update = useSessionUpdater();
+  return useMutation({
+    mutationFn: ({ sessionId, participant }) => trainingApi.registerParticipant(sessionId, participant, token),
+    onSuccess: update,
+  });
+}
+
+export function useMarkAttendance(token) {
+  const update = useSessionUpdater();
+  return useMutation({
+    mutationFn: ({ sessionId, participantId, attendance }) =>
+      trainingApi.markAttendance(sessionId, participantId, attendance, token),
+    onSuccess: update,
+  });
+}
+
+export function useConfirmPayment(token) {
+  const update = useSessionUpdater();
+  return useMutation({
+    mutationFn: ({ sessionId, participantId }) => trainingApi.confirmPayment(sessionId, participantId, token),
+    onSuccess: update,
+  });
+}
+
+export function useMarkPassed(token) {
+  const update = useSessionUpdater();
+  return useMutation({
+    mutationFn: ({ sessionId, participantId }) => trainingApi.markPassed(sessionId, participantId, token),
+    onSuccess: update,
+  });
+}
+
+export function useMentorshipFollowUps(token) {
+  const query = useTrainingOverview(token);
+  return { ...query, data: query.data?.followUps };
+}
+
+export function useCreateFollowUp(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => trainingApi.createFollowUp(body, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TRAINING_OVERVIEW_KEY }),
+  });
+}
+
+export function useUpdateMentorshipFollowUp(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }) => trainingApi.updateFollowUp(id, body, token),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(TRAINING_OVERVIEW_KEY, (old) => (old
+        ? { ...old, followUps: old.followUps.map((item) => (item.id === updated.id ? updated : item)) }
+        : old));
     },
   });
 }
