@@ -1306,6 +1306,23 @@ button.partner-status{cursor:pointer}
 .tx-draft-row .tx-draft-link{justify-self:stretch}
 .tx-draft-confirm{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink-soft)}
 .tx-draft-confirm .btn{min-height:30px}
+
+/* Textile collection slip: hidden on screen; printed alone while body has .tx-printing-slip. */
+.tx-print-slip{display:none}
+@media print{
+  body.tx-printing-slip *{visibility:hidden}
+  body.tx-printing-slip .tx-print-slip,body.tx-printing-slip .tx-print-slip *{visibility:visible}
+  body.tx-printing-slip .tx-print-slip{display:block;position:fixed;inset:0;box-sizing:border-box;padding:12mm;color:#000;background:#fff;font:11pt/1.45 var(--font-sans)}
+  .tx-print-slip header{border-bottom:1px solid #000;padding-bottom:6mm;margin-bottom:6mm}
+  .tx-print-slip header p{margin:0;font-size:9pt}
+  .tx-print-slip h2{margin:2mm 0;font-size:18pt}
+  .tx-print-slip dl{display:grid;grid-template-columns:1fr 1fr;gap:4mm 10mm;margin:0}
+  .tx-print-slip dt{font-size:8pt;text-transform:uppercase;letter-spacing:.08em}
+  .tx-print-slip dd{margin:1mm 0 0}
+  .tx-slip-note{margin:8mm 0 0;font-size:9pt}
+  .tx-slip-signatures{display:grid;grid-template-columns:1fr 1fr;gap:16mm;margin-top:20mm}
+  .tx-slip-signatures p{margin:0;padding-top:2mm;border-top:1px solid #000;font-size:9pt}
+}
 .tx-min-form input{width:120px;border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;font-size:11px;background:var(--surface);color:var(--ink)}
 .tx-min-form .btn{min-height:30px;padding:0 10px}
 .tx-row-actions{text-align:right}

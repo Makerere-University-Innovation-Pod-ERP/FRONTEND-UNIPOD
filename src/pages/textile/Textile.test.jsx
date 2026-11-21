@@ -306,3 +306,24 @@ describe('Order Review queue', () => {
     await expect(textileApi.discardDraft(token, 'TXO-2026-015')).rejects.toThrow(/only a draft/i);
   });
 });
+
+describe('Collection slip', () => {
+  it('prints a slip for a ready order and only switches the print styles on while printing', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderPage(OrderPage, { path: '/textile/orders/:id', route: '/textile/orders/TXO-2026-012' });
+    await user.click(await screen.findByRole('button', { name: /print collection slip/i }));
+    expect(print).toHaveBeenCalledOnce();
+    expect(document.body).toHaveClass('tx-printing-slip');
+    window.dispatchEvent(new Event('afterprint'));
+    expect(document.body).not.toHaveClass('tx-printing-slip');
+    expect(document.querySelector('.tx-print-slip')).toHaveTextContent('TXO-2026-012');
+    print.mockRestore();
+  });
+
+  it('offers no slip while the order is still being made', async () => {
+    renderPage(OrderPage, { path: '/textile/orders/:id', route: '/textile/orders/TXO-2026-014' });
+    expect(await screen.findByRole('heading', { name: /branded tote bags/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /print collection slip/i })).not.toBeInTheDocument();
+  });
+});

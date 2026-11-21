@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Boxes, LoaderCircle, PackageCheck, Save } from 'lucide-react';
-import { ORDER_STATUS_LABELS, formatUgx, isChecklistComplete, isMachineBookable, matchesOrderSearch, nextOrderStep } from '@/lib/textile';
+import { ArrowLeft, ArrowRight, Boxes, LoaderCircle, PackageCheck, Printer, Save } from 'lucide-react';
+import {
+  COLLECTION_LIMIT_DAYS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, collectionDeadline, formatUgx, isChecklistComplete, isMachineBookable,
+  matchesOrderSearch, nextOrderStep, todayIso,
+} from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import {
   useMachines, useOrderTransition, useRecordCollection, useSaveProduction, useSaveQuality, useTextileOrder, useTextileOrders,
@@ -11,6 +15,21 @@ import { formatDateTime, useUnauthorizedRedirect } from './helpers';
 import { DemoPaymentButton } from './DemoPaymentButton';
 
 const PRODUCTION_STATUSES = ['SCHEDULED', 'BEING_MADE', 'READY', 'COLLECTED'];
+/** Orders a collection slip can be printed for: finished and waiting for, or handed to, the customer. */
+const SLIP_STATUSES = ['READY', 'COLLECTED'];
+/** Body class that switches on the print-only slip styles (see .tx-printing-slip in api.css). */
+const PRINTING_CLASS = 'tx-printing-slip';
+
+/** Prints only the collection slip; the class is removed again once the print dialog closes. */
+function printSlip() {
+  document.body.classList.add(PRINTING_CLASS);
+  const done = () => {
+    document.body.classList.remove(PRINTING_CLASS);
+    window.removeEventListener('afterprint', done);
+  };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
 const ignore = () => {};
 
 export function OrderPage({ token, onUnauthorized }) {
@@ -42,6 +61,9 @@ function OrderView({ token, order, machines, onUnauthorized }) {
       <Link to="/textile/board" className="back-link"><ArrowLeft size={15} />Order board</Link>
       <div className="tx-order-meta"><OrderStatus status={order.status} /><span className="tx-mono">{order.code ?? 'Draft'}</span></div>
       <PageHeading eyebrow={`${order.customerName} · ${order.customerType}`} title={order.whatIsWanted}>
+        {SLIP_STATUSES.includes(order.status) && (
+          <button type="button" className="btn tx-ghost" onClick={printSlip}><Printer size={15} />Print collection slip</button>
+        )}
         {step && order.status !== 'BEING_MADE' && (
           <button type="button" className="btn btn-primary" disabled={Boolean(step.blockedReason) || transition.isPending}
             title={step.blockedReason ?? undefined}
@@ -92,7 +114,48 @@ function OrderView({ token, order, machines, onUnauthorized }) {
           </section>
         </div>
       </div>
+      {SLIP_STATUSES.includes(order.status) && <CollectionSlip order={order} />}
     </div>
+  );
+}
+
+/**
+ * Print-only slip handed over with the finished order (hidden on screen). Rendered
+ * into <body> so no animated (transformed) page wrapper offsets it on paper.
+ */
+function CollectionSlip({ order }) {
+  const deadline = collectionDeadline(order, todayIso());
+  return createPortal(
+    <section className="tx-print-slip" aria-hidden="true">
+      <header>
+        <p>Makerere University Innovation Pod · Textile workshop</p>
+        <h2>Collection slip</h2>
+        <p className="tx-mono">{order.code}</p>
+      </header>
+      <dl>
+        <div><dt>Customer</dt><dd>{order.customerName} ({order.customerType})</dd></div>
+        <div><dt>Item</dt><dd>{order.whatIsWanted}</dd></div>
+        <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
+        <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
+        {order.quote && <div><dt>Amount</dt><dd>{formatUgx(order.quote.amount)}</dd></div>}
+        <div><dt>Payment</dt><dd>{PAYMENT_STATUS_LABELS[order.payment.status] ?? order.payment.status}{order.payment.reference ? ` · ${order.payment.reference}` : ''}</dd></div>
+        {order.collection ? (
+          <>
+            <div><dt>Collected by</dt><dd>{order.collection.collectedBy}</dd></div>
+            <div><dt>Collected on</dt><dd>{formatDateTime(order.collection.collectedAt)}</dd></div>
+            <div><dt>Handed over by</dt><dd>{order.collection.recordedBy}</dd></div>
+          </>
+        ) : deadline && (
+          <div><dt>Collect by</dt><dd>{formatDate(deadline.deadline)}</dd></div>
+        )}
+      </dl>
+      <p className="tx-slip-note">Orders not collected within {COLLECTION_LIMIT_DAYS} days of being marked Ready may be disposed of.</p>
+      <div className="tx-slip-signatures">
+        <p>Customer signature</p>
+        <p>Workshop signature</p>
+      </div>
+    </section>,
+    document.body,
   );
 }
 
