@@ -12,6 +12,7 @@ import { StockMovementPage } from './StockMovementPage';
 import { ReportFaultPage } from './ReportFaultPage';
 import { WorkshopBookingPage } from './WorkshopBookingPage';
 import { NewOrderPage } from './NewOrderPage';
+import { PhotoView } from './shared';
 
 const token = makeMockToken(['ROLE_TEXTILE_DOMAIN_OWNER'], 'Faith Nabwire');
 
@@ -28,6 +29,36 @@ function renderPage(Page, { path = '/', route = '/' } = {}) {
     </QueryClientProvider>,
   );
 }
+
+describe('Reference photos', () => {
+  it('loads protected photos with the current bearer token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(['photo'], { type: 'image/png' }),
+    });
+    const urlApi = {
+      createObjectURL: vi.fn(() => 'blob:reference-photo'),
+      revokeObjectURL: vi.fn(),
+    };
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('URL', urlApi);
+    const { unmount } = render(
+      <PhotoView photo={{ name: 'reference.png', url: '/textile/orders/order-id/photo' }} token="session-token" />,
+    );
+
+    try {
+      expect(await screen.findByRole('img', { name: 'reference.png' })).toHaveAttribute('src', 'blob:reference-photo');
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/textile\/orders\/order-id\/photo$/),
+        expect.objectContaining({ headers: { Authorization: 'Bearer session-token' }, credentials: 'omit' }),
+      );
+    } finally {
+      unmount();
+      vi.unstubAllGlobals();
+    }
+    expect(urlApi.revokeObjectURL).toHaveBeenCalledWith('blob:reference-photo');
+  });
+});
 
 describe('Order Review & Quote', () => {
   it('keeps an unpaid quoted order out of Scheduled and says why', async () => {

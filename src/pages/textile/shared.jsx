@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CircleAlert, ImageUp, LoaderCircle, X } from 'lucide-react';
-import { ApiError } from '@/services/api-client';
+import { API_BASE_URL, ApiError } from '@/services/api-client';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
 import { MACHINE_STATE_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/textile';
 
@@ -47,12 +47,50 @@ export function MachineState({ state }) {
 }
 
 /** A stored photo: the image when the server gives a URL, otherwise just its file name. */
-export function PhotoView({ photo }) {
+export function PhotoView({ photo, token }) {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    if (!photo?.url || !token) {
+      setImageUrl(null);
+      setUnavailable(Boolean(photo?.url));
+      return undefined;
+    }
+
+    let active = true;
+    let objectUrl;
+    setImageUrl(null);
+    setUnavailable(false);
+    const url = /^https?:\/\//i.test(photo.url) ? photo.url : `${API_BASE_URL}${photo.url}`;
+
+    fetch(url, { headers: { Authorization: `Bearer ${token}` }, credentials: 'omit' })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Photo request failed (${response.status}).`);
+        return response.blob();
+      })
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      })
+      .catch(() => {
+        if (active) setUnavailable(true);
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [photo?.url, token]);
+
   if (!photo) return 'None';
   if (!photo.url) return photo.name;
+  if (unavailable) return <span>{photo.name} (photo unavailable)</span>;
+  if (!imageUrl) return <span>Loading {photo.name}…</span>;
   return (
-    <a className="tx-photo-link" href={photo.url} target="_blank" rel="noreferrer">
-      <img className="tx-photo-thumb" src={photo.url} alt={photo.name} />
+    <a className="tx-photo-link" href={imageUrl} target="_blank" rel="noreferrer">
+      <img className="tx-photo-thumb" src={imageUrl} alt={photo.name} />
       <span>{photo.name}</span>
     </a>
   );

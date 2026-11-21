@@ -62,7 +62,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
       <div className="detail-grid">
         <div className="tx-stack">
           {/* Always visible: the maker needs the size/design and date while producing. */}
-          <OrderSummary order={order} />
+          <OrderSummary order={order} token={token} />
           {inProduction && <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />}
           {inProduction && <QualityPanel token={token} order={order} onUnauthorized={onUnauthorized} />}
         </div>
@@ -96,7 +96,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
   );
 }
 
-function OrderSummary({ order }) {
+function OrderSummary({ order, token }) {
   return (
     <section className="live-panel">
       <h2 className="tx-panel-title">Order details</h2>
@@ -104,7 +104,7 @@ function OrderSummary({ order }) {
         <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
         <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
         <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
+        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} token={token} /></dd></div>
       </dl>
     </section>
   );
