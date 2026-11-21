@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Boxes, LoaderCircle, PackageCheck, Save } from 'lucide-react';
-import { ORDER_STATUS_LABELS, formatUgx, isChecklistComplete, isMachineBookable, nextOrderStep } from '@/lib/textile';
+import { ORDER_STATUS_LABELS, formatUgx, isChecklistComplete, isMachineBookable, matchesOrderSearch, nextOrderStep } from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import {
   useMachines, useOrderTransition, useRecordCollection, useSaveProduction, useSaveQuality, useTextileOrder, useTextileOrders,
@@ -236,21 +236,42 @@ function CollectionPanel({ token, order, step, transition, onUnauthorized }) {
 export function OrdersIndexPage({ token, onUnauthorized }) {
   const orders = useTextileOrders(token);
   useUnauthorizedRedirect(onUnauthorized, orders.error);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('');
+  const all = orders.data ?? [];
+  // Only offer the statuses that actually occur, in workflow order.
+  const statuses = Object.keys(ORDER_STATUS_LABELS).filter((key) => all.some((order) => order.status === key));
+  const visible = all
+    .filter((order) => matchesOrderSearch(order, query) && (!status || order.status === status))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return (
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · ORDERS" title="Order pages" intro="Open an order to record materials, machine, staff, quality checks and collection." />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : !orders.data?.length ? (
+      {orders.isLoading ? <Loading label="Loading orders…" /> : !all.length ? (
         <section className="live-panel">
           <p className="live-empty">No orders yet. <Link to="/textile/orders/new">Create the first order</Link>.</p>
         </section>
       ) : (
-        <section className="live-panel">
+        <section className="live-panel tx-table-panel">
+          <div className="tx-filters">
+            <input type="search" aria-label="Search orders" placeholder="Search by customer, order code or item" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">All statuses</option>
+              {statuses.map((key) => <option key={key} value={key}>{ORDER_STATUS_LABELS[key]}</option>)}
+            </select>
+          </div>
+          {visible.length === 0 && (
+            <p className="live-empty">
+              No orders match.{' '}
+              <button type="button" className="tx-link-button" onClick={() => { setQuery(''); setStatus(''); }}>Clear filters</button>
+            </p>
+          )}
           <div className="live-table-wrap">
             <table className="live-table">
               <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Date needed</th><th>Updated</th></tr></thead>
               <tbody>
-                {[...(orders.data ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((order) => (
+                {visible.map((order) => (
                   <tr key={order.id}>
                     <td><Link className="case-title" to={`/textile/orders/${encodeURIComponent(order.id)}`}><b>{order.whatIsWanted || 'Untitled order'}</b><small>{order.code ?? 'Draft'}</small></Link></td>
                     <td>{order.customerName} · {order.customerType}</td>

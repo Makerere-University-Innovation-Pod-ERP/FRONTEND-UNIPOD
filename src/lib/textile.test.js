@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOARD_COLUMNS, SCHEDULE_BLOCKED_REASON, READY_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder, describeMaterialLine,
   evaluateMovement, findBookingClashes, groupOrdersByColumn, isLowStock, isMachineBookable, isoWeekday,
-  nextOrderStep, startOfWeek, transitionError, collectionDeadline, isOrderOverdue,
+  nextOrderStep, startOfWeek, transitionError, collectionDeadline, isOrderOverdue, matchesOrderSearch, summarizeBoard,
 } from './textile';
 import { isTextileDomainOwner } from './permissions';
 
@@ -191,5 +191,33 @@ describe('overdue orders and the 30-day collection limit', () => {
     expect(collectionDeadline(order, '2026-11-01')).toMatchObject({ daysLeft: 23, warn: false });
     expect(collectionDeadline(order, '2026-11-26')).toMatchObject({ daysLeft: -2, warn: true });
     expect(collectionDeadline({ ...order, status: 'COLLECTED' }, today)).toBeNull();
+  });
+});
+
+describe('finding orders', () => {
+  const order = { code: 'TXO-2026-015', customerName: 'Robert Ssali', customerType: 'Public', whatIsWanted: 'Custom curtain set' };
+
+  it('matches code, customer and item text, ignoring case and spaces around the query', () => {
+    expect(matchesOrderSearch(order, '')).toBe(true);
+    expect(matchesOrderSearch(order, '  ssali ')).toBe(true);
+    expect(matchesOrderSearch(order, 'txo-2026-015')).toBe(true);
+    expect(matchesOrderSearch(order, 'CURTAIN')).toBe(true);
+    expect(matchesOrderSearch(order, 'apron')).toBe(false);
+  });
+
+  it('copes with drafts that have no code yet', () => {
+    expect(matchesOrderSearch({ ...order, code: null }, 'curtain')).toBe(true);
+  });
+
+  it('counts overdue work, collections coming due and paid quotes waiting to be scheduled', () => {
+    const today = '2026-11-21';
+    const orders = [
+      { status: 'BEING_MADE', dateNeeded: '2026-11-17', history: [] },
+      { status: 'QUOTED', dateNeeded: '2026-12-01', payment: { status: 'CONFIRMED' }, history: [] },
+      { status: 'QUOTED', dateNeeded: '2026-12-01', payment: { status: 'AWAITING_PROOF' }, history: [] },
+      { status: 'READY', dateNeeded: '2026-10-01', history: [{ status: 'READY', at: '2026-10-25T10:00:00Z' }], updatedAt: '2026-10-25T10:00:00Z' },
+      { status: 'COLLECTED', dateNeeded: '2026-10-01', history: [] },
+    ];
+    expect(summarizeBoard(orders, today)).toEqual({ overdue: 1, collectSoon: 1, readyToSchedule: 1 });
   });
 });
