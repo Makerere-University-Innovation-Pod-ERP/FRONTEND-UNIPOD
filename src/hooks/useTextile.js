@@ -94,6 +94,19 @@ export function useUpdateDraft(token, id) {
   return useOrderMutation(token, (payload) => textileApi.updateDraft(token, id, payload));
 }
 
+/** Discards a draft order; the draft disappears from the order lists. */
+export function useDiscardDraft(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => textileApi.discardDraft(token, id),
+    onSuccess: (_, id) => {
+      queryClient.removeQueries({ queryKey: textileKeys.order(token, id) });
+      queryClient.setQueryData(textileKeys.orders(token), (current) => current?.filter((order) => order.id !== id));
+      void queryClient.invalidateQueries({ queryKey: textileKeys.orders(token) });
+    },
+  });
+}
+
 export function useSendQuote(token, id) {
   return useOrderMutation(token, (body) => textileApi.sendQuote(token, id, body));
 }

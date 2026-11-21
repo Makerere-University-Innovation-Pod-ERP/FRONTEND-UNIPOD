@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { makeMockToken } from '@/mocks/jwt';
 import { server } from '@/mocks/server';
 import { orders as fixtureOrders } from '@/mocks/fixtures/textile';
 import { API_BASE_URL } from '@/services/api-client';
+import { textileApi } from '@/services/textile';
 import { addDays, startOfWeek, todayIso } from '@/lib/textile';
 import { OrderReviewPage } from './OrderReviewPage';
 import { OrderBoardPage } from './OrderBoardPage';
@@ -271,5 +272,37 @@ describe('Order pages index', () => {
     expect(screen.queryByText('Graduation sash set')).not.toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: /search orders/i }), 'nothing like this');
     expect(screen.getByText(/No orders match/)).toBeInTheDocument();
+  });
+});
+
+describe('Order Review queue', () => {
+  it('searches the review queue', async () => {
+    const user = userEvent.setup();
+    renderPage(OrderReviewPage, { path: '/textile/review', route: '/textile/review' });
+    const queue = await screen.findByRole('navigation', { name: /orders to review/i });
+    await user.type(within(queue).getByRole('searchbox', { name: /search orders to review/i }), 'bakers');
+    expect(within(queue).getByText('Branded aprons for bakery staff')).toBeInTheDocument();
+    expect(within(queue).queryByText('Custom curtain set, living room')).not.toBeInTheDocument();
+    await user.clear(within(queue).getByRole('searchbox'));
+    await user.type(within(queue).getByRole('searchbox'), 'zzz');
+    expect(within(queue).getByText(/No orders match/)).toBeInTheDocument();
+  });
+
+  it('discards a draft only after confirming', async () => {
+    await textileApi.createOrder(token, { order: { customerName: 'Draft Customer', whatIsWanted: 'Draft cushions', submit: false }, photo: null });
+    const user = userEvent.setup();
+    renderPage(OrderReviewPage, { path: '/textile/review', route: '/textile/review' });
+    await user.click(await screen.findByRole('button', { name: 'Discard draft: Draft cushions' }));
+    const confirm = screen.getByRole('group', { name: /discard draft cushions/i });
+    await user.click(within(confirm).getByRole('button', { name: 'Keep' }));
+    expect(screen.getByText('Draft cushions')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Discard draft: Draft cushions' }));
+    await user.click(within(screen.getByRole('group', { name: /discard draft cushions/i })).getByRole('button', { name: /discard/i }));
+    await waitFor(() => expect(screen.queryByText('Draft cushions')).not.toBeInTheDocument());
+  });
+
+  it('refuses to discard an order that has already been sent', async () => {
+    await expect(textileApi.discardDraft(token, 'TXO-2026-015')).rejects.toThrow(/only a draft/i);
   });
 });

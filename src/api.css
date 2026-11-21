@@ -1302,6 +1302,10 @@ button.partner-status{cursor:pointer}
 .tx-board-summary button:hover{border-color:var(--forest)}
 .tx-board-summary button[aria-pressed=true]{border-color:var(--forest);background:color-mix(in srgb,var(--forest) 10%,var(--surface));color:var(--ink)}
 .tx-board-summary b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.tx-draft-row{display:grid;gap:6px;justify-items:start}
+.tx-draft-row .tx-draft-link{justify-self:stretch}
+.tx-draft-confirm{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink-soft)}
+.tx-draft-confirm .btn{min-height:30px}
 .tx-min-form input{width:120px;border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;font-size:11px;background:var(--surface);color:var(--ink)}
 .tx-min-form .btn{min-height:30px;padding:0 10px}
 .tx-row-actions{text-align:right}
