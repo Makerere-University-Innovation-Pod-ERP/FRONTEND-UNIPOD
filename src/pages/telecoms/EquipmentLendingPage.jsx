@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   CalendarDays,
@@ -37,6 +37,8 @@ const EMPTY_LOAN_FORM = {
 };
 
 export function EquipmentLendingPage({ token, onUnauthorized }) {
+  const [searchParams] = useSearchParams();
+  const linkedLoanId = searchParams.get('loan');
   const loansQuery = useTelecomsLoans(token);
   const equipmentQuery = useTelecomsEquipment(token);
 
@@ -466,7 +468,12 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                   loans.map((loan) => {
                     const overdue = isLoanOverdue(loan);
                     return (
-                      <tr key={loan.id} className={overdue ? 'tx-attention' : ''}>
+                      <tr
+                        key={loan.id}
+                        className={overdue ? 'tx-attention' : ''}
+                        data-notification-target={loan.id === linkedLoanId ? 'true' : undefined}
+                        style={loan.id === linkedLoanId ? { background: '#fff8e6', outline: '2px solid #d59b3d', outlineOffset: '-2px' } : undefined}
+                      >
                         <td className="tx-mono">
                           <b style={{ fontSize: '13px', color: '#0f172a' }}>{loan.id}</b>
                         </td>

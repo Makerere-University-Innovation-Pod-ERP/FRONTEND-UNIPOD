@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Receipt,
   Clock,
@@ -37,6 +38,7 @@ function downloadBlob(file, filename) {
  */
 export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   const { data: overview, isLoading, error, refetch, isFetching } = useInvoicesOverview(token);
+  const [searchParams] = useSearchParams();
   const verifyMutation = useVerifyInvoice(token);
   const rejectMutation = useRejectInvoice(token);
   const receiptMutation = useReleaseReceipt(token);
@@ -48,10 +50,17 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   const [invoiceToVerify, setInvoiceToVerify] = useState(null);
   const [selectedPriceItem, setSelectedPriceItem] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const linkedInvoiceId = searchParams.get('invoice');
 
   useEffect(() => {
     if (error?.status === 401) onUnauthorized?.();
   }, [error, onUnauthorized]);
+
+  useEffect(() => {
+    if (!linkedInvoiceId || !overview) return;
+    const invoice = overview.invoices.find((item) => item.id === linkedInvoiceId);
+    if (invoice) setSelectedInvoice(invoice);
+  }, [linkedInvoiceId, overview]);
 
   if (isLoading && !overview) {
     return (

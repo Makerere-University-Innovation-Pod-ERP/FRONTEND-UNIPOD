@@ -16,9 +16,12 @@
 .management-staff-name{display:block;color:#354239;font-weight:700}
 .management-table td small{display:block;margin-top:4px;color:#89918a;font-size:9px}
 .management-table select{max-width:210px;border:1px solid #dfe3d9;border-radius:5px;background:#fff;padding:7px;color:#465148;font-size:10px}
+.management-table select[multiple]{min-width:160px;min-height:82px;padding:5px;border-radius:7px}
 .management-row-actions{display:flex;align-items:center;gap:6px}
 .management-row-actions .btn{min-height:31px;padding:0 9px;font-size:9px}
 .management-empty{text-align:center;color:#89918a}
+.management-assignment-areas{display:flex;flex-wrap:wrap;gap:8px}
+.management-assignment-areas span{padding:7px 10px;border:1px solid #dfe7df;border-radius:999px;background:#f7faf7;color:#52675a;font-size:10px;font-weight:650}
 .management-role{border-top:1px solid #eff0eb;padding:15px 0}
 .management-role-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 .management-role-heading h3{margin:0 0 4px;color:#354239;font-size:12px}

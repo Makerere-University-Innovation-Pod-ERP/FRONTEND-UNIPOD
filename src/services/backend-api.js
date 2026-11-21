@@ -2,6 +2,16 @@ import { API_BASE_URL, ApiError, request, requestFile } from './api-client';
 
 export { API_BASE_URL, ApiError };
 
+function normalizeAdminUser(user) {
+  const departmentIds = user.departmentIds ?? [];
+  return {
+    ...user,
+    fullName: user.profile?.fullName || user.profile?.displayFirstName || user.email,
+    departmentIds,
+    active: user.active ?? true,
+  };
+}
+
 export const backendApi = {
   health: (signal) =>
     request('/actuator/health', { signal }),
@@ -20,37 +30,24 @@ export const backendApi = {
   signup: (body) =>
     request('/auth/signup', { body }),
   createUser: (token, body) =>
-    request('/admin/users', { token, body }),
+    request('/admin/users', { token, body }).then(normalizeAdminUser),
   adminUsers: (token) =>
-    request('/admin/users', { token }),
+    request('/users?page=0&size=100', { token })
+      .then((response) => response.items.map(normalizeAdminUser)),
   updateAdminUser: (token, id, body) =>
-    request(`/admin/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body }),
-  setAdminUserActive: (token, id, active, version) =>
-    request(`/admin/users/${encodeURIComponent(id)}/status`, {
+    request(`/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body })
+      .then(normalizeAdminUser),
+  setAdminUserActive: (token, id, active) =>
+    request(`/users/${encodeURIComponent(id)}/${active ? 'reactivate' : 'deactivate'}`, {
       token,
-      method: 'PATCH',
-      body: { active, version },
-    }),
+      method: 'POST',
+    }).then(normalizeAdminUser),
   adminRoles: (token) =>
-    request('/admin/roles', { token }),
-  adminPermissions: (token) =>
-    request('/admin/permissions', { token }),
-  updateRolePermissions: (token, id, body) =>
-    request(`/admin/roles/${encodeURIComponent(id)}/permissions`, {
-      token,
-      method: 'PUT',
-      body,
-    }),
+    request('/roles', { token })
+      .then((roles) => roles.map(({ role, staff }) => ({ id: role, name: role, staff }))),
   adminDepartments: (token) =>
-    request('/admin/departments', { token }),
-  createDepartment: (token, body) =>
-    request('/admin/departments', { token, body }),
-  updateDepartment: (token, id, body) =>
-    request(`/admin/departments/${encodeURIComponent(id)}`, {
-      token,
-      method: 'PUT',
-      body,
-    }),
+    request('/departments', { token })
+      .then((departments) => departments.map((department) => ({ ...department, active: true }))),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (

@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from './BackendWorkspace';
 import { submissions } from '@/mocks/fixtures/submissions';
-import { notifications } from '@/mocks/fixtures/notifications';
 import { resetNotificationMocks } from '@/mocks/handlers';
 
 const session = {
@@ -22,10 +21,16 @@ function renderShell(currentSession = session, initialEntry = '/') {
       <MemoryRouter initialEntries={[initialEntry]}>
         <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
           <p>Page content</p>
+          <CurrentPath />
         </BackendWorkspace>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function CurrentPath() {
+  const { pathname } = useLocation();
+  return <output data-testid="current-path">{pathname}</output>;
 }
 
 beforeEach(() => {
@@ -48,6 +53,34 @@ describe('BackendWorkspace', () => {
     expect(expandToggle.querySelector('svg')).toHaveClass('lucide-chevron-right');
     await user.click(expandToggle);
     expect(sidebar).not.toHaveClass('collapsed');
+  });
+
+  it('shows navigation tooltips only while sidebar labels are hidden', async () => {
+    const user = userEvent.setup();
+    renderShell();
+    const factFindingLink = screen.getByRole('link', { name: 'Fact-Finding' });
+
+    await user.hover(factFindingLink);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /collapse navigation/i }));
+    await user.hover(factFindingLink);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Fact-Finding');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Investigate cases and record findings.');
+  });
+
+  it('shows app-bar tooltips on hover and keyboard focus', async () => {
+    const user = userEvent.setup();
+    renderShell();
+    const notifications = screen.getByRole('button', { name: /notifications/i });
+
+    await user.hover(notifications);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Notifications');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('View recent updates and alerts.');
+
+    await user.unhover(notifications);
+    fireEvent.focus(notifications);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Notifications');
   });
 
   it('shows submitters the submission registration action', () => {
@@ -120,35 +153,10 @@ describe('BackendWorkspace', () => {
     expect(await screen.findByText(target.title)).toBeInTheDocument();
   });
 
-  it('shows notifications in the bell popover', async () => {
+  it('navigates to the notifications page when the bell is clicked', async () => {
     const user = userEvent.setup();
     renderShell();
     await user.click(screen.getByRole('button', { name: /notifications/i }));
-    for (const item of notifications) {
-      expect(await screen.findByText(item.title)).toBeInTheDocument();
-    }
-  });
-
-  it('explains when this browser cannot receive background push notifications', async () => {
-    const user = userEvent.setup();
-    renderShell();
-
-    await user.click(screen.getByRole('button', { name: /notifications/i }));
-
-    expect(await screen.findByText('Background push is not supported in this browser.')).toBeInTheDocument();
-  });
-
-  it('shows the unread count in the navbar and updates it when a notification is opened', async () => {
-    const user = userEvent.setup();
-    renderShell();
-
-    const bell = await screen.findByRole('button', { name: 'Notifications, 2 unread' });
-    expect(bell.querySelector('.notification-count')).toHaveTextContent('2');
-    await user.click(bell);
-    await user.click(await screen.findByRole('link', { name: /fact-finding assessment needed/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument();
-    });
+    expect(await screen.findByTestId('current-path')).toHaveTextContent('/notifications');
   });
 });

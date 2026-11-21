@@ -18,6 +18,19 @@ export const mediaRequestSchema = z.object({
   description: z.string().optional(),
 });
 
+const mediaDeliveryRequestSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  title: z.string(),
+  status: z.string(),
+  deliveredAt: z.string().nullable().optional(),
+  deliveryPayload: z.object({
+    delivery_links: z.array(z.unknown()).optional(),
+    file_ids: z.array(z.unknown()).optional(),
+    note_to_submitter: z.string().nullable().optional(),
+  }).nullable().optional(),
+}).passthrough();
+
 export const mediaOverviewSchema = z.object({
   requestedCount: z.number(),
   scheduledCount: z.number(),
@@ -27,6 +40,11 @@ export const mediaOverviewSchema = z.object({
 });
 
 export const mediaApi = {
+  async getRequest(id, token, signal) {
+    const data = await request(`/media/requests/${encodeURIComponent(id)}`, { token, signal });
+    return mediaDeliveryRequestSchema.parse(data);
+  },
+
   async getOverview(token, signal) {
     const data = await request('/operations/media/overview', { token, signal });
     return mediaOverviewSchema.parse(data);

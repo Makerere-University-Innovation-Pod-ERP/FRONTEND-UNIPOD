@@ -157,6 +157,16 @@ export function useReportTelecomsFault(token) {
   });
 }
 
+export function useMarkTelecomsEquipmentWorking(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => telecomsApi.markEquipmentWorking(token, id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: telecomsKeys.equipment(token) });
+    },
+  });
+}
+
 export function useRequestEquipmentLoan(token) {
   const queryClient = useQueryClient();
   return useMutation({
