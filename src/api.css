@@ -3377,6 +3377,15 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   box-shadow: var(--shadow);
 }
 
+.skeleton-loader__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .skeleton-loader__header {
   display: grid;
   gap: 8px;

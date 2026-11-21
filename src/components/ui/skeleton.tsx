@@ -35,6 +35,7 @@ function LoadingSkeleton({
       aria-busy="true"
       {...props}
     >
+      <p className="skeleton-loader__label">{label}</p>
       <div className="skeleton-loader__header" aria-hidden="true">
         <Skeleton className="skeleton-loader__kicker" />
         <Skeleton className="skeleton-loader__heading" />
