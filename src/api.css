@@ -1356,6 +1356,15 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
    Textile owner's branch; raise it with them directly rather than
    re-deleting it a third time. */
 
+/* Textile's order board has five stages. The shared board block further down
+   (.tx-board, used by Telecoms and CNC too) lays boards out in four columns,
+   which pushed Collected onto a second row; these rules apply on /textile only. */
+.textile-theme .tx-board{grid-template-columns:repeat(5,minmax(200px,1fr))}
+.textile-theme .tx-column{min-width:0}
+@media(max-width:980px){
+  .textile-theme .tx-board{grid-template-columns:repeat(5,minmax(220px,78vw))}
+}
+
 /* Textile-mode sidebar: lime brand tile, pipeline count badges, demo card. */
 .tx-brand-mark{width:36px;height:36px;border-radius:10px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;flex:none}
 .live-nav-section{display:grid;align-content:start;gap:3px}
