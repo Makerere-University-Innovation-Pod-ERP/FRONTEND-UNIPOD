@@ -15,12 +15,12 @@ const session = {
   roles: ['ROLE_FACT_FINDING_OFFICER'],
 };
 
-function renderShell(currentSession = session, initialEntry = '/') {
+function renderShell(currentSession = session, initialEntry = '/', onLogout = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialEntry]}>
-        <BackendWorkspace session={currentSession} health="online" onLogout={vi.fn()}>
+        <BackendWorkspace session={currentSession} health="online" onLogout={onLogout}>
           <p>Page content</p>
         </BackendWorkspace>
       </MemoryRouter>
@@ -56,6 +56,19 @@ describe('BackendWorkspace', () => {
     expect(screen.getByRole('link', { name: /submit an idea/i })).toHaveAttribute('href', '/submissions/new');
   });
 
+  it('provides a separate mobile sign-out action for submitters', async () => {
+    const user = userEvent.setup();
+    const onLogout = vi.fn();
+    const { container } = renderShell({ ...session, roles: ['ROLE_SUBMITTER'] }, '/my-submissions', onLogout);
+    const mobileSignOut = container.querySelector('.mobile-signout-action');
+
+    expect(mobileSignOut).toHaveAttribute('aria-label', 'Sign out');
+    expect(mobileSignOut).toHaveTextContent('Sign out');
+    await user.click(mobileSignOut);
+
+    expect(onLogout).toHaveBeenCalledOnce();
+  });
+
   it('omits empty navigation groups for submitter-only accounts', () => {
     renderShell({ ...session, roles: ['ROLE_SUBMITTER'] });
 
@@ -63,10 +76,11 @@ describe('BackendWorkspace', () => {
   });
 
   it('lists separate submitter pages after My Submissions and highlights the current page', () => {
-    renderShell({ ...session, roles: ['ROLE_SUBMITTER'] }, '/my-submissions/bookings');
+    const { container } = renderShell({ ...session, roles: ['ROLE_SUBMITTER'] }, '/my-submissions/bookings');
 
     const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
     const links = Array.from(navigation.querySelectorAll('a'));
+    expect(container.querySelector('.live-shell')).toHaveClass('submitter-shell');
     expect(links.map((link) => link.textContent.trim())).toEqual([
       'My Submissions',
       'Service Requests',

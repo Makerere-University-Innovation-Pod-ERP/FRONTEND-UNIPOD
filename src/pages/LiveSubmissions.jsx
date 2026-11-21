@@ -74,7 +74,7 @@ export function LiveSubmissions({
               <SelectTrigger aria-label="Filter by category" className="submission-filter-select-trigger">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
-              <SelectContent className="submission-filter-select-content" sideOffset={6}>
+              <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
                 <SelectItem value="__all__">All categories</SelectItem>
                 <SelectItem value="student">Student projects</SelectItem>
                 <SelectItem value="general">General innovations</SelectItem>
@@ -85,7 +85,7 @@ export function LiveSubmissions({
             <SelectTrigger aria-label="Filter by stage" className="submission-filter-select-trigger">
               <SelectValue placeholder="All stages" />
             </SelectTrigger>
-            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+            <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
               <SelectItem value="__all__">All stages</SelectItem>
               {['DRAFT', 'RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'REFINEMENT_REQUESTED', 'FURTHER_HANDLING', 'FORWARDED', 'IN_PROGRESS', 'COMPLETED']
                 .map((value) => <SelectItem value={value} key={value}>{value.replaceAll('_', ' ')}</SelectItem>)}
@@ -95,7 +95,7 @@ export function LiveSubmissions({
             <SelectTrigger aria-label="Filter by sector" className="submission-filter-select-trigger">
               <SelectValue placeholder="All sectors" />
             </SelectTrigger>
-            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+            <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
               <SelectItem value="__all__">All sectors</SelectItem>
               {sectors.map((item) => <SelectItem value={item.id} key={item.id}>{item.name}</SelectItem>)}
             </SelectContent>
