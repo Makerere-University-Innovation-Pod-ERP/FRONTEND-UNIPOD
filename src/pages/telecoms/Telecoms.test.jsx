@@ -74,6 +74,22 @@ describe('Telecoms Equipment Register (TL6)', () => {
     await user.click(reportButtons[0]);
     expect(screen.getByLabelText(/issue description/i)).toBeInTheDocument();
   });
+
+  it('filters equipment by search term and condition', async () => {
+    const user = userEvent.setup();
+    renderPage(EquipmentListPage, { path: '/telecoms/equipment', route: '/telecoms/equipment' });
+
+    expect(await screen.findByText(/Digital Oscilloscope Set/i)).toBeInTheDocument();
+    const search = screen.getByRole('searchbox', { name: /search equipment/i });
+    await user.type(search, 'spectrum');
+    expect(screen.getByText(/Spectrum Analyzer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Digital Oscilloscope Set/i)).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by equipment state/i }), 'FAULTY');
+    expect(screen.getByText(/Vector Network Analyzer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Spectrum Analyzer/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('Telecoms Equipment Lending (TL7)', () => {

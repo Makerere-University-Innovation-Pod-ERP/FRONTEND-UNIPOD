@@ -33,4 +33,14 @@ export const equipmentApi = {
     });
     return equipmentItemSchema.parse(data);
   },
+
+  async markWorking(id, token, signal) {
+    const data = await request(`/operations/equipment/${encodeURIComponent(id)}/mark-working`, {
+      method: 'POST',
+      body: {},
+      token,
+      signal,
+    });
+    return equipmentItemSchema.parse(data);
+  },
 };
