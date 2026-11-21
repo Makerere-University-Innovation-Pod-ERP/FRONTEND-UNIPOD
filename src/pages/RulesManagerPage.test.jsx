@@ -42,6 +42,41 @@ describe('RulesManagerPage', () => {
     expect(await within(row).findByText('Published')).toBeInTheDocument();
   });
 
+  it('keeps a rule as a draft when only its wording is edited', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('row', { name: /originality and attribution/i });
+
+    await user.click(screen.getByRole('button', { name: /new rule/i }));
+    await user.type(screen.getByLabelText(/^title/i), 'Lab access hours');
+    await user.type(screen.getByLabelText(/^wording/i), 'The lab is open 9am to 5pm on weekdays.');
+    await user.click(screen.getByRole('button', { name: /create as draft/i }));
+
+    const row = await screen.findByRole('row', { name: /lab access hours/i });
+    expect(within(row).getByText('Draft')).toBeInTheDocument();
+
+    await user.click(within(row).getByRole('button', { name: /^edit$/i }));
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeInTheDocument();
+    const wording = screen.getByLabelText(/^wording/i);
+    await user.clear(wording);
+    await user.type(wording, 'The lab is open 9am to 6pm on weekdays.');
+    await user.click(screen.getByRole('button', { name: /save draft/i }));
+
+    expect(within(row).getByText('Draft')).toBeInTheDocument();
+  });
+
+  it('keeps a published rule published when only its wording is edited', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const row = await screen.findByRole('row', { name: /impartial review/i });
+    await user.click(within(row).getByRole('button', { name: /^edit$/i }));
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(within(row).getByText('Published')).toBeInTheDocument();
+  });
+
   it('retires a published rule', async () => {
     const user = userEvent.setup();
     renderPage();

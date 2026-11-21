@@ -74,7 +74,9 @@ export function ReviewerCaseFile({ token, onUnauthorized }) {
         <aside className="detail-side">
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">REFERENCE</p><h2>Applicable department rules</h2></div></div>
-            <RulesAcceptance rules={generalRules} readOnly />
+            {rulesQuery.isLoading && <p className="field-note">Loading the department rules…</p>}
+            {rulesQuery.isError && <div className="api-error api-error-banner" role="alert">Could not load the department rules.</div>}
+            {rulesQuery.isSuccess && <RulesAcceptance rules={generalRules} readOnly />}
           </section>
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">SUPPORTING FILES</p><h2>Documents</h2></div></div>
