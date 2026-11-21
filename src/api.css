@@ -1201,8 +1201,11 @@ td.tx-negative{color:var(--rose)}
 .tx-quote-actions{display:grid;gap:8px}
 .tx-quote-actions .btn{width:100%}
 .tx-quote-card .btn-primary:disabled{opacity:.55}
-.tx-ghost{background:transparent;border-color:color-mix(in srgb, var(--sidebar-ink) 28%, transparent);color:var(--sidebar-ink)}
-.tx-ghost:hover:not(:disabled){background:color-mix(in srgb, var(--sidebar-ink) 10%, transparent)}
+/* Outline button. On light surfaces it uses the page ink; inside the dark quote card it uses the sidebar ink. */
+.tx-ghost{background:transparent;border-color:var(--border);color:var(--ink-soft)}
+.tx-ghost:hover:not(:disabled){background:var(--surface-raised);border-color:var(--forest);color:var(--ink)}
+.tx-quote-card .tx-ghost{border-color:color-mix(in srgb, var(--sidebar-ink) 28%, transparent);color:var(--sidebar-ink)}
+.tx-quote-card .tx-ghost:hover:not(:disabled){background:color-mix(in srgb, var(--sidebar-ink) 10%, transparent);color:var(--sidebar-ink)}
 .tx-quote-reason{margin:0;font-size:10px;line-height:1.5;color:var(--sidebar-muted)}
 .tx-quote-reason.dark{color:var(--muted);margin-top:8px}
 .tx-inline-form{display:grid;gap:8px;padding-top:4px}
@@ -1388,6 +1391,14 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
    which pushed Collected onto a second row; these rules apply on /textile only. */
 .textile-theme .tx-board{grid-template-columns:repeat(5,minmax(200px,1fr))}
 .textile-theme .tx-column{min-width:0}
+/* Keep visually hidden (.sr-only, position:absolute) table headers inside the
+   scrolling table box; otherwise they escape it and widen the page on phones. */
+.textile-theme .live-table-wrap{position:relative}
+/* Booking week list on phones: let the status tag drop under the text instead of squeezing it. */
+@media(max-width:560px){
+  .textile-theme .tx-slot{flex-wrap:wrap;align-items:flex-start}
+  .textile-theme .tx-slot span:first-child{flex:1 1 100%}
+}
 @media(max-width:980px){
   .textile-theme .tx-board{grid-template-columns:repeat(5,minmax(220px,78vw))}
 }
