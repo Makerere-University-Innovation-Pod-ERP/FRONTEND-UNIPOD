@@ -72,3 +72,19 @@ export const initialCncPrices = [
   { id: 'price-cnc-router', departmentId: 'd1a7c6f0-0000-4000-8000-000000000002', service: 'CNC router time', unit: 'PER_HOUR', priceUgx: 15000, effectiveFrom: '2026-10-01', status: 'ACTIVE', proposedBy: 'robinson@unipod.test', updatedAt: '2026-10-01T08:00:00Z' },
   { id: 'price-laser', departmentId: 'd1a7c6f0-0000-4000-8000-000000000002', service: 'Laser cutting', unit: 'PER_ITEM', priceUgx: 25000, effectiveFrom: '2026-10-01', status: 'ACTIVE', proposedBy: 'robinson@unipod.test', updatedAt: '2026-10-01T08:00:00Z' },
 ];
+
+const recent = (days) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+export const initialCncStockItems = [
+  { id: 'cnc-stk-plywood', name: '18 mm plywood sheets', unit: 'sheets', quantity: 12, minimum: 20, location: 'CNC Workshop store' },
+  { id: 'cnc-stk-mdf', name: 'MDF sheets', unit: 'sheets', quantity: 48, minimum: 15, location: 'CNC Workshop store' },
+  { id: 'cnc-stk-bits', name: 'Router bits', unit: 'pcs', quantity: 6, minimum: 10, location: 'CNC Workshop store' },
+  { id: 'cnc-stk-blades', name: 'Laser blades', unit: 'pcs', quantity: 22, minimum: 8, location: 'Laser bay' },
+  { id: 'cnc-stk-hardwood', name: 'Hardwood planks', unit: 'planks', quantity: 18, minimum: 12, location: 'Carpentry store' },
+];
+
+export const initialCncStockMovements = [
+  { id: 'cnc-mv-3', itemId: 'cnc-stk-plywood', itemName: '18 mm plywood sheets', type: 'USED_ON_ORDER', quantity: 8, balanceAfter: 12, jobId: 'cnc-2', jobCode: 'ORD-CNC-2026-000002', note: 'Frame panels', by: 'robinson@unipod.test', at: recent(1) },
+  { id: 'cnc-mv-2', itemId: 'cnc-stk-mdf', itemName: 'MDF sheets', type: 'RECEIVED', quantity: 30, balanceAfter: 48, jobId: null, jobCode: null, note: 'Supplier delivery', by: 'robinson@unipod.test', at: recent(3) },
+  { id: 'cnc-mv-1', itemId: 'cnc-stk-bits', itemName: 'Router bits', type: 'CORRECTION', quantity: -2, balanceAfter: 6, jobId: null, jobCode: null, note: 'Two bits worn out', by: 'robinson@unipod.test', at: recent(5) },
+];

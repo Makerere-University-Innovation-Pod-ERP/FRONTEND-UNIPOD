@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL } from './api-client';
-import { notificationsApi } from './notifications';
+import { notificationLink, notificationTarget, notificationsApi } from './notifications';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -38,8 +38,26 @@ describe('notifications API', () => {
     expect(page.items[0]).toMatchObject({
       ...notification,
       body: '',
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000001202',
     });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('requests unread notifications when the inbox filter is selected', async () => {
+    const fetchMock = vi.fn(async (url) => {
+      expect(new URL(url).search).toBe('?page=1&size=20&unread=true');
+      return jsonResponse({
+        items: [],
+        page: 1,
+        size: 20,
+        totalElements: 0,
+        totalPages: 0,
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await notificationsApi.list('submitter-token', { page: 1, size: 20, unread: true });
+
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
@@ -51,6 +69,7 @@ describe('notifications API', () => {
           type: 'PAYMENT_CONFIRMED',
           title: 'Invoice paid',
           entityType: 'invoice',
+          entityId: 'invoice-123',
           createdAt: '2026-11-19T08:00:00Z',
           read: false,
         },
@@ -59,6 +78,7 @@ describe('notifications API', () => {
           type: 'DOCUMENT_REQUESTED',
           title: 'Document requested',
           entityType: 'submission',
+          entityId: 'submission-123',
           createdAt: '2026-11-19T08:00:00Z',
           read: false,
         },
@@ -73,9 +93,55 @@ describe('notifications API', () => {
     const page = await notificationsApi.list('submitter-token');
 
     expect(page.items.map(({ link }) => link)).toEqual([
-      '/my-submissions/invoices',
-      '/my-submissions',
+      '/my-submissions/invoices?invoice=invoice-123',
+      '/submissions/submission-123',
     ]);
+  });
+
+  it('uses the role-appropriate invoice and media record screens', () => {
+    expect(notificationTarget({
+      entityType: 'invoice',
+      entityId: 'invoice-123',
+      link: '/my-submissions/invoices?invoice=invoice-123',
+    }, ['ROLE_FINANCE_OFFICER'])).toBe('/finance/invoices?invoice=invoice-123');
+    expect(notificationTarget({
+      entityType: 'media_request',
+      entityId: 'media-123',
+      link: '/my-submissions/media/media-123',
+    }, ['ROLE_SUBMITTER'])).toBe('/my-submissions/media/media-123');
+    expect(notificationTarget({
+      entityType: 'media_request',
+      entityId: 'media-123',
+      link: '/my-submissions/media/media-123',
+    }, ['ROLE_DEPARTMENT_COORDINATOR'])).toBe('/multimedia/media?request=media-123');
+  });
+
+  it('deep-links ambiguous inventory records through the resolver', () => {
+    expect(notificationLink('equipment_item', 'equipment-123')).toBe('/notifications/open/equipment_item/equipment-123');
+    expect(notificationLink('stock_item', 'stock-123')).toBe('/notifications/open/stock_item/stock-123');
+    expect(notificationLink('machine', 'machine-123')).toBe('/notifications/open/machine/machine-123');
+  });
+
+  it('uses the role-aware home route for notification types without a dedicated page', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      items: [{
+        id: 'equipment-notification',
+        type: 'FAULT_REPORTED',
+        title: 'A fault was reported',
+        entityType: 'equipment',
+        createdAt: '2026-11-19T08:00:00Z',
+        read: false,
+      }],
+      page: 0,
+      size: 25,
+      totalElements: 1,
+      totalPages: 1,
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const page = await notificationsApi.list('admin-token');
+
+    expect(page.items[0].link).toBe('/');
   });
 
   it('reads the unread count and persists both single and bulk read updates', async () => {
@@ -105,7 +171,7 @@ describe('notifications API', () => {
     expect(await notificationsApi.unreadCount('submitter-token')).toEqual({ unread: 2 });
     expect(await notificationsApi.markRead(notification.id, 'submitter-token')).toMatchObject({
       read: true,
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000001202',
     });
     expect(await notificationsApi.markAllRead('submitter-token')).toEqual({ marked: 2 });
     expect(fetchMock).toHaveBeenCalledTimes(3);

@@ -71,6 +71,7 @@ export const telecomsHandlers = [
     const body = await request.json();
     const count = requests.length + 1;
     const code = `TL-2026-${String(count).padStart(3, '0')}`;
+    const status = body.draft ? REQUEST_STATUS.DRAFT : REQUEST_STATUS.NEW;
     const newReq = {
       id: code,
       code,
@@ -80,7 +81,7 @@ export const telecomsHandlers = [
       equipmentInvolved: body.equipmentInvolved ?? '',
       preferredDate: body.preferredDate ?? null,
       rulesAccepted: Boolean(body.rulesAccepted),
-      status: REQUEST_STATUS.NEW,
+      status,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       estimate: body.estimate ?? null,
@@ -89,10 +90,10 @@ export const telecomsHandlers = [
       workDetails: { technician: '', partsUsed: '', timeSpent: '', notes: '' },
       history: [
         {
-          status: REQUEST_STATUS.NEW,
+          status,
           by: body.customerName,
           at: new Date().toISOString(),
-          note: 'Submitted request to Telecoms department',
+          note: body.draft ? 'Request draft saved.' : 'Submitted request to Telecoms department',
         },
       ],
     };
@@ -108,6 +109,36 @@ export const telecomsHandlers = [
       ...requests[index],
       ...body,
       updatedAt: new Date().toISOString(),
+    };
+    requests[index] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/telecoms/requests/:id/submit`, ({ params }) => {
+    const index = requests.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const existing = requests[index];
+    if (existing.status !== REQUEST_STATUS.DRAFT) {
+      return HttpResponse.json({ message: 'Only a draft can be submitted.' }, { status: 409 });
+    }
+    if (!existing.customerName?.trim() || !existing.serviceWanted?.trim()
+        || !existing.equipmentInvolved?.trim() || !existing.rulesAccepted) {
+      return HttpResponse.json({ message: 'Complete the required fields and accept the lab rules before submitting.' }, { status: 422 });
+    }
+    const now = new Date().toISOString();
+    const updated = {
+      ...existing,
+      status: REQUEST_STATUS.NEW,
+      updatedAt: now,
+      history: [
+        ...existing.history,
+        {
+          status: REQUEST_STATUS.NEW,
+          by: existing.customerName,
+          at: now,
+          note: 'Submitted request to Telecoms department',
+        },
+      ],
     };
     requests[index] = updated;
     return HttpResponse.json(updated);

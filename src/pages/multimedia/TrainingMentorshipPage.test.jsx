@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { TrainingMentorshipPage } from './TrainingMentorshipPage';
 
-function renderPage() {
+function renderPage(roles = ['ROLE_ADMINISTRATOR']) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <TrainingMentorshipPage token="test-token" />
+        <TrainingMentorshipPage token="test-token" roles={roles} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -47,6 +47,22 @@ describe('TrainingMentorshipPage', () => {
 
     expect(await within(dialog).findByText('Confirmed', { selector: '[data-testid="participant-p-1"] *' })).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/attendance for daniel kato/i)).toBeEnabled();
+  });
+
+  it('shows passed safety attendance as locked instead of a disabled dropdown', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByTestId('session-row-ts-1'));
+    const dialog = await screen.findByRole('dialog');
+    const participant = within(dialog).getByTestId('participant-p-2');
+
+    await user.click(within(participant).getByRole('button', { name: /mark passed/i }));
+
+    expect(await within(participant).findByText('Present · locked')).toHaveAttribute(
+      'title',
+      'Attendance stays Present after a participant passes.',
+    );
+    expect(within(participant).queryByRole('combobox', { name: /attendance for lydia nakanwagi/i })).not.toBeInTheDocument();
   });
 
   it('signs up a participant on a free session as confirmed', async () => {
