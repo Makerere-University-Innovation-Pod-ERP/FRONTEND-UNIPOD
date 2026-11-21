@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
+  ArrowLeftRight, Bell, Boxes, CalendarDays, ChevronDown,
   ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
   List, LogOut, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, X,
@@ -26,13 +26,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { Toaster } from '@/components/ui/sonner';
 import {
   notificationKeys,
-  useNotifications,
   useUnreadNotificationCount,
-  useMarkAllNotificationsRead,
-  useMarkNotificationRead,
 } from '@/hooks/useNotifications';
-import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
-import { formatDate } from '@/lib/presentation';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
@@ -82,6 +77,68 @@ function isActiveLink(href, location) {
   return false;
 }
 
+const NAV_DESCRIPTIONS = {
+  Overview: 'See workspace activity, key metrics, and updates.',
+  'Reports & Analytics': 'Review performance trends and operational reports.',
+  'All Submissions': 'Review submissions received across the workspace.',
+  'Student Projects': 'Browse and review student project submissions.',
+  'General Innovations': 'Browse and review general innovation submissions.',
+  Settings: 'Manage workspace accounts, roles, and configuration.',
+  'Department Rules': 'Review the rules used by departments.',
+  'My Submissions': 'Track your submissions and their progress.',
+  'Service Requests': 'Review requests and responses for your submissions.',
+  'Invoices and Payments': 'View invoices, balances, and payment status.',
+  Bookings: 'View and manage your service bookings.',
+  Reception: 'Triage new submissions and route them to the right team.',
+  'Reception Home': 'Open reception tools and intake shortcuts.',
+  'Missing Documents': 'Follow up on submissions that need documents.',
+  'Walk-in Submission': 'Register a submission on behalf of a visitor.',
+  'Fact-Finding': 'Investigate cases and record findings.',
+  'Department Queue': 'Review cases awaiting a department response.',
+  Reviews: 'Review assigned submissions and record decisions.',
+  'Routing & IP': 'Route submissions to the right team and manage intellectual property review.',
+  Refinement: 'Track submissions that need further development.',
+  'Coordinator Briefs': 'Manage coordinator briefs and decisions.',
+  'Ideas Being Improved': 'Track submissions moving through improvement.',
+  'Training & Mentorship': 'Manage training sessions and mentorship follow-ups.',
+  'Media Services': 'Review and manage media service requests.',
+  'Students Followed Up': 'Track student follow-ups and outcomes.',
+  'Book a Podcast Slot': 'Reserve a podcast recording time.',
+  'Equipment Register': 'Browse equipment and its current status.',
+  'Take Equipment Out': 'Record equipment loans and returns.',
+  'Event Contracts': 'Review event agreements and contract details.',
+  'New Order': 'Create a textile production order.',
+  'Order Review & Quote': 'Check order details and prepare a quote.',
+  'Order Board': 'Track textile orders by production stage.',
+  'Order Page': 'Browse and update textile orders.',
+  'Stock List': 'View available stock and inventory levels.',
+  'Add/Use Stock': 'Record stock received, used, or corrected.',
+  'Add / Use Stock': 'Record stock received, used, or corrected.',
+  'Machine List': 'View machines, availability, and reported faults.',
+  'Report a Fault': 'Report a machine issue for the workshop team.',
+  'Book the Workshop': 'Reserve time in the textile workshop.',
+  'New Job': 'Create a CNC or carpentry production job.',
+  'Design Check & Quote': 'Review a design and prepare its quote.',
+  'Job Board': 'Track CNC and carpentry jobs by stage.',
+  'Book a Machine': 'Request time on an available workshop machine.',
+  'Safety Course': 'View safety sessions and CN5 pass status.',
+  'All Requests': 'Browse telecoms service requests.',
+  Requests: 'Track telecoms requests, their status, and request details.',
+  'New Request': 'Create a telecoms service request.',
+  'Review & Quote': 'Review a telecoms request and prepare a quote.',
+  'Request Board': 'Track telecoms requests by stage.',
+  'Lab Booking': 'Reserve a telecoms lab session.',
+  'Bootcamps & Training': 'Browse telecoms bootcamps and training sessions.',
+  'Equipment Lending': 'Manage equipment loans and returns.',
+  'Stock Inventory': 'View telecoms stock levels.',
+  'Price Lists & Invoices': 'Manage service prices and customer invoices.',
+  'Partners & MOUs': 'Manage partner records and agreements.',
+};
+
+function navigationDescription(label) {
+  return NAV_DESCRIPTIONS[label] ?? 'Open this page to view and manage its information.';
+}
+
 export function BackendWorkspace({
   session,
   health: _health,
@@ -94,12 +151,12 @@ export function BackendWorkspace({
   const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [openPopover, setOpenPopover] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchError, setSearchError] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [hoverTooltip, setHoverTooltip] = useState(null);
   const { theme, toggleTheme } = useTheme();
 
   const name = session.email || session.subject;
@@ -158,6 +215,15 @@ export function BackendWorkspace({
   ];
 
   const standardNavGroups = [
+    ...(isSubmitter ? [{
+      heading: 'MY WORKSPACE',
+      items: [
+        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
+      ],
+    }] : []),
     ...(isAdministrator ? [{
       heading: 'MANAGEMENT',
       items: [
@@ -168,15 +234,6 @@ export function BackendWorkspace({
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
         { label: 'Settings', href: '/management', icon: Settings2 },
         { label: 'Department Rules', href: '/rules/manager', icon: FileText },
-      ],
-    }] : []),
-    ...(isSubmitter ? [{
-      heading: 'MY WORKSPACE',
-      items: [
-        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
-        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
-        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
-        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
       ],
     }] : []),
     {
@@ -259,6 +316,54 @@ export function BackendWorkspace({
     ? textileNavSections.flatMap((s) => s.links)
     : navGroups.flatMap((group) => group.items);
 
+  const showQuickNavMore = allNavItems.length > 4;
+  const quickNavItems = (() => {
+    if (!showQuickNavMore) return allNavItems;
+    const activeItem = allNavItems.find((item) => isActiveLink(item.href, location));
+    const leadingItems = allNavItems.slice(0, 2);
+    if (activeItem && !leadingItems.some((item) => item.href === activeItem.href)) {
+      return [...leadingItems, activeItem];
+    }
+    return [...leadingItems, allNavItems[2]];
+  })();
+
+  function showTooltip(event, title, description, placement = 'right') {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const horizontalCenter = rect.left + rect.width / 2;
+    const verticalCenter = rect.top + rect.height / 2;
+    setHoverTooltip({
+      title,
+      description,
+      placement,
+      pathname: location,
+      left: placement === 'right'
+        ? rect.right + 10
+        : Math.min(Math.max(horizontalCenter, 125), window.innerWidth - 125),
+      top: placement === 'right'
+        ? Math.min(Math.max(verticalCenter, 40), window.innerHeight - 40)
+        : rect.bottom + 8,
+    });
+  }
+
+  function showSidebarTooltip(event, label) {
+    const compactViewport = window.matchMedia?.('(max-width: 980px)').matches ?? false;
+    if (!collapsed && !(compactViewport && !mobileOpen)) return;
+    showTooltip(event, label, navigationDescription(label));
+  }
+
+  function showActionTooltip(event, title, description) {
+    showTooltip(event, title, description, 'below');
+  }
+
+  function tooltipEvents(handler) {
+    return {
+      onMouseEnter: (event) => handler(event),
+      onMouseLeave: () => setHoverTooltip(null),
+      onFocus: (event) => handler(event),
+      onBlur: () => setHoverTooltip(null),
+    };
+  }
+
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key === 'Escape' && searchOpen) {
@@ -301,15 +406,8 @@ export function BackendWorkspace({
     };
   }, [searchOpen, searchQuery, session.accessToken, onLogout]);
 
-  const notificationsQuery = useNotifications(session.accessToken);
   const unreadCountQuery = useUnreadNotificationCount(session.accessToken);
-  const markAllRead = useMarkAllNotificationsRead(session.accessToken);
-  const markRead = useMarkNotificationRead(session.accessToken);
-  const browserPush = useBrowserPushNotifications(session.accessToken);
-  const notificationItems = notificationsQuery.data ?? [];
-  const unreadCount = unreadCountQuery.data
-    ?? notificationItems.filter((item) => !item.read).length;
-  const hasUnread = unreadCount > 0;
+  const unreadCount = unreadCountQuery.data ?? 0;
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
@@ -324,13 +422,17 @@ export function BackendWorkspace({
     return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
   }, [queryClient, session.accessToken]);
 
-  const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
-
   return (
-    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${isSubmitter && session.roles.length === 1 ? 'submitter-shell' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
+    <div className={`live-shell bottom-nav-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
-          <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
+          <Link
+            to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'}
+            className="live-brand-link"
+            onClick={() => { setMobileOpen(false); setHoverTooltip(null); }}
+            aria-label="MUTIC ERP home"
+            {...tooltipEvents((event) => showSidebarTooltip(event, 'MUTIC ERP'))}
+          >
             {isTelecoms ? (
               <>
                 <div className="brand-mark" aria-hidden="true" style={{ background: '#d7ef67' }}><span /><span /><span /><span /></div>
@@ -351,20 +453,28 @@ export function BackendWorkspace({
           <button
             type="button"
             className="sidebar-collapse"
-            onClick={() => setCollapsed((value) => !value)}
+            onClick={() => { setCollapsed((value) => !value); setHoverTooltip(null); }}
             aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             aria-expanded={!collapsed}
+            {...tooltipEvents((event) => showTooltip(
+              event,
+              collapsed ? 'Expand navigation' : 'Collapse navigation',
+              collapsed ? 'Show page names in the sidebar.' : 'Hide page names and keep the sidebar icons only.',
+            ))}
           >
             {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
           <button
             type="button"
             className="mobile-edge-nav-toggle"
-            onClick={() => setMobileOpen((value) => !value)}
+            onClick={() => { setMobileOpen((value) => !value); setHoverTooltip(null); }}
             aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-            title={mobileOpen ? 'Close navigation' : 'Open navigation'}
             aria-expanded={mobileOpen}
+            {...tooltipEvents((event) => showTooltip(
+              event,
+              mobileOpen ? 'Close navigation' : 'Open navigation',
+              mobileOpen ? 'Hide the navigation panel.' : 'Show the navigation panel.',
+            ))}
           >
             {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
           </button>
@@ -381,9 +491,10 @@ export function BackendWorkspace({
                   <Link
                     key={href}
                     to={href}
-                    title={collapsed ? label : undefined}
-                    onClick={() => setMobileOpen(false)}
+                    aria-label={label}
+                    onClick={() => { setMobileOpen(false); setHoverTooltip(null); }}
                     className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                    {...tooltipEvents((event) => showSidebarTooltip(event, label))}
                   >
                     <Icon size={17} /><span>{label}</span>
                     {count > 0 && <em className="live-nav-count" aria-label={`${count} waiting`}>{count}</em>}
@@ -403,9 +514,10 @@ export function BackendWorkspace({
                   <Link
                     key={href}
                     to={href}
-                    title={collapsed ? label : undefined}
-                    onClick={() => setMobileOpen(false)}
+                    aria-label={label}
+                    onClick={() => { setMobileOpen(false); setHoverTooltip(null); }}
                     className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                    {...tooltipEvents((event) => showSidebarTooltip(event, label))}
                   >
                     <Icon size={16} /><span>{label}</span>
                     {badge !== undefined && badge > 0 && (
@@ -417,6 +529,34 @@ export function BackendWorkspace({
             ))}
           </nav>
         )}
+
+        <nav className="bottom-nav" aria-label="Quick navigation">
+          {quickNavItems.map(({ label, href, icon: Icon, badge, count }) => (
+            <Link
+              key={href}
+              to={href}
+              aria-label={label}
+              onClick={() => { setMobileOpen(false); setHoverTooltip(null); }}
+              className={`bottom-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+            >
+              <Icon size={18} aria-hidden="true" /><span>{label}</span>
+              {(badge ?? count) > 0 && (
+                <em className="bottom-nav-count" aria-label={`${badge ?? count} waiting`}>{badge ?? count}</em>
+              )}
+            </Link>
+          ))}
+          {showQuickNavMore && (
+            <button
+              type="button"
+              className="bottom-nav-link bottom-nav-more"
+              onClick={() => { setMobileOpen(true); setHoverTooltip(null); }}
+              aria-label="More navigation"
+              aria-expanded={mobileOpen}
+            >
+              <Grid2x2 size={18} aria-hidden="true" /><span>More</span>
+            </button>
+          )}
+        </nav>
 
         {!collapsed && (
           <div className="live-sidebar-notice">
@@ -433,7 +573,12 @@ export function BackendWorkspace({
             <b>{name}</b>
             <small>{role}{!collapsed && <ChevronDown size={11} style={{ opacity: 0.7 }} />}</small>
           </span>
-          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out">
+          <button
+            className="icon-button"
+            onClick={onLogout}
+            aria-label="Sign out"
+            {...tooltipEvents((event) => showTooltip(event, 'Sign out', 'End your session and sign out.'))}
+          >
             <LogOut size={16} />
           </button>
         </div>
@@ -453,126 +598,59 @@ export function BackendWorkspace({
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
             <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location === '/notifications' ? 'Notifications' : location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
-            <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
+            <button
+              className="global-search-trigger"
+              onClick={() => { setSearchOpen(true); setHoverTooltip(null); }}
+              aria-label="Search cases (Ctrl+K)"
+              {...tooltipEvents((event) => showActionTooltip(
+                event,
+                isTelecoms ? 'Search requests and equipment' : 'Search submissions',
+                isTelecoms ? 'Find a request or equipment record.' : 'Find submissions by title or details.',
+              ))}
+            >
               <Search size={14} /><span>{isTelecoms ? 'Search requests & equipment…' : 'Search submissions…'}</span><kbd>⌘K</kbd>
             </button>
             {isTelecomsDomainOwner(session.roles) ? (
-              <Link to="/telecoms/requests/new" className="btn btn-primary topbar-action-btn">
+              <Link
+                to="/telecoms/requests/new"
+                className="btn btn-primary topbar-action-btn"
+                {...tooltipEvents((event) => showActionTooltip(event, 'New request', 'Start a telecoms service request.'))}
+              >
                 <span>New request</span> <Plus size={15} />
               </Link>
             ) : null}
-            <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
-            <div className="top-pop-wrap">
-              <button
-                className="top-circle-btn notification-btn"
-                onClick={() => togglePopover('notifications')}
-                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
-              >
-                <Bell size={15} />
-                {hasUnread && (
-                  <span className="notification-count" aria-hidden="true">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              {openPopover === 'notifications' && (
-                <div className="notification-popover">
-                  <div className="notification-head">
-                    <b>Notifications</b>
-                    <button className="notification-read-all" onClick={() => markAllRead.mutate()} disabled={!hasUnread || markAllRead.isPending}>
-                      <CheckCheck size={12} /> Mark all read
-                    </button>
-                  </div>
-                  <div className="notification-push">
-                    <div className="notification-push-copy">
-                      <b>Browser push</b>
-                      <small>
-                        {browserPush.loading
-                          ? 'Checking push availability…'
-                          : !browserPush.supported
-                            ? 'Background push is not supported in this browser.'
-                            : !browserPush.enabled
-                              ? 'Push alerts are not configured on the server.'
-                              : browserPush.permission === 'denied'
-                                ? 'Blocked in browser site settings.'
-                                : browserPush.subscribed
-                                  ? 'Enabled on this browser.'
-                                  : 'Opt in to alerts when the app is closed.'}
-                      </small>
-                    </div>
-                    {browserPush.enabled && browserPush.supported && browserPush.permission !== 'denied' && (
-                      <button
-                        type="button"
-                        className="notification-push-toggle"
-                        disabled={browserPush.working || browserPush.loading}
-                        onClick={async () => {
-                          const wasSubscribed = browserPush.subscribed;
-                          const succeeded = wasSubscribed
-                            ? await browserPush.disable()
-                            : await browserPush.enable();
-                          if (succeeded) {
-                            toast.success(wasSubscribed
-                              ? 'Browser push disabled'
-                              : 'Browser push enabled');
-                          }
-                        }}
-                      >
-                        {browserPush.working
-                          ? 'Updating…'
-                          : browserPush.subscribed
-                            ? 'Turn off'
-                            : 'Enable'}
-                      </button>
-                    )}
-                    {browserPush.error && <p role="alert">{browserPush.error}</p>}
-                    <small className="notification-push-privacy">
-                      Push alerts may appear when you are signed out.
-                    </small>
-                  </div>
-                  <div className="notification-list">
-                    {notificationsQuery.isLoading ? (
-                      <p>Loading…</p>
-                    ) : notificationsQuery.isError || unreadCountQuery.isError ? (
-                      <p role="alert">
-                        Notifications could not be loaded.
-                        <button
-                          type="button"
-                          onClick={() => {
-                            notificationsQuery.refetch();
-                            unreadCountQuery.refetch();
-                          }}
-                        >
-                          Retry
-                        </button>
-                      </p>
-                    ) : notificationItems.length ? (
-                      notificationItems.map((item) => (
-                        <Link
-                          key={item.id}
-                          to={item.link}
-                          className={`notification-item ${item.read ? '' : 'unread'}`}
-                          onClick={() => {
-                            if (!item.read) markRead.mutate(item.id);
-                            setOpenPopover(null);
-                          }}
-                        >
-                          <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
-                        </Link>
-                      ))
-                    ) : (
-                      <p>No notifications yet.</p>
-                    )}
-                    {(markRead.isError || markAllRead.isError || unreadCountQuery.isError) && (
-                      <p role="alert">The notification status could not be updated or loaded.</p>
-                    )}
-                  </div>
-                </div>
+            <span
+              className="live-secure"
+              {...tooltipEvents((event) => showActionTooltip(event, 'Secure session', 'Your account is authenticated to this workspace.'))}
+            >
+              <ShieldCheck size={15} /> Secure session
+            </span>
+            <button
+              className="top-circle-btn notification-btn"
+              onClick={() => { navigate('/notifications'); setHoverTooltip(null); }}
+              aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              {...tooltipEvents((event) => showActionTooltip(event, 'Notifications', 'View recent updates and alerts.'))}
+            >
+              <Bell size={15} />
+              {unreadCount > 0 && (
+                <span className="notification-count" aria-hidden="true">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
               )}
-            </div>
-            <button className="top-circle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            </button>
+            <button
+              className="top-circle-btn"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              {...tooltipEvents((event) => showActionTooltip(
+                event,
+                theme === 'dark' ? 'Light mode' : 'Dark mode',
+                theme === 'dark' ? 'Switch to the light appearance.' : 'Switch to the dark appearance.',
+              ))}
+            >
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             {mayCreateSubmission && !isTelecoms && (
@@ -580,6 +658,11 @@ export function BackendWorkspace({
                 to="/submissions/new"
                 className="top-register"
                 data-testid="link-register-top"
+                {...tooltipEvents((event) => showActionTooltip(
+                  event,
+                  isSubmitter ? 'Submit an idea' : 'Register submission',
+                  isSubmitter ? 'Start a new idea submission.' : 'Create a new submission record.',
+                ))}
               >
                 <span>{isSubmitter ? 'Submit an idea' : 'Register submission'}</span>
                 <span className="register-plus">+</span>
@@ -646,6 +729,17 @@ export function BackendWorkspace({
           </div>
         </section>
       </div>}
+      {hoverTooltip && hoverTooltip.pathname === location && !searchOpen && (
+        <div
+          id="workspace-hover-tooltip"
+          className={`workspace-hover-tooltip is-${hoverTooltip.placement}`}
+          role="tooltip"
+          style={{ left: hoverTooltip.left, top: hoverTooltip.top }}
+        >
+          <strong>{hoverTooltip.title}</strong>
+          <span>{hoverTooltip.description}</span>
+        </div>
+      )}
       <Toaster position="top-right" richColors closeButton />
     </div>
   );

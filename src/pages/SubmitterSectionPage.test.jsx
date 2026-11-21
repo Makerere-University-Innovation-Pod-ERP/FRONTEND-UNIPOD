@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +21,10 @@ beforeEach(() => {
   resetSubmitterBookingMocks();
   resetSubmitterInvoiceMocks();
   resetNotificationMocks();
+});
+
+afterEach(() => {
+  window.history.replaceState({}, '', '/');
 });
 
 function renderPage(Page, token = makeMockToken(['ROLE_SUBMITTER'], 'brian.s', 'submitter@unipod.test')) {
@@ -101,6 +105,20 @@ describe('Submitter section pages', () => {
     expect(screen.queryByRole('dialog', { name: 'Booking details' })).not.toBeInTheDocument();
   });
 
+  it('opens the exact booking linked by a notification', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301');
+    renderPage(SubmitterBookingsPage);
+
+    const reference = (await screen.findAllByText('BKG-2026-001201'))[0];
+    const booking = reference.closest('[data-notification-target="true"]');
+    expect(booking).not.toBeNull();
+    const dialog = await screen.findByRole('dialog', { name: 'Booking details' });
+    expect(within(dialog).getByText('Contact / operator')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Close booking details' }));
+    expect(within(booking).getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
+  });
+
   it('filters facilities by typing and only selects a listed facility', async () => {
     const user = userEvent.setup();
     renderPage(SubmitterBookingsPage);
@@ -152,7 +170,7 @@ describe('Submitter section pages', () => {
     expect(notificationPage.items[0]).toMatchObject({
       type: 'BOOKING_REQUESTED',
       title: 'Booking request received: BKG-2026-001202',
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000001202',
       read: false,
     });
   });
@@ -177,7 +195,7 @@ describe('Submitter section pages', () => {
     expect(notificationPage.items[0]).toMatchObject({
       type: 'BOOKING_CANCELLED',
       title: 'Booking cancelled: BKG-2026-001201',
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301',
       read: false,
     });
   });

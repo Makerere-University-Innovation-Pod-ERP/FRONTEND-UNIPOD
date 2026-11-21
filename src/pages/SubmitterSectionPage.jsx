@@ -539,26 +539,35 @@ function SubmitterInvoiceDetails({ invoiceId, token, onUnauthorized, onDownload 
 }
 
 function SubmitterInvoiceRecords({ token, onUnauthorized }) {
+  const linkedInvoiceId = new URLSearchParams(window.location.search).get('invoice');
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(linkedInvoiceId);
   const [proofInvoiceId, setProofInvoiceId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
   const query = useSubmitterInvoices(token, { page, size: 25, status: status || undefined });
+  const linkedInvoiceQuery = useSubmitterInvoice(token, linkedInvoiceId, Boolean(linkedInvoiceId));
   const uploadMutation = useUploadSubmitterPaymentProof(token);
 
   useEffect(() => {
     if (query.error instanceof ApiError && query.error.status === 401) onUnauthorized?.();
   }, [onUnauthorized, query.error]);
+  useEffect(() => {
+    if (linkedInvoiceQuery.error instanceof ApiError && linkedInvoiceQuery.error.status === 401) onUnauthorized?.();
+  }, [linkedInvoiceQuery.error, onUnauthorized]);
 
   const invoices = query.data?.items ?? [];
   const filteredInvoices = invoices.filter((invoice) => (
     [invoice.number, invoice.description, invoice.statusLabel, invoice.sourceId]
       .some((value) => String(value ?? '').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   ));
+  const displayedInvoices = [...filteredInvoices];
+  if (linkedInvoiceQuery.data && !displayedInvoices.some((invoice) => invoice.id === linkedInvoiceQuery.data.id)) {
+    displayedInvoices.unshift(linkedInvoiceQuery.data);
+  }
 
   function showActionError(error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -624,6 +633,12 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           <button type="button" onClick={() => query.refetch()}>Retry</button>
         </div>
       )}
+      {linkedInvoiceQuery.error && (
+        <div className="submitter-invoice-alert" role="alert">
+          <CircleAlert size={16} />
+          <span>{linkedInvoiceQuery.error instanceof Error ? linkedInvoiceQuery.error.message : 'The linked invoice could not be loaded.'}</span>
+        </div>
+      )}
       <div className="submitter-invoice-controls">
         <label className="submitter-invoice-search">
           <Search size={16} aria-hidden="true" />
@@ -657,7 +672,7 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           : 'Your invoice list'}
       </p>
       {query.isPending && <div className="submitter-invoice-state" role="status"><LoaderCircle className="spin" size={20} />Loading your invoices…</div>}
-      {query.data && filteredInvoices.length === 0 && (
+      {query.data && displayedInvoices.length === 0 && (
         <div className="submitter-invoice-state">
           <span className="submitter-invoice-state__icon"><Receipt size={21} /></span>
           <h3>{search ? 'No matching invoices' : status ? 'No invoices in this status' : 'No invoices yet'}</h3>
@@ -666,7 +681,7 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
         </div>
       )}
       <div className="submitter-invoice-list">
-        {filteredInvoices.map((invoice) => {
+        {displayedInvoices.map((invoice) => {
           const expanded = expandedId === invoice.id;
           const proofOpen = proofInvoiceId === invoice.id;
           const invoicePdfKey = `${invoice.id}:invoice`;
@@ -1167,6 +1182,7 @@ function SubmitterBookingDetailsDialog({ open, onOpenChange, booking, query }) {
 }
 
 function SubmitterBookingRecords({ token, onUnauthorized }) {
+  const linkedBookingId = new URLSearchParams(window.location.search).get('booking');
   const [page, setPage] = useState(0);
   const bookingsQuery = useSubmitterBookings(token, { page, size: 25 });
   const facilitiesQuery = useFacilities(token);
@@ -1183,7 +1199,7 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
   }));
   const [now, setNow] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
-  const [detailsId, setDetailsId] = useState(null);
+  const [detailsId, setDetailsId] = useState(linkedBookingId);
   const [cancelId, setCancelId] = useState(null);
   const facilities = facilitiesQuery.data ?? [];
   const availableFacilities = facilities.filter((facility) => facility.status !== 'MAINTENANCE');
@@ -1278,10 +1294,14 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
   }
 
   const list = bookingsQuery.data?.items ?? [];
+  const detailsQuery = useSubmitterBooking(token, detailsId, Boolean(detailsId));
+  const linkedBooking = detailsQuery.data;
+  const showLinkedBooking = Boolean(
+    linkedBookingId && linkedBooking && !list.some((booking) => booking.id === linkedBooking.id),
+  );
   const bookingToCancel = list.find((booking) => booking.id === cancelId);
   const bookingForDetails = list.find((booking) => booking.id === detailsId);
   const actionError = createBooking.error || cancelBooking.error;
-  const detailsQuery = useSubmitterBooking(token, detailsId, Boolean(detailsId));
   useEffect(() => {
     if (detailsQuery.error instanceof ApiError && detailsQuery.error.status === 401) onUnauthorized?.();
   }, [detailsQuery.error, onUnauthorized]);
@@ -1407,7 +1427,7 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
         )}
         {bookingsQuery.isPending ? (
           <div className="submitter-booking-state"><LoaderCircle className="spin" size={19} /><span>Loading your bookings…</span></div>
-        ) : list.length === 0 ? (
+        ) : list.length === 0 && !linkedBookingId ? (
           <div className="submitter-booking-state">
             <span className="submitter-hub__empty-icon"><CalendarDays size={22} aria-hidden="true" /></span>
             <h4>No bookings to show</h4>
@@ -1415,11 +1435,51 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         ) : (
           <div className="submitter-booking-list">
+            {showLinkedBooking && (
+              <article className="submitter-booking-card" data-notification-target="true">
+                <div className="submitter-booking-card__top">
+                  <div>
+                    <p className="submitter-booking-card__reference">{linkedBooking.reference}</p>
+                    <h4>{linkedBooking.facilityName}</h4>
+                    <p className="submitter-booking-card__purpose">{linkedBooking.purpose}</p>
+                  </div>
+                  <span className={`submitter-booking-status submitter-booking-status--${linkedBooking.status.toLowerCase()}`}>
+                    <i aria-hidden="true" />{bookingStatusLabels[linkedBooking.status] ?? linkedBooking.status}
+                  </span>
+                </div>
+                <div className="submitter-booking-card__actions">
+                  <button type="button" className="submitter-booking-button" aria-expanded="true">
+                    Booking details
+                  </button>
+                  {['PENDING', 'APPROVED'].includes(linkedBooking.status) && (
+                    <button
+                      type="button"
+                      className="submitter-booking-button submitter-booking-button--quiet"
+                      onClick={() => {
+                        cancelBooking.reset();
+                        setCancelId(linkedBooking.id);
+                      }}
+                    >
+                      Cancel booking
+                    </button>
+                  )}
+                </div>
+              </article>
+            )}
+            {linkedBookingId && !linkedBooking && !detailsQuery.isPending && detailsQuery.error && (
+              <div className="submitter-booking-alert" role="alert">
+                {detailsQuery.error.message || 'The linked booking could not be loaded.'}
+              </div>
+            )}
             {list.map((booking) => {
               const statusLabel = bookingStatusLabels[booking.status] ?? booking.status;
               const canCancel = ['PENDING', 'APPROVED'].includes(booking.status);
               return (
-                <article className="submitter-booking-card" key={booking.id}>
+                <article
+                  className="submitter-booking-card"
+                  key={booking.id}
+                  data-notification-target={booking.id === linkedBookingId ? 'true' : undefined}
+                >
                   <div className="submitter-booking-card__top">
                     <div>
                       <p className="submitter-booking-card__reference">{booking.reference}</p>
