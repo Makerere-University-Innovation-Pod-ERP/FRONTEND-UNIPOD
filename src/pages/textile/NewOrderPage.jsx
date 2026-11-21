@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, LoaderCircle, Save } from 'lucide-react';
 import { CUSTOMER_TYPES, TEXTILE_RULES, todayIso } from '@/lib/textile';
-import { useCreateOrder, useTextileOrder, useUpdateDraft } from '@/hooks/useTextile';
+import { useCreateOrder, usePublishedTextileRules, useTextileOrder, useUpdateDraft } from '@/hooks/useTextile';
+import { allMustAcceptAccepted, RulesAcceptance } from '@/components/RulesAcceptance';
 import { ErrorBanner, Loading, PageHeading, PhotoDrop } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
@@ -51,6 +52,12 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
   // What was last saved (or the empty form), to tell whether there are unsaved changes.
   const [savedValues, setSavedValues] = useState(values);
   const [notice, setNotice] = useState('');
+  const [rulesError, setRulesError] = useState('');
+  // Rules published for Textile in the Rules Manager replace the built-in list when there are any.
+  const publishedRules = usePublishedTextileRules(token);
+  const usePublished = publishedRules.rules.length > 0;
+  const [acceptedRuleIds, setAcceptedRuleIds] = useState([]);
+  const rulesAccepted = usePublished ? allMustAcceptAccepted(publishedRules.rules, acceptedRuleIds) : values.rulesAccepted;
   const createOrder = useCreateOrder(token);
   const updateDraft = useUpdateDraft(token, savedDraft?.id ?? '');
   const mutation = savedDraft ? updateDraft : createOrder;
@@ -80,6 +87,12 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
       quantity: values.quantity.trim(),
       sizeDesign: values.sizeDesign.trim(),
       dateNeeded: values.dateNeeded || null,
+      rulesAccepted,
+      ...(usePublished ? {
+        acceptedRules: publishedRules.rules
+          .filter((rule) => acceptedRuleIds.includes(rule.id))
+          .map((rule) => ({ id: rule.id, version: rule.version })),
+      } : {}),
       submit,
     };
     try {
@@ -99,6 +112,10 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
 
   const onSubmit = (event) => {
     event.preventDefault();
+    if (!rulesAccepted) {
+      setRulesError('The customer must accept every Textile rule marked for acceptance before the order is sent.');
+      return;
+    }
     void save(true);
   };
 
@@ -154,16 +171,29 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
         />
         <fieldset className="tx-rules">
           <legend>Textile department rules</legend>
-          <ul>{TEXTILE_RULES.map((rule) => <li key={rule}>{rule}</li>)}</ul>
-          <label className="tx-check">
-            <input type="checkbox" required checked={values.rulesAccepted} onChange={set('rulesAccepted')} />
-            <span>The customer accepts the Textile department’s handling and collection rules*</span>
-          </label>
+          {publishedRules.isLoading ? (
+            <p className="tx-inline-note">Loading the department rules…</p>
+          ) : usePublished ? (
+            <RulesAcceptance
+              rules={publishedRules.rules}
+              value={acceptedRuleIds}
+              onChange={(next) => { setAcceptedRuleIds(next); setRulesError(''); setNotice(''); }}
+            />
+          ) : (
+            <>
+              <ul>{TEXTILE_RULES.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+              <label className="tx-check">
+                <input type="checkbox" required checked={values.rulesAccepted} onChange={set('rulesAccepted')} />
+                <span>The customer accepts the Textile department’s handling and collection rules*</span>
+              </label>
+            </>
+          )}
+          {rulesError && <p className="tx-field-error" role="alert">{rulesError}</p>}
         </fieldset>
         <ErrorBanner error={mutation.error} fallback="Could not save the order." />
         {notice && <p className="tx-success" role="status">{notice}</p>}
         <div className="tx-actions">
-          <button className="btn btn-primary" type="submit" disabled={mutation.isPending}>
+          <button className="btn btn-primary" type="submit" disabled={mutation.isPending || publishedRules.isLoading}>
             {mutation.isPending ? <LoaderCircle size={15} className="spin" /> : null}Send order
           </button>
           <button className="btn" type="button" onClick={onSaveDraft} disabled={mutation.isPending}>

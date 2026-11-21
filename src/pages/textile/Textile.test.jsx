@@ -3,7 +3,10 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import { makeMockToken } from '@/mocks/jwt';
+import { server } from '@/mocks/server';
+import { API_BASE_URL } from '@/services/api-client';
 import { addDays, startOfWeek, todayIso } from '@/lib/textile';
 import { OrderReviewPage } from './OrderReviewPage';
 import { OrderBoardPage } from './OrderBoardPage';
@@ -175,5 +178,52 @@ describe('New Order', () => {
     await user.click(rules);
     await user.click(screen.getByRole('button', { name: 'Send order' }));
     expect(await screen.findByText('Navigated away')).toBeInTheDocument();
+  });
+
+  async function fillOrder(user) {
+    await user.type(screen.getByRole('textbox', { name: /customer name/i }), 'Robert Ssali');
+    await user.selectOptions(screen.getByRole('combobox', { name: /customer type/i }), 'Public');
+    await user.type(screen.getByRole('textbox', { name: /what is wanted/i }), 'Cushion covers');
+    await user.type(screen.getByRole('textbox', { name: /^quantity/i }), '4');
+    await user.type(screen.getByRole('textbox', { name: /size/i }), '45 × 45 cm');
+  }
+
+  it('uses the Textile rules published in the Rules Manager when there are any', async () => {
+    let sentOrder = null;
+    server.use(
+      http.get(`${API_BASE_URL}/sectors`, () => HttpResponse.json([{ id: 'sec-tx', name: 'Textile' }, { id: 'sec-1', name: 'Technical Assessment' }])),
+      http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json([
+        { id: 'r-tx', title: 'Fabric deposit', body: 'Customers pay for special-order fabric up front.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 2, published: true, updatedAt: '2026-11-20T08:00:00Z' },
+        { id: 'r-draft', title: 'Unpublished textile rule', body: 'Not live yet.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 1, published: false, updatedAt: '2026-11-20T08:00:00Z' },
+        { id: 'r-other', title: 'Technical Assessment turnaround', body: 'Other department.', scope: 'SECTOR', scopeId: 'sec-1', mustAccept: true, version: 1, published: true, updatedAt: '2026-11-20T08:00:00Z' },
+      ])),
+      http.post(`${API_BASE_URL}/textile/orders`, async ({ request }) => {
+        sentOrder = JSON.parse(await (await request.formData()).get('order').text());
+        return HttpResponse.json({ message: 'stop here' }, { status: 400 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage(NewOrderPage);
+    expect(await screen.findByText('Fabric deposit')).toBeInTheDocument();
+    expect(screen.queryByText('Unpublished textile rule')).not.toBeInTheDocument();
+    expect(screen.queryByText('Technical Assessment turnaround')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /accepts the Textile department/i })).not.toBeInTheDocument();
+
+    await fillOrder(user);
+    await user.click(screen.getByRole('button', { name: 'Send order' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/must accept every Textile rule/i);
+    expect(sentOrder).toBeNull();
+
+    await user.click(screen.getByRole('checkbox', { name: /read and accept this rule/i }));
+    await user.click(screen.getByRole('button', { name: 'Send order' }));
+    await screen.findByText('stop here');
+    expect(sentOrder).toMatchObject({ rulesAccepted: true, acceptedRules: [{ id: 'r-tx', version: 2 }] });
+  });
+
+  it('falls back to the built-in Textile rules when the published rules cannot be loaded', async () => {
+    server.use(http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json({ message: 'Forbidden' }, { status: 403 })));
+    renderPage(NewOrderPage);
+    expect(await screen.findByRole('checkbox', { name: /accepts the Textile department/i })).toBeRequired();
+    expect(screen.getByText(/Work starts only after the quote is accepted/i)).toBeInTheDocument();
   });
 });
