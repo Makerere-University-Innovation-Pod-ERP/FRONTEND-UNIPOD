@@ -1904,7 +1904,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  background: #ffffff;
+  background: var(--surface);
   border: 1.5px solid var(--border-soft);
   border-radius: 18px;
   text-align: left;
@@ -1919,14 +1919,14 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .queue-row:hover {
   border-color: var(--forest);
-  background: #fdfefe;
+  background: var(--surface);
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(11, 52, 38, 0.09);
 }
 
 .queue-row.active {
   border-color: #0b3426;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 4px 18px rgba(11, 52, 38, 0.12);
   outline: 2px solid rgba(11, 52, 38, 0.2);
 }
