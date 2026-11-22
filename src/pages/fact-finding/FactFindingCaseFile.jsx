@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, CircleAlert, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Check, CircleAlert } from 'lucide-react';
 import { useFactFindingCase } from '@/hooks/useFactFinding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function FactFindingCaseFile({ token, onUnauthorized }) {
   const { id = '' } = useParams();
@@ -13,7 +14,7 @@ export function FactFindingCaseFile({ token, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  if (isLoading) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
+  if (isLoading) return <div className="live-page"><LoadingSkeleton label="Loading case file…" variant="detail" /></div>;
   if (!caseFile) {
     return (
       <div className="live-page">

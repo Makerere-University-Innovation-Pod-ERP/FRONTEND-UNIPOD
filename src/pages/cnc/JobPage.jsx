@@ -70,7 +70,7 @@ export function JobPage({ token }) {
     });
   }
 
-  if (jobsQuery.isPending) return <div className="live-page"><Loading label="Loading job…" /></div>;
+  if (jobsQuery.isPending) return <div className="live-page"><Loading label="Loading job…" variant="detail" /></div>;
   if (!job) {
     return (
       <div className="live-page page-enter">

@@ -24,7 +24,7 @@ export function NewOrderPage({ token, onUnauthorized }) {
   const draft = useTextileOrder(token, draftId);
   useUnauthorizedRedirect(onUnauthorized, draft.error);
 
-  if (draftId && draft.isLoading) return <Loading label="Loading draft…" />;
+  if (draftId && draft.isLoading) return <Loading label="Loading draft…" variant="form" />;
   if (draftId && draft.data && draft.data.status !== 'DRAFT') {
     return (
       <div className="live-page page-enter">

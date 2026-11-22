@@ -45,7 +45,7 @@ export function BriefCheckPage({ token, onUnauthorized }) {
     <div className="live-page page-enter">
       <Link className="btn btn-outline" to="/reception/home"><ArrowLeft size={15} />Back to reception home</Link>
       {isLoading ? (
-        <Loading label="Loading brief…" />
+        <Loading label="Loading brief…" variant="detail" />
       ) : !brief ? (
         <ErrorBanner error={error} fallback="Could not load this brief." onRetry={() => void refetch()} />
       ) : (

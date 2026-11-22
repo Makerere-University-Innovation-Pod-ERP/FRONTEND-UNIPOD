@@ -51,7 +51,7 @@ export function ReceptionHomePage({ token, onUnauthorized }) {
           />
         </label>
         {isLoading ? (
-          <Loading label="Loading new briefs…" />
+          <Loading label="Loading new briefs…" variant="table" />
         ) : data?.items.length ? (
           <BriefTable items={data.items} />
         ) : data ? (

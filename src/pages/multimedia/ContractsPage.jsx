@@ -197,7 +197,7 @@ export function ContractsPage({ token }) {
       )}
 
       {contractsQuery.isLoading ? (
-        <Loading label="Loading contracts…" />
+        <Loading label="Loading contracts…" variant="table" />
       ) : (
         <section className="live-panel tx-table-panel">
           <div className="live-table-wrap">

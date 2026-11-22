@@ -32,7 +32,7 @@ export function OrderReviewPage({ token, onUnauthorized }) {
         intro="Confirm feasibility against stock and send a price before any work begins."
       />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" variant="table" /> : (
         <div className="queue-grid">
           <nav className="queue-list" aria-label="Orders to review">
             {queue.length > 1 && (
@@ -106,7 +106,7 @@ function ReviewPanel({ token, id, onUnauthorized }) {
   const priceList = usePriceList(token);
   useUnauthorizedRedirect(onUnauthorized, order.error, stock.error, priceList.error);
 
-  if (order.isLoading || stock.isLoading || priceList.isLoading) return <section className="live-panel"><Loading label="Loading order…" /></section>;
+  if (order.isLoading || stock.isLoading || priceList.isLoading) return <section className="live-panel"><Loading label="Loading order…" variant="detail" /></section>;
   if (!order.data) return <section className="live-panel"><ErrorBanner error={order.error} fallback="This order could not be loaded." /></section>;
 
   return (

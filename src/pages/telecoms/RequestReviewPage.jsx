@@ -158,7 +158,7 @@ function ReviewPanel({ token, id, onUnauthorized }) {
   if (requestQuery.isLoading || stockQuery.isLoading || priceListQuery.isLoading) {
     return (
       <section className="live-panel">
-        <Loading label="Loading request details…" />
+        <Loading label="Loading request details…" variant="detail" />
       </section>
     );
   }

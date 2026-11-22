@@ -49,7 +49,7 @@ export function MachineListPage({ token }) {
       </section>
 
       <section className="live-panel tx-table-panel">
-        {facilitiesQuery.isPending ? <Loading label="Loading machines…" /> : (
+        {facilitiesQuery.isPending ? <Loading label="Loading machines…" variant="table" /> : (
           <div className="live-table-wrap">
             <table className="live-table">
               <thead><tr><th>MACHINE</th><th>LOCATION</th><th>SAFETY PASS</th><th>STATE</th><th>ACTION</th></tr></thead>

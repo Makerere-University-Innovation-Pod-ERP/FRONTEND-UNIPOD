@@ -83,7 +83,7 @@ export function StockMovementPage({ token, onUnauthorized }) {
       {savedNotice && <p className="tx-success">{savedNotice}</p>}
 
       {stock.isLoading ? (
-        <Loading label="Loading stock items…" />
+        <Loading label="Loading stock items…" variant="table" />
       ) : (
         <form className="live-panel tx-form tx-narrow" onSubmit={onSubmit}>
           <div className="tx-segments" role="radiogroup" aria-label="Movement type">

@@ -159,32 +159,32 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
       <div className="live-metrics" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '22px' }}>
         <div className="live-metric">
           <p>Active On Loan</p>
-          <strong style={{ color: '#0f172a' }}>{activeCount}</strong>
+          <strong style={{ color: 'var(--ink)' }}>{activeCount}</strong>
           <small>Equipment deployed in field / student projects</small>
         </div>
         <div className="live-metric">
           <p>Pending Approval</p>
-          <strong style={{ color: pendingCount > 0 ? '#b45309' : '#0f172a' }}>{pendingCount}</strong>
+          <strong style={{ color: pendingCount > 0 ? 'var(--amber)' : 'var(--ink)' }}>{pendingCount}</strong>
           <small>Awaiting Telecoms Manager sign-off</small>
         </div>
         <div className="live-metric">
           <p>Overdue Returns</p>
-          <strong style={{ color: overdueCount > 0 ? '#b91c1c' : '#0f172a' }}>{overdueCount}</strong>
+          <strong style={{ color: overdueCount > 0 ? 'var(--rose)' : 'var(--ink)' }}>{overdueCount}</strong>
           <small>{overdueCount > 0 ? 'Urgent follow-up required' : 'All loans currently on schedule'}</small>
         </div>
         <div className="live-metric">
           <p>Available Gear</p>
-          <strong style={{ color: '#176b52' }}>{availableEquipment.length}</strong>
+          <strong style={{ color: 'var(--green)' }}>{availableEquipment.length}</strong>
           <small>Catalog items currently ready for checkout</small>
         </div>
       </div>
 
       {/* Return Inspection Dialog (shown when user clicks Mark Returned) */}
       {returnDialogId && (
-        <section className="live-panel" style={{ border: '2px solid #176b52', background: '#f8faf9', marginBottom: '22px' }}>
+        <section className="live-panel" style={{ border: '2px solid #176b52', background: 'var(--surface-raised)', marginBottom: '22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h3 className="tx-panel-title" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
-              Record Equipment Return: <span style={{ color: '#176b52' }}>{returnDialogId}</span>
+            <h3 className="tx-panel-title" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>
+              Record Equipment Return: <span style={{ color: 'var(--green)' }}>{returnDialogId}</span>
             </h3>
             <button type="button" className="icon-button" onClick={() => setReturnDialogId(null)} title="Cancel return check-in">
               <X size={16} />
@@ -192,14 +192,14 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
           </div>
           <form className="tx-form" onSubmit={onCompleteReturn}>
             <div className="form-field">
-              <label htmlFor="tl-return-cond" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+              <label htmlFor="tl-return-cond" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                 Incoming Condition Inspection Notes *
               </label>
               <textarea
                 id="tl-return-cond"
                 required
                 rows={3}
-                style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: '#0f172a', background: '#ffffff', width: '100%' }}
+                style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--ink)', background: 'var(--surface)', width: '100%' }}
                 placeholder="Verify power up, display, knobs, probe integrity, physical cleanliness…"
                 value={returnCondition}
                 onChange={(e) => setReturnCondition(e.target.value)}
@@ -225,13 +225,13 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
 
       {/* Request Loan Form Panel */}
       {showForm && (
-        <section className="live-panel" style={{ marginBottom: '24px', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '24px', background: '#ffffff', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+        <section className="live-panel" style={{ marginBottom: '24px', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '24px', background: 'var(--surface)', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
             <div>
-              <h2 className="tx-panel-title" style={{ margin: 0, fontSize: '19px', fontWeight: 800, color: '#0f172a' }}>
+              <h2 className="tx-panel-title" style={{ margin: 0, fontSize: '19px', fontWeight: 800, color: 'var(--ink)' }}>
                 Request Equipment Loan
               </h2>
-              <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#64748b' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--muted)' }}>
                 Loans require manager approval before handover. Only undamaged, available gear may be requested.
               </p>
             </div>
@@ -251,7 +251,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               {/* Column 1: Equipment Selection & Details */}
               <div style={{ display: 'grid', gap: '14px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-eq" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-loan-eq" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                     Select Equipment *
                   </label>
                   <CurvedSelect
@@ -271,7 +271,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
                   <div className="form-field">
-                    <label htmlFor="tl-loan-qty" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                    <label htmlFor="tl-loan-qty" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                       Quantity *
                     </label>
                     <input
@@ -280,13 +280,13 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                       min="1"
                       max="10"
                       required
-                      style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                      style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                       value={form.quantity}
                       onChange={onFormChange('quantity')}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="tl-loan-type" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                    <label htmlFor="tl-loan-type" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                       Borrower Type
                     </label>
                     <CurvedSelect
@@ -306,14 +306,14 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               {/* Column 2: Borrower Identity & Contact */}
               <div style={{ display: 'grid', gap: '14px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-loan-borrower" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-loan-borrower" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                     Borrower Name & ID *
                   </label>
                   <input
                     id="tl-loan-borrower"
                     type="text"
                     required
-                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                    style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                     placeholder="e.g. Peter Okello (S24/1048)"
                     value={form.borrowerName}
                     onChange={onFormChange('borrowerName')}
@@ -321,14 +321,14 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="tl-loan-contact" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-loan-contact" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                     Contact Phone / Email *
                   </label>
                   <input
                     id="tl-loan-contact"
                     type="text"
                     required
-                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                    style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                     placeholder="0772-XXXXXX or student@mak.ac.ug"
                     value={form.borrowerContact}
                     onChange={onFormChange('borrowerContact')}
@@ -340,20 +340,20 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               <div style={{ display: 'grid', gap: '14px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-field">
-                    <label htmlFor="tl-loan-out" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                    <label htmlFor="tl-loan-out" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                       Date Out *
                     </label>
                     <input
                       id="tl-loan-out"
                       type="date"
                       required
-                      style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                      style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                       value={form.dateOut}
                       onChange={onFormChange('dateOut')}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="tl-loan-back" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                    <label htmlFor="tl-loan-back" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                       Expected Return Date *
                     </label>
                     <input
@@ -361,7 +361,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                       type="date"
                       required
                       min={form.dateOut || todayIso()}
-                      style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                      style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                       value={form.dateBack}
                       onChange={onFormChange('dateBack')}
                     />
@@ -369,13 +369,13 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="tl-loan-cond" style={{ fontSize: '13.5px', fontWeight: 750, color: '#0f172a', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-loan-cond" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)', marginBottom: '6px', display: 'block' }}>
                     Outgoing Condition Notes
                   </label>
                   <input
                     id="tl-loan-cond"
                     type="text"
-                    style={{ border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: '#0f172a', background: '#ffffff', minHeight: '42px', width: '100%' }}
+                    style={{ border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: 'var(--ink)', background: 'var(--surface)', minHeight: '42px', width: '100%' }}
                     value={form.outgoingCondition}
                     onChange={onFormChange('outgoingCondition')}
                   />
@@ -383,7 +383,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid var(--border-soft)' }}>
               <button
                 type="button"
                 className="btn btn-outline"
@@ -418,13 +418,13 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
       )}
 
       {/* Main Table: Active & Historical Loans */}
-      <section className="live-panel" style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '24px', background: '#ffffff', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)' }}>
+      <section className="live-panel" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', background: 'var(--surface)', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
           <div>
-            <h2 className="tx-panel-title" style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
+            <h2 className="tx-panel-title" style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--ink)' }}>
               Active & Historical Loans
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--muted)' }}>
               Showing {loans.length} recorded equipment loans across Telecoms lab inventory.
             </p>
           </div>
@@ -441,7 +441,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
         </div>
 
         {loansQuery.isLoading ? (
-          <Loading label="Loading equipment loans…" />
+          <Loading label="Loading equipment loans…" variant="table" />
         ) : (
           <div className="live-table-wrap">
             <table className="live-table">
@@ -458,7 +458,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
               <tbody>
                 {loans.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="live-empty" style={{ textAlign: 'center', padding: '36px', color: '#64748b', fontSize: '14px' }}>
+                    <td colSpan={6} className="live-empty" style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)', fontSize: '14px' }}>
                       No loan records yet. Use the Request form above to create the first equipment loan.
                     </td>
                   </tr>
@@ -468,34 +468,34 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                     return (
                       <tr key={loan.id} className={overdue ? 'tx-attention' : ''}>
                         <td className="tx-mono">
-                          <b style={{ fontSize: '13px', color: '#0f172a' }}>{loan.id}</b>
+                          <b style={{ fontSize: '13px', color: 'var(--ink)' }}>{loan.id}</b>
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <b style={{ fontSize: '14.5px', color: '#0f172a' }}>{loan.equipmentName}</b>
-                            <span style={{ fontSize: '11px', fontWeight: 750, color: '#176b52', background: '#e4efe6', padding: '2px 8px', borderRadius: '4px' }}>
+                            <b style={{ fontSize: '14.5px', color: 'var(--ink)' }}>{loan.equipmentName}</b>
+                            <span style={{ fontSize: '11px', fontWeight: 750, color: 'var(--green)', background: 'var(--green-bg)', padding: '2px 8px', borderRadius: '4px' }}>
                               Qty: {loan.quantity}
                             </span>
                           </div>
                         </td>
                         <td>
                           <div>
-                            <b style={{ fontSize: '14px', color: '#0f172a' }}>{loan.borrowerName}</b>{' '}
-                            <span style={{ color: '#475569', fontWeight: 600, fontSize: '12px' }}>({loan.borrowerType})</span>
-                            <div style={{ color: '#64748b', fontSize: '12.5px', marginTop: '2px' }}>
+                            <b style={{ fontSize: '14px', color: 'var(--ink)' }}>{loan.borrowerName}</b>{' '}
+                            <span style={{ color: 'var(--ink-soft)', fontWeight: 600, fontSize: '12px' }}>({loan.borrowerType})</span>
+                            <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '2px' }}>
                               {loan.borrowerContact}
                             </div>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: '#1e293b' }}>
-                            <CalendarDays size={15} style={{ color: '#176b52', flexShrink: 0 }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: 'var(--ink)' }}>
+                            <CalendarDays size={15} style={{ color: 'var(--green)', flexShrink: 0 }} />
                             <span>{formatDate(loan.dateOut)}</span>
-                            <span style={{ color: '#94a3b8', fontWeight: 700 }}>→</span>
-                            <b style={{ color: '#0f172a' }}>{formatDate(loan.dateBack)}</b>
+                            <span style={{ color: 'var(--muted)', fontWeight: 700 }}>→</span>
+                            <b style={{ color: 'var(--ink)' }}>{formatDate(loan.dateBack)}</b>
                           </div>
                           {overdue && (
-                            <div style={{ color: '#991b1b', fontSize: '11px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
+                            <div style={{ color: 'var(--rose)', fontSize: '11px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, background: 'var(--rose-bg)', padding: '2px 8px', borderRadius: '4px' }}>
                               <ShieldAlert size={13} /> OVERDUE
                             </div>
                           )}
@@ -531,7 +531,7 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                             <button
                               type="button"
                               className="btn btn-sm btn-outline"
-                              style={{ padding: '6px 14px', fontSize: '12.5px', fontWeight: 750, color: '#176b52', borderColor: '#176b52' }}
+                              style={{ padding: '6px 14px', fontSize: '12.5px', fontWeight: 750, color: 'var(--green)', borderColor: '#176b52' }}
                               onClick={() => setReturnDialogId(loan.id)}
                             >
                               <CheckCircle size={14} /> Mark Returned
@@ -539,11 +539,11 @@ export function EquipmentLendingPage({ token, onUnauthorized }) {
                           )}
 
                           {loan.status === 'RETURNED' && (
-                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#64748b' }}>Closed</span>
+                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--muted)' }}>Closed</span>
                           )}
 
                           {loan.status === 'DECLINED' && (
-                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#991b1b' }}>Declined</span>
+                            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--rose)' }}>Declined</span>
                           )}
                         </td>
                       </tr>

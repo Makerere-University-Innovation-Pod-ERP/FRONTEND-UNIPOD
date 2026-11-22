@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, CircleAlert, LoaderCircle, Users } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CircleAlert, Users } from 'lucide-react';
 import { useReviewerAssigned } from '@/hooks/useReviewer';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function ReviewerOverview({ token, onUnauthorized }) {
   const { data: assigned, isLoading, error } = useReviewerAssigned(token);
@@ -25,7 +26,7 @@ export function ReviewerOverview({ token, onUnauthorized }) {
         <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error instanceof Error ? error.message : 'Could not load your assigned cases.'}</div>
       )}
       {isLoading ? (
-        <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading your assigned cases…</div>
+        <LoadingSkeleton label="Loading your assigned cases…" variant="metrics-list" />
       ) : (
         <>
           <section className="live-metrics" aria-label="Reviewer summary">
