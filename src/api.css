@@ -1201,8 +1201,11 @@ td.tx-negative{color:var(--rose)}
 .tx-quote-actions{display:grid;gap:8px}
 .tx-quote-actions .btn{width:100%}
 .tx-quote-card .btn-primary:disabled{opacity:.55}
-.tx-ghost{background:transparent;border-color:color-mix(in srgb, var(--sidebar-ink) 28%, transparent);color:var(--sidebar-ink)}
-.tx-ghost:hover:not(:disabled){background:color-mix(in srgb, var(--sidebar-ink) 10%, transparent)}
+/* Outline button. On light surfaces it uses the page ink; inside the dark quote card it uses the sidebar ink. */
+.tx-ghost{background:transparent;border-color:var(--border);color:var(--ink-soft)}
+.tx-ghost:hover:not(:disabled){background:var(--surface-raised);border-color:var(--forest);color:var(--ink)}
+.tx-quote-card .tx-ghost{border-color:color-mix(in srgb, var(--sidebar-ink) 28%, transparent);color:var(--sidebar-ink)}
+.tx-quote-card .tx-ghost:hover:not(:disabled){background:color-mix(in srgb, var(--sidebar-ink) 10%, transparent);color:var(--sidebar-ink)}
 .tx-quote-reason{margin:0;font-size:10px;line-height:1.5;color:var(--sidebar-muted)}
 .tx-quote-reason.dark{color:var(--muted);margin-top:8px}
 .tx-inline-form{display:grid;gap:8px;padding-top:4px}
@@ -1293,9 +1296,36 @@ button.partner-status{cursor:pointer}
 .tx-min{display:inline-flex;align-items:center;gap:6px}
 .tx-icon-sm{width:26px;height:26px}
 .tx-min-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.tx-stock-filters{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
-.tx-stock-filters input[type=search]{flex:1 1 220px;min-width:0;height:36px;padding:0 11px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--surface);color:var(--ink);font:12px var(--font-sans)}
-.tx-stock-filters input[type=search]:focus{outline:2px solid var(--forest);outline-offset:1px}
+.tx-stock-filters,.tx-filters{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.tx-stock-filters input[type=search],.tx-filters input[type=search]{flex:1 1 220px;min-width:0;height:36px;padding:0 11px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--surface);color:var(--ink);font:12px var(--font-sans)}
+.tx-filters select{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--surface);color:var(--ink);font:12px var(--font-sans)}
+.tx-stock-filters input[type=search]:focus,.tx-filters input[type=search]:focus,.tx-filters select:focus{outline:2px solid var(--forest);outline-offset:1px}
+.tx-board-summary{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;padding:0;list-style:none}
+.tx-board-summary button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--ink-soft);font:600 11px var(--font-sans);cursor:pointer}
+.tx-board-summary button:hover{border-color:var(--forest)}
+.tx-board-summary button[aria-pressed=true]{border-color:var(--forest);background:color-mix(in srgb,var(--forest) 10%,var(--surface));color:var(--ink)}
+.tx-board-summary b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.tx-draft-row{display:grid;gap:6px;justify-items:start}
+.tx-draft-row .tx-draft-link{justify-self:stretch}
+.tx-draft-confirm{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink-soft)}
+.tx-draft-confirm .btn{min-height:30px}
+
+/* Textile collection slip: hidden on screen; printed alone while body has .tx-printing-slip. */
+.tx-print-slip{display:none}
+@media print{
+  body.tx-printing-slip *{visibility:hidden}
+  body.tx-printing-slip .tx-print-slip,body.tx-printing-slip .tx-print-slip *{visibility:visible}
+  body.tx-printing-slip .tx-print-slip{display:block;position:fixed;inset:0;box-sizing:border-box;padding:12mm;color:#000;background:#fff;font:11pt/1.45 var(--font-sans)}
+  .tx-print-slip header{border-bottom:1px solid #000;padding-bottom:6mm;margin-bottom:6mm}
+  .tx-print-slip header p{margin:0;font-size:9pt}
+  .tx-print-slip h2{margin:2mm 0;font-size:18pt}
+  .tx-print-slip dl{display:grid;grid-template-columns:1fr 1fr;gap:4mm 10mm;margin:0}
+  .tx-print-slip dt{font-size:8pt;text-transform:uppercase;letter-spacing:.08em}
+  .tx-print-slip dd{margin:1mm 0 0}
+  .tx-slip-note{margin:8mm 0 0;font-size:9pt}
+  .tx-slip-signatures{display:grid;grid-template-columns:1fr 1fr;gap:16mm;margin-top:20mm}
+  .tx-slip-signatures p{margin:0;padding-top:2mm;border-top:1px solid #000;font-size:9pt}
+}
 .tx-min-form input{width:120px;border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;font-size:11px;background:var(--surface);color:var(--ink)}
 .tx-min-form .btn{min-height:30px;padding:0 10px}
 .tx-row-actions{text-align:right}
@@ -1355,6 +1385,23 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
    a per-domain reskin. If this reappears again, it is coming from the
    Textile owner's branch; raise it with them directly rather than
    re-deleting it a third time. */
+
+/* Textile's order board has five stages. The shared board block further down
+   (.tx-board, used by Telecoms and CNC too) lays boards out in four columns,
+   which pushed Collected onto a second row; these rules apply on /textile only. */
+.textile-theme .tx-board{grid-template-columns:repeat(5,minmax(200px,1fr))}
+.textile-theme .tx-column{min-width:0}
+/* Keep visually hidden (.sr-only, position:absolute) table headers inside the
+   scrolling table box; otherwise they escape it and widen the page on phones. */
+.textile-theme .live-table-wrap{position:relative}
+/* Booking week list on phones: let the status tag drop under the text instead of squeezing it. */
+@media(max-width:560px){
+  .textile-theme .tx-slot{flex-wrap:wrap;align-items:flex-start}
+  .textile-theme .tx-slot span:first-child{flex:1 1 100%}
+}
+@media(max-width:980px){
+  .textile-theme .tx-board{grid-template-columns:repeat(5,minmax(220px,78vw))}
+}
 
 /* Textile-mode sidebar: lime brand tile, pipeline count badges, demo card. */
 .tx-brand-mark{width:36px;height:36px;border-radius:10px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;flex:none}
@@ -1895,7 +1942,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  background: #ffffff;
+  background: var(--surface);
   border: 1.5px solid var(--border-soft);
   border-radius: 18px;
   text-align: left;
@@ -1910,14 +1957,14 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .queue-row:hover {
   border-color: var(--forest);
-  background: #fdfefe;
+  background: var(--surface);
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(11, 52, 38, 0.09);
 }
 
 .queue-row.active {
   border-color: #0b3426;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 4px 18px rgba(11, 52, 38, 0.12);
   outline: 2px solid rgba(11, 52, 38, 0.2);
 }
