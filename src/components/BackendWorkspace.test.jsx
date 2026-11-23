@@ -33,6 +33,19 @@ beforeEach(() => {
 });
 
 describe('BackendWorkspace', () => {
+  it('hides the demonstration workspace notice outside Telecoms', () => {
+    renderShell();
+
+    expect(screen.queryByText('Demonstration workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Role-based prototype · sample data')).not.toBeInTheDocument();
+  });
+
+  it('keeps the Telecoms workspace notice for Telecoms users', () => {
+    renderShell({ ...session, roles: ['ROLE_TELECOMS_DOMAIN_OWNER'] });
+
+    expect(screen.getByText('Telecoms Lab Workspace')).toBeInTheDocument();
+  });
+
   it('toggles the sidebar collapsed state', async () => {
     const user = userEvent.setup();
     const { container } = renderShell();

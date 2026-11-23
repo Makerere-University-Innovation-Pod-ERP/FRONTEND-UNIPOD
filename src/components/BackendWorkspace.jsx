@@ -419,10 +419,10 @@ export function BackendWorkspace({
           </nav>
         )}
 
-        {!collapsed && (
+        {!collapsed && isTelecoms && (
           <div className="live-sidebar-notice">
-            <div><span className="dot" /><span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span></div>
-            <small>{isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}</small>
+            <div><span className="dot" /><span>Telecoms Lab Workspace</span></div>
+            <small>Domain 6 · RF & IoT Systems</small>
           </div>
         )}
 
