@@ -47,7 +47,7 @@ describe('Walk-in submission', () => {
     expect(await screen.findByText('Minimal account created')).toBeInTheDocument();
     const banner = screen.getByRole('status', { name: 'Submitting on behalf of' });
     expect(within(banner).getByText('Joan Akello')).toBeInTheDocument();
-    expect(screen.getByText(/step 1 of 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 01 of 05/i)).toBeInTheDocument();
   });
 
   it('finds an existing account instead of creating a new one', async () => {
@@ -65,7 +65,7 @@ describe('Walk-in submission', () => {
 
     // Step 1: type
     await user.click(screen.getByLabelText(/general innovation/i));
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     // Step 2: details - Submitter ID is filled in and locked
     const submitterId = screen.getByLabelText(/submitter id/i);
     expect(submitterId).toHaveAttribute('readonly');
@@ -73,13 +73,17 @@ describe('Walk-in submission', () => {
     await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Bicycle Water Pump');
     await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'Pump water without fuel.');
     await user.type(screen.getByPlaceholderText(/what problem or need/i), 'Fuel pumps are too expensive.');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     // Step 3: documents
-    await user.type(screen.getAllByPlaceholderText(/file name or storage reference/i)[0], 'brief.pdf');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    const briefFile = new File(['brief contents'], 'brief.pdf', { type: 'application/pdf' });
+    await user.upload(screen.getByLabelText(/upload project brief/i), briefFile);
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     // Step 4: rules
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    for (const checkbox of await screen.findAllByRole('checkbox')) {
+      // eslint-disable-next-line no-await-in-loop
+      await user.click(checkbox);
+    }
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     // Step 5: submit
     await user.click(screen.getByRole('button', { name: /create draft/i }));
 

@@ -65,6 +65,34 @@ export const bookingsApi = {
     return z.array(facilitySchema).parse(await request('/facilities', { token, signal }));
   },
 
+  async listMyBookings({ page = 0, size = 25 } = {}, token, signal) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    return bookingPageSchema.parse(await request(`/me/bookings?${params}`, { token, signal }));
+  },
+
+  async myBooking(id, token, signal) {
+    return bookingSchema.parse(
+      await request(`/me/bookings/${encodeURIComponent(id)}`, { token, signal }),
+    );
+  },
+
+  async createMyBooking(body, token, signal) {
+    return bookingSchema.parse(await request('/me/bookings', {
+      method: 'POST',
+      body,
+      token,
+      signal,
+    }));
+  },
+
+  async cancelMyBooking(id, token, signal) {
+    return bookingSchema.parse(await request(`/me/bookings/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      token,
+      signal,
+    }));
+  },
+
   async list({ date, status, page = 0, size = 100 } = {}, token, signal) {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (date) params.set('date', date);

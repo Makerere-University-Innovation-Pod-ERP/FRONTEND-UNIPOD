@@ -1,12 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, ArrowUpRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
-  CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Menu, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  ArrowLeftRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
+  ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
+  List, LogOut, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { canCreateSubmission, displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
@@ -22,7 +23,15 @@ import {
   isCncDomainOwner,
 } from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
-import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
+import { Toaster } from '@/components/ui/sonner';
+import {
+  notificationKeys,
+  useNotifications,
+  useUnreadNotificationCount,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+} from '@/hooks/useNotifications';
+import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
 import { formatDate } from '@/lib/presentation';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
@@ -59,6 +68,7 @@ function buildTelecomsNavigation(roles) {
 }
 
 function isActiveLink(href, location) {
+  if (href === '/my-submissions' || href.startsWith('/my-submissions/')) return location === href;
   if (location === href) return true;
   if (href === '/overview' && location === '/') return true;
   if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
@@ -81,6 +91,7 @@ export function BackendWorkspace({
 }) {
   const { pathname: location } = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openPopover, setOpenPopover] = useState(null);
@@ -91,7 +102,7 @@ export function BackendWorkspace({
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const name = session.subject.includes('@') ? session.subject.split('@')[0] : session.subject;
+  const name = session.email || session.subject;
   const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
@@ -156,12 +167,16 @@ export function BackendWorkspace({
         { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
         { label: 'Settings', href: '/management', icon: Settings2 },
+        { label: 'Department Rules', href: '/rules/manager', icon: FileText },
       ],
     }] : []),
     ...(isSubmitter ? [{
       heading: 'MY WORKSPACE',
       items: [
         { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
       ],
     }] : []),
     {
@@ -227,7 +242,9 @@ export function BackendWorkspace({
     }] : []),
   ];
 
-  const navGroups = isTelecoms ? telecomsNavGroups : standardNavGroups;
+  const navGroups = isTelecoms
+    ? telecomsNavGroups
+    : standardNavGroups.filter((group) => group.items.length > 0);
 
   const textileNavSections = [
     { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
@@ -285,9 +302,27 @@ export function BackendWorkspace({
   }, [searchOpen, searchQuery, session.accessToken, onLogout]);
 
   const notificationsQuery = useNotifications(session.accessToken);
+  const unreadCountQuery = useUnreadNotificationCount(session.accessToken);
   const markAllRead = useMarkAllNotificationsRead(session.accessToken);
+  const markRead = useMarkNotificationRead(session.accessToken);
+  const browserPush = useBrowserPushNotifications(session.accessToken);
   const notificationItems = notificationsQuery.data ?? [];
-  const hasUnread = notificationItems.some((item) => !item.read);
+  const unreadCount = unreadCountQuery.data
+    ?? notificationItems.filter((item) => !item.read).length;
+  const hasUnread = unreadCount > 0;
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+    const handlePushMessage = (event) => {
+      const notification = event.data?.notification;
+      if (event.data?.type !== 'PUSH_NOTIFICATION' || !notification) return;
+
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.list(session.accessToken) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount(session.accessToken) });
+    };
+    navigator.serviceWorker.addEventListener('message', handlePushMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+  }, [queryClient, session.accessToken]);
 
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
@@ -321,7 +356,7 @@ export function BackendWorkspace({
             title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             aria-expanded={!collapsed}
           >
-            <Menu size={17} />
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
           <button
             type="button"
@@ -331,7 +366,7 @@ export function BackendWorkspace({
             title={mobileOpen ? 'Close navigation' : 'Open navigation'}
             aria-expanded={mobileOpen}
           >
-            {mobileOpen ? <X size={19} /> : <Menu size={19} />}
+            {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
           </button>
         </div>
 
@@ -422,9 +457,17 @@ export function BackendWorkspace({
             ) : null}
             <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
             <div className="top-pop-wrap">
-              <button className="top-circle-btn notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
+              <button
+                className="top-circle-btn notification-btn"
+                onClick={() => togglePopover('notifications')}
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              >
                 <Bell size={15} />
-                {hasUnread && <span className="notification-mark" />}
+                {hasUnread && (
+                  <span className="notification-count" aria-hidden="true">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {openPopover === 'notifications' && (
                 <div className="notification-popover">
@@ -434,24 +477,87 @@ export function BackendWorkspace({
                       <CheckCheck size={12} /> Mark all read
                     </button>
                   </div>
+                  <div className="notification-push">
+                    <div className="notification-push-copy">
+                      <b>Browser push</b>
+                      <small>
+                        {browserPush.loading
+                          ? 'Checking push availability…'
+                          : !browserPush.supported
+                            ? 'Background push is not supported in this browser.'
+                            : !browserPush.enabled
+                              ? 'Push alerts are not configured on the server.'
+                              : browserPush.permission === 'denied'
+                                ? 'Blocked in browser site settings.'
+                                : browserPush.subscribed
+                                  ? 'Enabled on this browser.'
+                                  : 'Opt in to alerts when the app is closed.'}
+                      </small>
+                    </div>
+                    {browserPush.enabled && browserPush.supported && browserPush.permission !== 'denied' && (
+                      <button
+                        type="button"
+                        className="notification-push-toggle"
+                        disabled={browserPush.working || browserPush.loading}
+                        onClick={async () => {
+                          const wasSubscribed = browserPush.subscribed;
+                          const succeeded = wasSubscribed
+                            ? await browserPush.disable()
+                            : await browserPush.enable();
+                          if (succeeded) {
+                            toast.success(wasSubscribed
+                              ? 'Browser push disabled'
+                              : 'Browser push enabled');
+                          }
+                        }}
+                      >
+                        {browserPush.working
+                          ? 'Updating…'
+                          : browserPush.subscribed
+                            ? 'Turn off'
+                            : 'Enable'}
+                      </button>
+                    )}
+                    {browserPush.error && <p role="alert">{browserPush.error}</p>}
+                    <small className="notification-push-privacy">
+                      Push alerts may appear when you are signed out.
+                    </small>
+                  </div>
                   <div className="notification-list">
                     {notificationsQuery.isLoading ? (
                       <p>Loading…</p>
-                    ) : notificationsQuery.isError ? (
-                      <p>Notifications aren't available for this account yet.</p>
+                    ) : notificationsQuery.isError || unreadCountQuery.isError ? (
+                      <p role="alert">
+                        Notifications could not be loaded.
+                        <button
+                          type="button"
+                          onClick={() => {
+                            notificationsQuery.refetch();
+                            unreadCountQuery.refetch();
+                          }}
+                        >
+                          Retry
+                        </button>
+                      </p>
                     ) : notificationItems.length ? (
                       notificationItems.map((item) => (
                         <Link
                           key={item.id}
                           to={item.link}
                           className={`notification-item ${item.read ? '' : 'unread'}`}
-                          onClick={() => setOpenPopover(null)}
+                          onClick={() => {
+                            if (!item.read) markRead.mutate(item.id);
+                            setOpenPopover(null);
+                          }}
                         >
                           <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
                         </Link>
                       ))
                     ) : (
                       <p>No notifications yet.</p>
+                    )}
+                    {(markRead.isError || markAllRead.isError || unreadCountQuery.isError) && (
+                      <p role="alert">The notification status could not be updated or loaded.</p>
                     )}
                   </div>
                 </div>
@@ -460,18 +566,6 @@ export function BackendWorkspace({
             <button className="top-circle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <div className="top-pop-wrap">
-              <button className="top-circle-btn" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={16} /></button>
-              {openPopover === 'help' && (
-                <div className="top-popover">
-                  <b>Workspace guide</b>
-                  <p>Stages are a flexible guide; exact roles and destinations remain configurable with the backend team.</p>
-                  <a href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" onClick={() => setOpenPopover(null)}>
-                    Check backend health <ArrowUpRight size={13} />
-                  </a>
-                </div>
-              )}
-            </div>
             {mayCreateSubmission && !isTelecoms && (
               <Link
                 to="/submissions/new"
@@ -543,6 +637,7 @@ export function BackendWorkspace({
           </div>
         </section>
       </div>}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

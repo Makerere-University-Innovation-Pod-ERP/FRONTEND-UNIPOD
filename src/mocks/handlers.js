@@ -10,12 +10,23 @@ import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handler
 import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment } from './fixtures/equipment';
-import { initialBookings, initialFacilities, initialTimetableBlocks } from './fixtures/bookings';
+import {
+  initialBookings,
+  initialFacilities,
+  initialSubmitterBookings,
+  initialTimetableBlocks,
+} from './fixtures/bookings';
 import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
+import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
-import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
+import {
+  initialInvoices,
+  initialPriceList,
+  initialInvoicesOverview,
+  initialSubmitterInvoices,
+} from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
 
@@ -89,15 +100,104 @@ function bookingProblem(status, detail) {
 function updateBooking(id, change) {
   const index = bookings.findIndex((b) => b.id === id);
   if (index === -1) return bookingProblem(404, 'Booking not found.');
-  const result = change(bookings[index]);
+  const previous = bookings[index];
+  const result = change(previous);
   if (result.error) return bookingProblem(...result.error);
   const updated = { ...result, decidedAt: result.decidedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
   bookings = bookings.map((b, i) => (i === index ? updated : b));
+  const statusNotifications = {
+    APPROVED: ['BOOKING_APPROVED', `Booking approved: ${updated.reference}`, `Your booking for ${updated.facilityName} has been approved.`],
+    REJECTED: ['BOOKING_REJECTED', `Booking rejected: ${updated.reference}`, `Your booking for ${updated.facilityName} was rejected.`],
+  };
+  const notification = statusNotifications[updated.status];
+  if (updated.status !== previous.status && notification) {
+    publishMockNotification(updated, ...notification);
+  }
   return HttpResponse.json(updated);
 }
+
+function publishMockNotification(booking, type, title, body) {
+  notificationRecords.unshift({
+    id: `00000000-0000-4000-8000-${String(nextNotificationNumber++).padStart(12, '0')}`,
+    type,
+    title,
+    body,
+    entityType: 'booking',
+    entityId: booking.id,
+    createdAt: new Date().toISOString(),
+    readAt: null,
+    read: false,
+    recipient: booking.requesterId?.toLocaleLowerCase(),
+  });
+}
+
+function notificationsForRequest(request) {
+  const email = mockSubmitterEmail(request);
+  return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
+}
 let eventContracts = [...initialContracts];
+let rules = [...initialRules];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
+let notificationRecords = notifications.map((item) => ({ ...item }));
+let nextNotificationNumber = 704;
+let pushSubscriptions = new Map();
+const createSubmitterInvoiceMocks = () => initialSubmitterInvoices.map((invoice) => ({
+  ...invoice,
+  paymentProof: invoice.paymentProof ? { ...invoice.paymentProof } : null,
+  receipt: invoice.receipt ? { ...invoice.receipt } : null,
+}));
+let submitterInvoices = createSubmitterInvoiceMocks();
+const createSubmitterBookingMocks = () => initialSubmitterBookings.map((booking) => ({ ...booking }));
+let submitterBookings = createSubmitterBookingMocks();
+let nextSubmitterBookingNumber = 1202;
+
+export function resetSubmitterInvoiceMocks() {
+  submitterInvoices = createSubmitterInvoiceMocks();
+}
+
+export function resetSubmitterBookingMocks() {
+  submitterBookings = createSubmitterBookingMocks();
+  nextSubmitterBookingNumber = 1202;
+}
+
+export function resetNotificationMocks() {
+  notificationRecords = notifications.map((item) => ({ ...item }));
+  nextNotificationNumber = 704;
+  pushSubscriptions = new Map();
+}
+
+function mockSubmitterEmail(request) {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const encodedPayload = token?.split('.')[1];
+  if (!encodedPayload) return null;
+  try {
+    const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.email === 'string'
+      ? payload.email.toLocaleLowerCase()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function findSubmitterInvoice(request, id) {
+  const email = mockSubmitterEmail(request);
+  if (!email) return { status: 401, invoice: null };
+  const invoice = submitterInvoices.find((item) => (
+    item.id === id && item.customerEmail.toLocaleLowerCase() === email
+  ));
+  return { status: invoice ? 200 : 404, invoice: invoice ?? null };
+}
+
+function findSubmitterBooking(request, id) {
+  const email = mockSubmitterEmail(request);
+  if (!email) return { status: 401, booking: null };
+  const booking = submitterBookings.find((item) => (
+    item.id === id && item.requesterId.toLocaleLowerCase() === email
+  ));
+  return { status: booking ? 200 : 404, booking: booking ?? null };
+}
 
 const invoiceStatusMap = {
   'Pending evidence': 'WAITING_FOR_PROOF',
@@ -209,7 +309,7 @@ export const handlers = [
       || mockUsers['factfinding@unipod.test'];
     return HttpResponse.json({
       tokenType: 'Bearer',
-      accessToken: makeMockToken(account.roles, account.subject),
+      accessToken: makeMockToken(account.roles, account.subject, rawEmail),
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
     });
   }),
@@ -308,6 +408,7 @@ export const handlers = [
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
+      acceptedRules: Array.isArray(body.acceptedRules) ? body.acceptedRules : [],
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
@@ -712,11 +813,62 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
-  http.get(`${API_BASE_URL}/notifications`, () => HttpResponse.json({ items: notifications })),
+  http.get(`${API_BASE_URL}/notifications`, ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    const page = Number(params.get('page') ?? 0);
+    const size = Number(params.get('size') ?? 25);
+    const unreadOnly = params.get('unread') === 'true';
+    const all = notificationsForRequest(request);
+    const filtered = unreadOnly ? all.filter((item) => !item.read) : all;
+    const items = filtered.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    });
+  }),
 
-  http.post(`${API_BASE_URL}/notifications/read-all`, () => {
-    for (const item of notifications) item.read = true;
+  http.get(`${API_BASE_URL}/notifications/unread-count`, ({ request }) => (
+    HttpResponse.json({ unread: notificationsForRequest(request).filter((item) => !item.read).length })
+  )),
+
+  http.get(`${API_BASE_URL}/notifications/push/config`, () => (
+    HttpResponse.json({ enabled: true, publicKey: 'B'.repeat(87) })
+  )),
+
+  http.put(`${API_BASE_URL}/notifications/push/subscriptions`, async ({ request }) => {
+    const body = await request.json();
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.set(`${email}:${body.endpoint}`, body);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete(`${API_BASE_URL}/notifications/push/subscriptions`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.delete(`${email}:${new URL(request.url).searchParams.get('endpoint')}`);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/:id/read`, ({ params, request }) => {
+    const notification = notificationsForRequest(request).find((item) => item.id === params.id);
+    if (!notification) return new HttpResponse(null, { status: 404 });
+    const updated = { ...notification, read: true, readAt: notification.readAt ?? new Date().toISOString() };
+    notificationRecords = notificationRecords.map((item) => item.id === params.id ? updated : item);
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/read-all`, ({ request }) => {
+    const current = notificationsForRequest(request);
+    const unreadIds = new Set(current.filter((item) => !item.read).map((item) => item.id));
+    const readAt = new Date().toISOString();
+    notificationRecords = notificationRecords.map((item) => unreadIds.has(item.id)
+      ? { ...item, read: true, readAt }
+      : item);
+    return HttpResponse.json({ marked: unreadIds.size });
   }),
 
   ...receptionHandlers,
@@ -876,6 +1028,121 @@ export const handlers = [
   // Facilities, bookings, equipment allocations and timetable
   http.get(`${API_BASE_URL}/facilities`, () => HttpResponse.json(facilities)),
 
+  http.get(`${API_BASE_URL}/me/bookings`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100) {
+      return HttpResponse.json({ detail: 'The booking query parameters are invalid.' }, { status: 400 });
+    }
+    const mine = submitterBookings
+      .filter((booking) => booking.requesterId.toLocaleLowerCase() === email)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const items = mine.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: mine.length,
+      totalPages: Math.ceil(mine.length / size),
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/me/bookings`, async ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const body = await request.json();
+    const facility = facilities.find((item) => item.id === body.facilityId);
+    if (!facility) return bookingProblem(404, 'Facility not found.');
+    const startsAt = Date.parse(body.startsAt);
+    const endsAt = Date.parse(body.endsAt);
+    if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt) {
+      return bookingProblem(400, 'The booking end time must be after the start time.');
+    }
+    if (!body.purpose?.trim() || body.purpose.length > 1000) {
+      return bookingProblem(400, 'A purpose of up to 1000 characters is required.');
+    }
+    if (!Number.isInteger(body.attendees) || body.attendees < 1) {
+      return bookingProblem(400, 'At least one attendee is required.');
+    }
+    if (facility.status === 'MAINTENANCE') {
+      return bookingProblem(409, 'The facility is under maintenance and cannot be booked.');
+    }
+    if (body.attendees > facility.capacity) {
+      return bookingProblem(400, 'The group size exceeds the facility capacity.');
+    }
+    const conflicts = [...bookings, ...submitterBookings].some((booking) => (
+      booking.facilityId === facility.id
+      && BLOCKING.includes(booking.status)
+      && overlaps(booking.startsAt, booking.endsAt, body.startsAt, body.endsAt)
+    ));
+    if (conflicts) return bookingProblem(409, 'The facility is already booked for that time.');
+
+    const now = new Date().toISOString();
+    const sequence = nextSubmitterBookingNumber++;
+    const created = {
+      id: `00000000-0000-4000-8000-${String(sequence).padStart(12, '0')}`,
+      reference: `BKG-2026-${String(sequence).padStart(6, '0')}`,
+      facilityId: facility.id,
+      facilityName: facility.name,
+      facilityLocation: facility.location,
+      requesterId: email,
+      purpose: body.purpose.trim(),
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+      attendees: body.attendees,
+      operator: body.operator?.trim() || null,
+      status: 'PENDING',
+      rejectionReason: null,
+      requestType: 'FACILITY',
+      isEquipmentRequest: false,
+      equipmentName: null,
+      purposeDetail: null,
+      decisionNote: null,
+      decidedAt: null,
+      conditionOut: null,
+      conditionReturned: null,
+      returnedAt: null,
+      returnNotes: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    submitterBookings = [created, ...submitterBookings];
+    publishMockNotification(
+      created,
+      'BOOKING_REQUESTED',
+      `Booking request received: ${created.reference}`,
+      `Your request for ${created.facilityName} has been submitted and is awaiting review.`,
+    );
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/bookings/:id`, ({ params, request }) => {
+    const result = findSubmitterBooking(request, params.id);
+    return result.booking
+      ? HttpResponse.json(result.booking)
+      : new HttpResponse(null, { status: result.status });
+  }),
+
+  http.post(`${API_BASE_URL}/me/bookings/:id/cancel`, ({ params, request }) => {
+    const result = findSubmitterBooking(request, params.id);
+    if (!result.booking) return new HttpResponse(null, { status: result.status });
+    if (!['PENDING', 'APPROVED'].includes(result.booking.status)) {
+      return bookingProblem(409, 'Only pending or approved bookings can be cancelled.');
+    }
+    const updated = { ...result.booking, status: 'CANCELLED', updatedAt: new Date().toISOString() };
+    submitterBookings = submitterBookings.map((item) => item.id === params.id ? updated : item);
+    publishMockNotification(
+      updated,
+      'BOOKING_CANCELLED',
+      `Booking cancelled: ${updated.reference}`,
+      `Your booking for ${updated.facilityName} has been cancelled.`,
+    );
+    return HttpResponse.json(updated);
+  }),
+
   http.get(`${API_BASE_URL}/bookings`, ({ request }) => {
     const url = new URL(request.url);
     const date = url.searchParams.get('date');
@@ -971,8 +1238,25 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/price-list-items`, ({ request }) => {
-    const departmentId = new URL(request.url).searchParams.get('departmentId');
-    return HttpResponse.json(initialCncPrices.filter((p) => !departmentId || p.departmentId === departmentId));
+    const params = new URL(request.url).searchParams;
+    const departmentId = params.get('departmentId');
+    const status = params.get('status');
+    const financePrices = initialPriceList.map((item, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 501).padStart(12, '0')}`,
+      departmentId: '00000000-0000-4000-8000-000000000900',
+      service: item.service,
+      unit: ['PER_SESSION', 'PER_HOUR', 'PER_ITEM', 'PER_SESSION'][index],
+      priceUgx: item.rateNumeric,
+      effectiveFrom: '2026-10-01',
+      status: 'ACTIVE',
+      proposedBy: 'finance@unipod.test',
+      updatedAt: '2026-10-01T08:00:00Z',
+    }));
+    const prices = departmentId ? initialCncPrices : financePrices;
+    return HttpResponse.json(prices.filter((item) => (
+      (!departmentId || item.departmentId === departmentId)
+      && (!status || item.status === status)
+    )));
   }),
 
   // CNC & Carpentry orders
@@ -1102,6 +1386,47 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
+  // Department Rules Manager (Assignment 12)
+  http.get(`${API_BASE_URL}/rules`, () => {
+    return HttpResponse.json(rules);
+  }),
+
+  http.post(`${API_BASE_URL}/rules`, async ({ request }) => {
+    const body = await request.json();
+    const newRule = {
+      id: `rule-${Date.now()}`,
+      scope: 'GENERAL',
+      scopeId: null,
+      mustAccept: false,
+      published: false,
+      version: 1,
+      updatedAt: new Date().toISOString().slice(0, 10),
+      ...body,
+    };
+    rules = [...rules, newRule];
+    return HttpResponse.json(newRule, { status: 201 });
+  }),
+
+  http.patch(`${API_BASE_URL}/rules/:id`, async ({ params, request }) => {
+    const index = rules.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    rules[index] = {
+      ...rules[index],
+      ...body,
+      version: rules[index].version + 1,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    return HttpResponse.json(rules[index]);
+  }),
+
+  http.post(`${API_BASE_URL}/rules/:id/retire`, ({ params }) => {
+    const index = rules.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    rules[index] = { ...rules[index], published: false, updatedAt: new Date().toISOString().slice(0, 10) };
+    return HttpResponse.json(rules[index]);
+  }),
+
   // Operations / Multimedia - Partners & MOUs
   http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
     return HttpResponse.json({
@@ -1139,6 +1464,108 @@ export const handlers = [
     return HttpResponse.json(partners[index]);
   }),
 
+  http.get(`${API_BASE_URL}/me/invoices`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const status = url.searchParams.get('status');
+    const statuses = ['WAITING_FOR_PROOF', 'WAITING_FOR_CHECK', 'PAID', 'RECEIPTED'];
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100
+      || (status && !statuses.includes(status))) {
+      return HttpResponse.json({ detail: 'The invoice query parameters are invalid.' }, { status: 400 });
+    }
+
+    const mine = submitterInvoices.filter((invoice) => invoice.customerEmail.toLocaleLowerCase() === email);
+    const filtered = status ? mine.filter((invoice) => invoice.status === status) : mine;
+    const items = filtered.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    return result.invoice
+      ? HttpResponse.json(result.invoice)
+      : new HttpResponse(null, { status: result.status });
+  }),
+
+  http.post(`${API_BASE_URL}/me/invoices/:id/proof`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    const index = submitterInvoices.findIndex((invoice) => invoice.id === params.id);
+    const invoice = result.invoice;
+    if (invoice.status !== 'WAITING_FOR_PROOF') {
+      return HttpResponse.json({ detail: 'Payment proof is no longer accepted for this invoice.' }, { status: 409 });
+    }
+
+    const updated = {
+      ...invoice,
+      status: 'WAITING_FOR_CHECK',
+      statusLabel: 'Payment evidence under review',
+      updatedAt: new Date().toISOString(),
+      paymentProof: {
+        id: '00000000-0000-4000-8000-000000000304',
+        reference: 'DEMO-PAYMENT-REFERENCE',
+        amount: invoice.amount,
+        paidOn: '2026-11-18',
+        contentType: 'application/pdf',
+        fileSize: 1024,
+        originalFilename: 'payment-proof.pdf',
+        status: 'PENDING',
+        rejectionReason: null,
+        uploadedBy: invoice.customerEmail,
+        uploadedAt: new Date().toISOString(),
+        verifiedBy: null,
+        verifiedAt: null,
+      },
+    };
+    submitterInvoices[index] = updated;
+    return HttpResponse.json(updated, { status: 201 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/proof/file`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.paymentProof) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(new Blob([`Mock payment proof for ${result.invoice.number}`]), {
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    return result.invoice.receipt
+      ? HttpResponse.json(result.invoice.receipt)
+      : new HttpResponse(null, { status: 404 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt/download`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.receipt) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(`Receipt ${result.invoice.receipt.receiptNumber}`, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/pdf`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    return new HttpResponse(new Blob([`Mock invoice PDF for ${result.invoice.number}`], { type: 'application/pdf' }));
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt/pdf`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.receipt) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(new Blob([`Mock receipt PDF for ${result.invoice.receipt.receiptNumber}`], { type: 'application/pdf' }));
+  }),
+
   // Finance / Overview (Daniel Kato, Finance Officer)
   http.get(`${API_BASE_URL}/finance/overview`, () => {
     return HttpResponse.json(initialFinanceOverview);
@@ -1159,10 +1586,6 @@ export const handlers = [
       outstandingUgx: 340000,
       collectedUgx: 1620000,
     });
-  }),
-
-  http.get(`${API_BASE_URL}/finance/price-list`, () => {
-    return HttpResponse.json({ items: initialPriceList });
   }),
 
   http.get(`${API_BASE_URL}/invoices`, ({ request }) => {

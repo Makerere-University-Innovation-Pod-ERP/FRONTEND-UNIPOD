@@ -2,18 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NewSubmissionPage } from './NewSubmissionPage';
 import { backendApi } from '@/services/backend-api';
 
 function renderPage({ isSubmitter = false } = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={['/submissions/new']}>
-      <Routes>
-        <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
-        <Route path="/submissions/new/confirmation" element={<div>confirmation screen</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/submissions/new']}>
+        <Routes>
+          <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
+          <Route path="/submissions/new/confirmation" element={<div>confirmation screen</div>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
+}
+
+async function acceptAllRules(user) {
+  for (const checkbox of await screen.findAllByRole('checkbox')) {
+    // eslint-disable-next-line no-await-in-loop
+    await user.click(checkbox);
+  }
 }
 
 describe('NewSubmissionPage wizard', () => {
@@ -56,10 +67,11 @@ describe('NewSubmissionPage wizard', () => {
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(await screen.findByText(/step 04 of 05/i)).toBeInTheDocument();
+    expect(await screen.findByText(/originality and attribution/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/must accept the rules/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/step 05 of 05/i)).toBeInTheDocument();
   }, 15000);
@@ -83,7 +95,7 @@ describe('NewSubmissionPage wizard', () => {
       new File(['Brief contents'], 'brief.pdf', { type: 'application/pdf' }),
     );
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     fireEvent.submit(container.querySelector('form'));
@@ -120,13 +132,17 @@ describe('NewSubmissionPage wizard', () => {
     const evidenceFile = new File(['A chart'], 'evidence.csv', { type: 'text/csv' });
     await user.upload(screen.getByLabelText('Upload Supporting evidence (data, photos, reports)'), evidenceFile);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.click(screen.getByRole('button', { name: /^submit brief$/i }));
 
     expect(await screen.findByText('confirmation screen')).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
+    expect(createSubmission.mock.calls[0][1].acceptedRules).toEqual([
+      { id: 'rule-general-1', version: 1 },
+      { id: 'rule-general-2', version: 1 },
+    ]);
     expect(uploadDocument).toHaveBeenCalledTimes(2);
     expect(maxActiveUploads).toBe(1);
     expect(uploadDocument).toHaveBeenNthCalledWith(1, 'test-token', 'brief-1', expect.any(FormData));

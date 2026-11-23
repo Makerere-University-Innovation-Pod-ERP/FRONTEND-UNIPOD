@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderCircle, UserPlus } from 'lucide-react';
 import { createSession } from '@/lib/auth';
+import { PasskeySetupPanel } from '@/components/PasskeySetupPanel';
 import { backendApi } from '@/services/backend-api';
 import './reception.css';
 
@@ -83,6 +84,7 @@ function FieldError({ error }) {
 
 export function SignUpPage({ onBackToSignIn, onLogin }) {
   const [serverError, setServerError] = useState('');
+  const [pendingSession, setPendingSession] = useState(null);
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -151,8 +153,8 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
   async function onSubmit(values) {
     setServerError('');
     try {
-      const session = createSession(await backendApi.signup(toRequestBody(values)));
-      onLogin(session);
+      const session = createSession(await backendApi.signup(toRequestBody(values)), values.email.trim());
+      setPendingSession(session);
     } catch (reason) {
       setServerError(reason instanceof Error ? reason.message : 'Could not create the account.');
     }
@@ -163,6 +165,10 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
       <div className="login-window">
         <section className="login-panel signup-panel">
           <div className="login-card signup-card">
+            {pendingSession ? (
+              <PasskeySetupPanel session={pendingSession} onDone={onLogin} />
+            ) : (
+              <>
             <div className="login-brand">
               <img src="/mak-crest.png" alt="Makerere University" className="brand-crest" />
               <div><b>MUTIC ERP</b><small>Makerere University</small></div>
@@ -330,6 +336,8 @@ export function SignUpPage({ onBackToSignIn, onLogin }) {
               </>
             )}
             </form>
+              </>
+            )}
           </div>
         </section>
         <aside className="login-hero" aria-hidden="true">

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Fingerprint, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
 import { backendApi } from '@/services/backend-api';
 import { createSession, saveSession } from '@/lib/auth';
+import { getPasskeyAssertion } from '@/lib/passkeys';
 
 export function LoginPage({ onLogin, onCreateAccount }) {
   const [email, setEmail] = useState('');
@@ -26,11 +27,31 @@ export function LoginPage({ onLogin, onCreateAccount }) {
     setError('');
     setBusy(true);
     try {
-      const session = createSession(await backendApi.login(email.trim(), password));
+      const session = createSession(await backendApi.login(email.trim(), password), email.trim());
       saveSession(session);
       onLogin(session);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to sign in.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signInWithPasskey() {
+    setError('');
+    setBusy(true);
+    try {
+      const challenge = await backendApi.passkeyAuthenticationOptions();
+      const credential = await getPasskeyAssertion(challenge.options);
+      const response = await backendApi.finishPasskeyAuthentication({
+        challengeId: challenge.challengeId,
+        credential,
+      });
+      const session = createSession(response, email.trim());
+      saveSession(session);
+      onLogin(session);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to sign in with a passkey.');
     } finally {
       setBusy(false);
     }
@@ -157,6 +178,15 @@ export function LoginPage({ onLogin, onCreateAccount }) {
                     {!busy && <ArrowRight size={15} />}
                   </button>
                 </form>
+                <button
+                  className="btn btn-outline login-passkey"
+                  type="button"
+                  onClick={() => void signInWithPasskey()}
+                  disabled={busy}
+                >
+                  {busy ? <LoaderCircle className="spin" size={16} /> : <Fingerprint size={16} />}
+                  Sign in with a passkey
+                </button>
                 {onCreateAccount ? (
                   <p className="login-footnote">
                     New here? <button type="button" className="btn btn-outline" onClick={onCreateAccount}>Create an account</button>
