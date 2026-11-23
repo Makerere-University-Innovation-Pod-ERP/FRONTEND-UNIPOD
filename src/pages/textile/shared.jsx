@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CircleAlert, ImageUp, LoaderCircle, X } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
@@ -46,6 +46,18 @@ export function MachineState({ state }) {
   return <StatusDot tone={MACHINE_TONE[state] ?? 'neutral'}>{MACHINE_STATE_LABELS[state] ?? state}</StatusDot>;
 }
 
+/** A stored photo: the image when the server gives a URL, otherwise just its file name. */
+export function PhotoView({ photo }) {
+  if (!photo) return 'None';
+  if (!photo.url) return photo.name;
+  return (
+    <a className="tx-photo-link" href={photo.url} target="_blank" rel="noreferrer">
+      <img className="tx-photo-thumb" src={photo.url} alt={photo.name} />
+      <span>{photo.name}</span>
+    </a>
+  );
+}
+
 /**
  * Drop zone / file picker for an optional reference photo. `existingName`
  * shows a photo already stored on the server (e.g. when resuming a draft).
@@ -64,6 +76,9 @@ export function PhotoDrop({ label, hint, file, existingName, onChange }) {
   };
 
   const name = file?.name ?? existingName;
+  // Local preview of the chosen file; the object URL is released when the file changes.
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   return (
     <div className="tx-field">
       <span className="tx-label">{label}</span>
@@ -78,7 +93,7 @@ export function PhotoDrop({ label, hint, file, existingName, onChange }) {
           accept(event.dataTransfer.files?.[0] ?? null);
         }}
       >
-        <ImageUp size={18} aria-hidden="true" />
+        {previewUrl ? <img className="tx-photo-thumb" src={previewUrl} alt={`Preview of ${file.name}`} /> : <ImageUp size={18} aria-hidden="true" />}
         <b>{name ? `${name} ${file ? 'selected' : 'uploaded'}` : 'Drop a photo or click to choose'}</b>
         <small>{hint}</small>
         <input

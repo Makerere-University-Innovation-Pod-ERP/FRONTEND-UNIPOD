@@ -2,18 +2,44 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
+import {
+  clearSession,
+  canCreateSubmission,
+  createSession,
+  getRoleLandingPath,
+  loadSession,
+  saveSession,
+  SUBMISSION_INTAKE_ROLES,
+} from '@/lib/auth';
+import {
+  COORDINATOR_ONLY_REASON,
+  isFactFindingOfficer,
+  isFinanceOfficer,
+  isMultimediaOfficer,
+  isReceptionist,
+  isInnovationCoordinator,
+  isReviewer,
+  isTelecomsDomainOwner,
+  isTextileDomainOwner,
+  isCncDomainOwner,
+} from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
-import { clearSession, createSession, loadSession, saveSession, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { isFactFindingOfficer, isReviewer, isTextileDomainOwner } from '@/lib/permissions';
 import { LoginPage } from '@/pages/LoginPage';
+import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
-import { AdminManagementPage } from '@/pages/AdminManagementPage';
+import { AdminManagementPage } from '@/pages/admin/AdminManagementPage';
+import { RulesManagerPage } from '@/pages/RulesManagerPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
 import { RespondToRequestPage } from '@/pages/RespondToRequestPage';
 import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
+import {
+  SubmitterBookingsPage,
+  SubmitterInvoicesPage,
+  SubmitterServiceRequestsPage,
+} from '@/pages/SubmitterSectionPage';
 import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
 import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
@@ -21,11 +47,23 @@ import { DepartmentQueue } from '@/pages/fact-finding/DepartmentQueue';
 import { DepartmentResponsePage } from '@/pages/fact-finding/DepartmentResponsePage';
 import { ReviewerOverview } from '@/pages/reviewer/ReviewerOverview';
 import { ReviewerWorkspace } from '@/pages/reviewer/ReviewerWorkspace';
+import { CoordinatorBriefPage } from '@/pages/coordinator/CoordinatorBriefPage';
+import { CoordinatorDecisionPage } from '@/pages/coordinator/CoordinatorDecisionPage';
+import { CoordinatorImprovementsPage } from '@/pages/coordinator/CoordinatorImprovementsPage';
+import { CoordinatorChangesPage } from '@/pages/coordinator/CoordinatorChangesPage';
+import { CoordinatorVersionsPage } from '@/pages/coordinator/CoordinatorVersionsPage';
 import { TrainingMentorshipPage } from '@/pages/multimedia/TrainingMentorshipPage';
 import { MediaServicesPage } from '@/pages/multimedia/MediaServicesPage';
+import { StudentsFollowedUpPage } from '@/pages/multimedia/StudentsFollowedUpPage';
+import { EquipmentListPage as MultimediaEquipmentListPage } from '@/pages/multimedia/EquipmentListPage';
+import { ReportFaultPage as MultimediaReportFaultPage } from '@/pages/multimedia/ReportFaultPage';
+import { EquipmentLendingPage as MultimediaEquipmentLendingPage } from '@/pages/multimedia/EquipmentLendingPage';
+import { PodcastBookingPage } from '@/pages/multimedia/PodcastBookingPage';
+import { ContractsPage } from '@/pages/multimedia/ContractsPage';
 import { PartnersMousPage } from '@/pages/multimedia/PartnersMousPage';
 import { FinanceOverviewPage } from '@/pages/multimedia/FinanceOverviewPage';
 import { PriceListsInvoicesPage } from '@/pages/multimedia/PriceListsInvoicesPage';
+import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage';
 import { ReviewerCaseFile } from '@/pages/reviewer/ReviewerCaseFile';
 import { NewOrderPage } from '@/pages/textile/NewOrderPage';
 import { OrderReviewPage } from '@/pages/textile/OrderReviewPage';
@@ -36,6 +74,30 @@ import { StockMovementPage } from '@/pages/textile/StockMovementPage';
 import { MachineListPage } from '@/pages/textile/MachineListPage';
 import { ReportFaultPage } from '@/pages/textile/ReportFaultPage';
 import { WorkshopBookingPage } from '@/pages/textile/WorkshopBookingPage';
+import { NewRequestPage } from '@/pages/telecoms/NewRequestPage';
+import { RequestReviewPage } from '@/pages/telecoms/RequestReviewPage';
+import { RequestBoardPage } from '@/pages/telecoms/RequestBoardPage';
+import { RequestPage, RequestsIndexPage } from '@/pages/telecoms/RequestPage';
+import { LabBookingPage } from '@/pages/telecoms/LabBookingPage';
+import { EquipmentListPage } from '@/pages/telecoms/EquipmentListPage';
+import { EquipmentLendingPage } from '@/pages/telecoms/EquipmentLendingPage';
+import { BootcampSessionsPage } from '@/pages/telecoms/BootcampSessionsPage';
+import { StockListPage as TelecomsStockListPage } from '@/pages/telecoms/StockListPage';
+import { StockMovementPage as TelecomsStockMovementPage } from '@/pages/telecoms/StockMovementPage';
+import { NewJobPage as CncNewJobPage } from '@/pages/cnc/NewJobPage';
+import { DesignCheckPage as CncDesignCheckPage } from '@/pages/cnc/DesignCheckPage';
+import { JobBoardPage as CncJobBoardPage } from '@/pages/cnc/JobBoardPage';
+import { JobPage as CncJobPage } from '@/pages/cnc/JobPage';
+import { MachineBookingPage as CncMachineBookingPage } from '@/pages/cnc/MachineBookingPage';
+import { MachineListPage as CncMachineListPage } from '@/pages/cnc/MachineListPage';
+import { SafetyCoursePage as CncSafetyCoursePage } from '@/pages/cnc/SafetyCoursePage';
+import { StockListPage as CncStockListPage } from '@/pages/cnc/StockListPage';
+import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
+import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
+import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
+import { SignUpPage } from '@/pages/reception/SignUpPage';
+import { WalkInSubmissionPage } from '@/pages/reception/WalkInSubmissionPage';
+import { WalkInSubmittedPage } from '@/pages/reception/WalkInSubmittedPage';
 import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
@@ -68,13 +130,6 @@ function OtherModulePage({ title }) {
   );
 }
 
-const DEFAULT_COORDINATOR_SESSION = {
-  accessToken: 'mock-coordinator-token',
-  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-  subject: 'Grace Namuli',
-  roles: ['ROLE_DEPARTMENT_COORDINATOR'],
-};
-
 function AccessRestricted({ label }) {
   return <div className="live-panel not-found-live"><p className="eyebrow">ACCESS RESTRICTED</p><h1>{label}</h1></div>;
 }
@@ -86,48 +141,117 @@ function AuthenticatedApp({
 }) {
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
+  const canCoordinate = isInnovationCoordinator(session.roles);
   const canTextile = isTextileDomainOwner(session.roles);
+  const canCnc = isCncDomainOwner(session.roles);
+  const canReception = isReceptionist(session.roles);
+  const canFinance = isFinanceOfficer(session.roles);
+  const canMultimedia = isMultimediaOfficer(session.roles);
+  const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
+  const mayCreateSubmission = canCreateSubmission(session.roles);
+  const reception = (Page) => (canReception
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="The Reception screens are only available to reception staff." />);
+  const cnc = (Page) => (canCnc
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="CNC & Carpentry is only available to the CNC & Carpentry domain owner." />);
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
+  const finance = (Page) => (canFinance
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />);
+  const multimedia = (Page) => (canMultimedia
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Multimedia screens are only available to the Multimedia officer." />);
+  const submitter = (Page) => (session.roles.includes('ROLE_SUBMITTER')
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="This page is for submitter accounts." />);
+  const canTelecoms = isTelecomsDomainOwner(session.roles) || isAdministrator;
+  const telecoms = (Page) => (canTelecoms
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
+
+  const isTelecoms = isTelecomsDomainOwner(session.roles);
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
-          {TEXTILE_ONLY ? null : <>
+          {isTelecoms ? (
+            <>
+              {/* Telecoms Operations (Domain 6: Assignment 11) - Only Telecoms screens */}
+              <Route path="/" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/overview" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms" element={<Navigate to="/telecoms/requests" replace />} />
+              <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+              <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+              <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+              <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+              <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+              <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+              <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+              <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+              <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+              <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+              <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
+              <Route path="*" element={<Navigate to="/telecoms/requests" replace />} />
+            </>
+          ) : (
+            <>
+              {TEXTILE_ONLY ? null : <>
+          <Route path="/" element={
+            getRoleLandingPath(session.roles) === '/'
+              ? <LiveDashboard token={session.accessToken} roles={session.roles} subject={session.subject} onUnauthorized={onLogout} />
+              : <Navigate to={getRoleLandingPath(session.roles)} replace />
+          } />
+          <Route path="/reports-analytics" element={isAdministrator ? <ReportsAnalyticsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Reports & Analytics is only available to administrators." />} />
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
-          <Route path="/" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/overview" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance" element={<FinanceOverviewPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/training" element={<TrainingMentorshipPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/media" element={<MediaServicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/multimedia/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/operations/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/partners" element={<PartnersMousPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/finance/prices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/invoices" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/price-lists" element={<PriceListsInvoicesPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
+          <Route path="/finance" element={finance(FinanceOverviewPage)} />
+          <Route path="/multimedia/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/operations/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/training" element={multimedia(TrainingMentorshipPage)} />
+          <Route path="/multimedia/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/operations/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/multimedia/mentorship" element={multimedia(StudentsFollowedUpPage)} />
+          <Route path="/multimedia/equipment" element={multimedia(MultimediaEquipmentListPage)} />
+          <Route path="/multimedia/equipment/report-fault" element={multimedia(MultimediaReportFaultPage)} />
+          <Route path="/multimedia/equipment/lending" element={multimedia(MultimediaEquipmentLendingPage)} />
+          <Route path="/multimedia/podcast" element={multimedia(PodcastBookingPage)} />
+          <Route path="/multimedia/contracts" element={multimedia(ContractsPage)} />
+          <Route path="/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/multimedia/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/operations/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/finance/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/finance/invoices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/finance/prices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/invoices" element={finance(PriceListsInvoicesPage)} />
+          <Route path="/price-lists" element={finance(PriceListsInvoicesPage)} />
 
           {/* Submissions & Queues */}
-          <Route path="/submissions" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
-          <Route path="/submissions/student" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" />} />
-          <Route path="/submissions/general" element={<LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" />} />
+          <Route path="/submissions" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
+          <Route path="/submissions/student" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="student" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
+          <Route path="/submissions/general" element={isAdministrator ? <LiveSubmissions token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} fixedCategory="general" /> : <AccessRestricted label="The cross-domain submissions list is only available to administrators." />} />
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
+          <Route path="/my-submissions/service-requests" element={submitter(SubmitterServiceRequestsPage)} />
+          <Route path="/my-submissions/invoices" element={submitter(SubmitterInvoicesPage)} />
+          <Route path="/my-submissions/bookings" element={submitter(SubmitterBookingsPage)} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
-          <Route path="/submissions/new" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot create submissions." />} />
-          <Route path="/submissions/new/confirmation" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <BriefSubmittedPage /> : <AccessRestricted label="Your account cannot create submissions." />} />
+          <Route path="/rules/manager" element={isAdministrator ? <RulesManagerPage token={session.accessToken} /> : <AccessRestricted label="The department rules manager is only available to administrators." />} />
+          <Route path="/submissions/new" element={mayCreateSubmission ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
+          <Route path="/submissions/new/confirmation" element={mayCreateSubmission ? <BriefSubmittedPage isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
           <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
+          {/* Reception (Assignment 3 - Peter Arnold Mukasa) */}
+          <Route path="/reception/home" element={reception(ReceptionHomePage)} />
+          <Route path="/reception/briefs/:id" element={reception(BriefCheckPage)} />
+          <Route path="/reception/missing-documents" element={reception(MissingDocumentsPage)} />
+          <Route path="/reception/walk-in" element={reception(WalkInSubmissionPage)} />
+          <Route path="/reception/walk-in/confirmation" element={canReception ? <WalkInSubmittedPage staffName={session.subject} /> : <AccessRestricted label="The Reception screens are only available to reception staff." />} />
           <Route path="/fact-finding" element={canFactFind ? <FactFindingOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/queue" element={canFactFind ? <FactFindingWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/fact-finding/cases/:id" element={canFactFind ? <FactFindingCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
@@ -135,8 +259,24 @@ function AuthenticatedApp({
           <Route path="/fact-finding/department/:id" element={canFactFind ? <DepartmentResponsePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Fact-finding is only available to fact-finding officers." />} />
           <Route path="/reviewer" element={canReview ? <ReviewerOverview token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           <Route path="/reviewer/workspace" element={canReview ? <ReviewerWorkspace token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
+          <Route path="/coordinator" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id" element={canCoordinate ? <CoordinatorBriefPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/decision" element={canCoordinate ? <CoordinatorDecisionPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/improvements" element={canCoordinate ? <CoordinatorImprovementsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/changes" element={canCoordinate ? <CoordinatorChangesPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
+          <Route path="/coordinator/briefs/:id/versions" element={canCoordinate ? <CoordinatorVersionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label={COORDINATOR_ONLY_REASON} />} />
           <Route path="/reviewer/cases/:id" element={canReview ? <ReviewerCaseFile token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="The reviewer workspace is only available to reviewers." />} />
           </>}
+          {/* CNC & Carpentry (Assignment 10) */}
+          <Route path="/cnc" element={<Navigate to="/cnc/board" replace />} />
+          <Route path="/cnc/jobs/new" element={cnc(CncNewJobPage)} />
+          <Route path="/cnc/review" element={cnc(CncDesignCheckPage)} />
+          <Route path="/cnc/board" element={cnc(CncJobBoardPage)} />
+          <Route path="/cnc/jobs/:id" element={cnc(CncJobPage)} />
+          <Route path="/cnc/machines" element={cnc(CncMachineListPage)} />
+          <Route path="/cnc/machines/book" element={cnc(CncMachineBookingPage)} />
+          <Route path="/cnc/safety" element={cnc(CncSafetyCoursePage)} />
+          <Route path="/cnc/stock" element={cnc(CncStockListPage)} />
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />
           <Route path="/textile/board" element={textile(OrderBoardPage)} />
@@ -147,11 +287,25 @@ function AuthenticatedApp({
           <Route path="/textile/machines" element={textile(MachineListPage)} />
           <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
           <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
+          {/* Telecoms Operations (Domain 6: Assignment 11) */}
+          <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
+          <Route path="/telecoms/review" element={telecoms(RequestReviewPage)} />
+          <Route path="/telecoms/board" element={telecoms(RequestBoardPage)} />
+          <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
+          <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
+          <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
+          <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
+          <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+          <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
+          <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
+          <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
           {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
             <Route key={href} path={href} element={<OtherModulePage title={label} />} />
           ))}
           {TEXTILE_ONLY && <Route path="*" element={<Navigate to={TEXTILE_HOME} replace />} />}
           {!TEXTILE_ONLY && <Route path="*" element={<div className="live-panel not-found-live"><p className="eyebrow">404 · NOT FOUND</p><h1>This page isn't in the workspace.</h1><a className="btn btn-primary" href="/">Return to overview</a></div>} />}
+            </>
+          )}
         </Routes>
       </BackendWorkspace>
       </BrowserRouter>
@@ -165,9 +319,18 @@ function App() {
     // In textile-only mode a saved non-textile session would only ever see
     // "access restricted", so drop it and sign in as the textile owner instead.
     if (TEXTILE_ONLY && saved && !isTextileDomainOwner(saved.roles)) return null;
-    return saved || DEFAULT_COORDINATOR_SESSION;
+    return saved;
   });
   const [health, setHealth] = useState('checking');
+  const [showSignUp, setShowSignUp] = useState(false);
+
+  useEffect(() => {
+    const handleSessionRefreshed = (event) => {
+      if (event.detail?.accessToken) setSession(event.detail);
+    };
+    window.addEventListener('unipod:session-refreshed', handleSessionRefreshed);
+    return () => window.removeEventListener('unipod:session-refreshed', handleSessionRefreshed);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -198,11 +361,16 @@ function App() {
 
   const logout = useCallback(() => {
     clearSession();
-    setSession(DEFAULT_COORDINATOR_SESSION);
+    setSession(null);
   }, []);
 
   const acceptSession = useCallback((nextSession) => {
     saveSession(nextSession);
+    // The browser URL may still be wherever a previous session left it (a
+    // stale path from before this session started, or from browser
+    // history). Reset it to "/" so the fresh AuthenticatedApp always starts
+    // from the role-based landing redirect below, not mid-route.
+    window.history.replaceState(null, '', '/');
     setSession(nextSession);
   }, []);
 
@@ -219,7 +387,9 @@ function App() {
     };
   }, [session, acceptSession]);
 
-  if (!session) return TEXTILE_ONLY ? null : <LoginPage onLogin={acceptSession} />;
+  if (!session && TEXTILE_ONLY) return null;
+  if (!session && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} onLogin={acceptSession} />;
+  if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={() => setShowSignUp(true)} />;
   return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
 }
 

@@ -70,7 +70,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.js'],
+    setupFiles: ['./src/test/setup.js', './src/test/multipart-shim.js'],
     css: false,
   },
 });

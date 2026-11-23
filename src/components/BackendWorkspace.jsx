@@ -1,36 +1,38 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, Boxes, Building2, CalendarDays, CheckCheck, ChevronDown, ChevronLeft,
-  CircleHelp, ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  List, LogOut, Menu, Moon, Receipt, Search, Settings2, Sun, TriangleAlert, Upload, Users, Video,
-  Workflow, Wrench, X,
+  ArrowLeftRight, Bell, Boxes, CalendarDays, CheckCheck, ChevronDown,
+  ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
+  List, LogOut, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { stageCount, TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { displayRole } from '@/lib/auth';
-import { isTextileDomainOwner } from '@/lib/permissions';
+import { canCreateSubmission, displayRole, SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import {
+  isFactFindingOfficer,
+  isFinanceOfficer,
+  isMultimediaOfficer,
+  isReceptionist,
+  isInnovationCoordinator,
+  isReviewer,
+  isTelecomsDomainOwner,
+  isTextileDomainOwner,
+  isCncDomainOwner,
+} from '@/lib/permissions';
 import { useTheme } from '@/hooks/useTheme';
-import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
+import { Toaster } from '@/components/ui/sonner';
+import {
+  notificationKeys,
+  useNotifications,
+  useUnreadNotificationCount,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+} from '@/hooks/useNotifications';
+import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
 import { formatDate } from '@/lib/presentation';
-
-function buildNavigation(roles) {
-  const items = [
-    { label: 'Overview', href: '/', icon: LayoutDashboard },
-    { label: 'Submissions', href: '/submissions', icon: Boxes },
-  ];
-  if (isFactFindingOfficer(roles)) {
-    items.push({ label: 'Fact-Finding Overview', href: '/fact-finding', icon: ClipboardList });
-    items.push({ label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList });
-    items.push({ label: 'Department queue', href: '/fact-finding/department', icon: ClipboardList });
-  }
-  if (isReviewer(roles)) {
-    items.push({ label: 'Reviewer Overview', href: '/reviewer', icon: Users });
-    items.push({ label: 'Review Workspace', href: '/reviewer/workspace', icon: Users });
-  }
-  return items;
-}
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
@@ -48,10 +50,34 @@ function buildTextileNavigation(roles) {
   ];
 }
 
+/** Telecoms Operations section (Assignment 11: service requests, lab booking, equipment lending, bootcamps, stock). */
+function buildTelecomsNavigation(roles) {
+  if (!isTelecomsDomainOwner(roles) && !roles.includes('ROLE_ADMINISTRATOR')) return [];
+  return [
+    { label: 'New Request', href: '/telecoms/requests/new', icon: Upload },
+    { label: 'Review & Quote', href: '/telecoms/review', icon: ClipboardList },
+    { label: 'Request Board', href: '/telecoms/board', icon: LayoutGrid },
+    { label: 'Requests', href: '/telecoms/requests', icon: FileText },
+    { label: 'Lab Booking', href: '/telecoms/lab-booking', icon: CalendarDays },
+    { label: 'Equipment Register', href: '/telecoms/equipment', icon: List },
+    { label: 'Equipment Lending', href: '/telecoms/equipment/lending', icon: ArrowLeftRight },
+    { label: 'Bootcamps & Training', href: '/telecoms/bootcamps', icon: Users },
+    { label: 'Stock List', href: '/telecoms/stock', icon: Boxes },
+    { label: 'Add/Use Stock', href: '/telecoms/stock/movements', icon: ArrowLeftRight },
+  ];
+}
+
 function isActiveLink(href, location) {
+  if (href === '/my-submissions' || href.startsWith('/my-submissions/')) return location === href;
   if (location === href) return true;
   if (href === '/overview' && location === '/') return true;
   if (href === '/textile/orders' && location.startsWith('/textile/orders/') && location !== '/textile/orders/new') return true;
+  if (href === '/telecoms/requests' && location.startsWith('/telecoms/requests/') && location !== '/telecoms/requests/new') return true;
+  if (href === '/telecoms/equipment') return location === '/telecoms/equipment';
+  if (href === '/telecoms/stock') return location === '/telecoms/stock';
+  if (href === '/multimedia/equipment') return location === '/multimedia/equipment';
+  if (href === '/cnc/machines') return location === '/cnc/machines';
+  if (href === '/cnc/board' && location.startsWith('/cnc/jobs/') && location !== '/cnc/jobs/new') return true;
   if (href !== '/' && href !== '/submissions' && location.startsWith(href)) return true;
   return false;
 }
@@ -65,6 +91,7 @@ export function BackendWorkspace({
 }) {
   const { pathname: location } = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openPopover, setOpenPopover] = useState(null);
@@ -75,80 +102,149 @@ export function BackendWorkspace({
   const [searchLoading, setSearchLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const isFinanceRoute = location.includes('/overview') || location.includes('/finance');
-  const effectiveSubject = isFinanceRoute && session.subject === 'Grace Namuli' ? 'Daniel Kato' : session.subject;
-  const effectiveRoles = isFinanceRoute && session.roles.includes('ROLE_DEPARTMENT_COORDINATOR') ? ['ROLE_FINANCE_OFFICER'] : session.roles;
-
-  const name = effectiveSubject.includes('@') ? effectiveSubject.split('@')[0] : effectiveSubject;
-  const role = effectiveRoles[0] ? displayRole(effectiveRoles[0]) : 'Authenticated user';
+  const name = session.email || session.subject;
+  const role = session.roles[0] ? displayRole(session.roles[0]) : 'Authenticated user';
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
+  const mayCreateSubmission = canCreateSubmission(session.roles);
 
   // Dynamic logic badges derived from live dashboard / pipeline stage counts
   const { data: dashboard } = useQuery({
     queryKey: ['dashboard', 'overview'],
     queryFn: ({ signal }) => backendApi.dashboard(session.accessToken, signal),
     staleTime: 1000 * 30,
+    enabled: isAdministrator || isInnovationCoordinator(session.roles),
   });
 
   const stageCounts = dashboard?.byStage ?? {};
   const receptionBadge = stageCounts.RECEIVED ?? 3;
   const factFindingBadge = stageCounts.FACT_FINDING ?? 2;
   const reviewBadge = stageCounts.UNDER_REVIEW ?? 1;
-  const routingBadge = stageCounts.FORWARDED ?? 1;
-  const refinementBadge = stageCounts.REFINEMENT_REQUESTED ?? 2;
 
   const textileLinks = buildTextileNavigation(session.roles);
+  const telecomsLinks = buildTelecomsNavigation(session.roles);
 
-  const navGroups = [
+  const isTelecoms = isTelecomsDomainOwner(session.roles);
+  const canReview = isReviewer(session.roles);
+  const isFinance = isFinanceOfficer(session.roles);
+  const isMultimedia = isMultimediaOfficer(session.roles);
+
+  const telecomsNavGroups = [
     {
+      heading: 'REQUESTS & PIPELINE',
       items: [
+        { label: 'All Requests', href: '/telecoms/requests', icon: FileText },
+        { label: 'New Request', href: '/telecoms/requests/new', icon: Upload },
+        { label: 'Review & Quote', href: '/telecoms/review', icon: ClipboardList },
+        { label: 'Request Board', href: '/telecoms/board', icon: LayoutGrid },
+      ],
+    },
+    {
+      heading: 'LAB & SKILLING',
+      items: [
+        { label: 'Lab Booking', href: '/telecoms/lab-booking', icon: CalendarDays },
+        { label: 'Bootcamps & Training', href: '/telecoms/bootcamps', icon: Users },
+      ],
+    },
+    {
+      heading: 'EQUIPMENT & STOCK',
+      items: [
+        { label: 'Equipment Register', href: '/telecoms/equipment', icon: List },
+        { label: 'Equipment Lending', href: '/telecoms/equipment/lending', icon: ArrowLeftRight },
+        { label: 'Stock Inventory', href: '/telecoms/stock', icon: Boxes },
+        { label: 'Add / Use Stock', href: '/telecoms/stock/movements', icon: ArrowLeftRight },
+      ],
+    },
+  ];
+
+  const standardNavGroups = [
+    ...(isAdministrator ? [{
+      heading: 'MANAGEMENT',
+      items: [
+        { label: 'Overview', href: '/', icon: LayoutDashboard },
+        { label: 'Reports & Analytics', href: '/reports-analytics', icon: Grid2x2 },
         { label: 'All Submissions', href: '/submissions', icon: Boxes },
         { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
-        ...(isSubmitter ? [{ label: 'My Submissions', href: '/my-submissions', icon: Boxes }] : []),
+        { label: 'Settings', href: '/management', icon: Settings2 },
+        { label: 'Department Rules', href: '/rules/manager', icon: FileText },
       ],
-    },
+    }] : []),
+    ...(isSubmitter ? [{
+      heading: 'MY WORKSPACE',
+      items: [
+        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
+      ],
+    }] : []),
     {
       heading: 'INNOVATION PIPELINE',
       items: [
-        { label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge },
-        { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
-        { label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge },
-        { label: 'Routing & IP', href: '/routing', icon: ArrowUpRight, badge: routingBadge },
-        { label: 'Refinement', href: '/refinement', icon: Workflow, badge: refinementBadge },
+        ...(session.roles.some((r) => SUBMISSION_INTAKE_ROLES.includes(r))
+          ? [{ label: 'Reception', href: '/reception', icon: Workflow, badge: receptionBadge }]
+          : []),
+        ...(isReceptionist(session.roles) ? [
+          { label: 'Reception Home', href: '/reception/home', icon: ClipboardList },
+          { label: 'Missing Documents', href: '/reception/missing-documents', icon: FileText },
+          { label: 'Walk-in Submission', href: '/reception/walk-in', icon: Plus },
+        ] : []),
+        ...(isFactFindingOfficer(session.roles) ? [
+          { label: 'Fact-Finding', href: '/fact-finding/queue', icon: ClipboardList, badge: factFindingBadge },
+          { label: 'Department Queue', href: '/fact-finding/department', icon: ClipboardList },
+        ] : []),
+        ...(canReview ? [{ label: 'Reviews', href: '/reviewer/workspace', icon: Users, badge: reviewBadge }] : []),
+        ...(isInnovationCoordinator(session.roles) ? [
+          { label: 'Coordinator Briefs', href: '/coordinator', icon: Workflow },
+          { label: 'Ideas Being Improved', href: '/coordinator/improvements', icon: ArrowLeftRight },
+        ] : []),
       ],
     },
-    {
-      heading: 'OPERATIONS',
+    ...(isMultimedia ? [{
+      heading: 'MULTIMEDIA OPERATIONS',
       items: [
-        { label: 'Facilities & Bookings', href: '/operations/facilities', icon: Building2 },
-        { label: 'Assets & Equipment', href: '/operations/assets', icon: Wrench },
         { label: 'Training & Mentorship', href: '/multimedia/training', icon: GraduationCap },
         { label: 'Media Services', href: '/multimedia/media', icon: Video },
+        { label: 'Students Followed Up', href: '/multimedia/mentorship', icon: Users },
+        { label: 'Book a Podcast Slot', href: '/multimedia/podcast', icon: CalendarDays },
+        { label: 'Equipment Register', href: '/multimedia/equipment', icon: List },
+        { label: 'Take Equipment Out', href: '/multimedia/equipment/lending', icon: ArrowLeftRight },
+        { label: 'Event Contracts', href: '/multimedia/contracts', icon: Handshake },
       ],
-    },
+    }] : []),
     ...(textileLinks.length > 0 ? [{
       heading: 'TEXTILE OPERATIONS',
       items: textileLinks,
     }] : []),
-    {
+    ...(isCncDomainOwner(session.roles) ? [{
+      heading: 'CNC & CARPENTRY OPERATIONS',
+      items: [
+        { label: 'New Job', href: '/cnc/jobs/new', icon: Upload },
+        { label: 'Design Check & Quote', href: '/cnc/review', icon: ClipboardList },
+        { label: 'Job Board', href: '/cnc/board', icon: LayoutGrid },
+        { label: 'Book a Machine', href: '/cnc/machines/book', icon: CalendarDays },
+        { label: 'Machine List', href: '/cnc/machines', icon: Cog },
+        { label: 'Safety Course', href: '/cnc/safety', icon: ShieldCheck },
+        { label: 'Stock List', href: '/cnc/stock', icon: Boxes },
+      ],
+    }] : []),
+    ...(telecomsLinks.length > 0 ? [{
+      heading: 'TELECOMS OPERATIONS',
+      items: telecomsLinks,
+    }] : []),
+    ...(isFinance ? [{
       heading: 'FINANCE & PARTNERS',
       items: [
         { label: 'Price Lists & Invoices', href: '/finance/invoices', icon: Receipt },
         { label: 'Partners & MOUs', href: '/partners', icon: Handshake },
       ],
-    },
-    {
-      heading: 'MANAGEMENT',
-      items: [
-        { label: 'Overview', href: '/overview', icon: LayoutDashboard },
-        { label: 'Reports & Analytics', href: '/reports', icon: BarChart3 },
-        { label: 'Activity History', href: '/activity', icon: Activity },
-        ...(isAdministrator ? [{ label: 'Settings', href: '/management', icon: Settings2 }] : []),
-      ],
-    },
+    }] : []),
   ];
+
+  const navGroups = isTelecoms
+    ? telecomsNavGroups
+    : standardNavGroups.filter((group) => group.items.length > 0);
 
   const textileNavSections = [
     { heading: 'WORKSPACE', links: TEXTILE_MODE_WORKSPACE_LINKS },
@@ -206,19 +302,51 @@ export function BackendWorkspace({
   }, [searchOpen, searchQuery, session.accessToken, onLogout]);
 
   const notificationsQuery = useNotifications(session.accessToken);
+  const unreadCountQuery = useUnreadNotificationCount(session.accessToken);
   const markAllRead = useMarkAllNotificationsRead(session.accessToken);
+  const markRead = useMarkNotificationRead(session.accessToken);
+  const browserPush = useBrowserPushNotifications(session.accessToken);
   const notificationItems = notificationsQuery.data ?? [];
-  const hasUnread = notificationItems.some((item) => !item.read);
+  const unreadCount = unreadCountQuery.data
+    ?? notificationItems.filter((item) => !item.read).length;
+  const hasUnread = unreadCount > 0;
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+    const handlePushMessage = (event) => {
+      const notification = event.data?.notification;
+      if (event.data?.type !== 'PUSH_NOTIFICATION' || !notification) return;
+
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.list(session.accessToken) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount(session.accessToken) });
+    };
+    navigator.serviceWorker.addEventListener('message', handlePushMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+  }, [queryClient, session.accessToken]);
 
   const togglePopover = (name) => setOpenPopover((current) => (current === name ? null : name));
 
   return (
-    <div className={`live-shell ${textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''}`}>
+    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
-          <Link to={textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
-            <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
-            <span><b>UNIPOD ERP</b><small style={{ color: 'var(--sidebar-muted)' }}>Innovation & Operations</small></span>
+          <Link to={isTelecoms ? '/telecoms/requests' : textileOnly ? '/textile/board' : '/'} className="live-brand-link" onClick={() => setMobileOpen(false)}>
+            {isTelecoms ? (
+              <>
+                <div className="brand-mark" aria-hidden="true" style={{ background: '#d7ef67' }}><span /><span /><span /><span /></div>
+                <span><b>TELECOMS ERP</b><small style={{ color: '#9db2a2' }}>RF & IoT Operations</small></span>
+              </>
+            ) : textileOnly ? (
+              <>
+                <span className="tx-brand-mark" aria-hidden="true"><Grid2x2 size={18} strokeWidth={2.4} /></span>
+                <span><b>MUTIC ERP</b><small>Textile Operations</small></span>
+              </>
+            ) : (
+              <>
+                <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
+                <span><b>MUTIC ERP</b><small>Makerere Innovation Center</small></span>
+              </>
+            )}
           </Link>
           <button
             type="button"
@@ -226,19 +354,19 @@ export function BackendWorkspace({
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            style={{
-              marginLeft: 'auto',
-              width: 26,
-              height: 26,
-              borderRadius: 7,
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              background: 'rgba(0, 0, 0, 0.2)',
-              color: '#d6dfd7',
-              display: 'grid',
-              placeItems: 'center',
-            }}
+            aria-expanded={!collapsed}
           >
-            <ChevronLeft size={13} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+          </button>
+          <button
+            type="button"
+            className="mobile-edge-nav-toggle"
+            onClick={() => setMobileOpen((value) => !value)}
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            title={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
           </button>
         </div>
 
@@ -265,116 +393,81 @@ export function BackendWorkspace({
             ))}
           </nav>
         ) : (
-          <nav className="live-nav" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: '1 1 auto', overflowY: 'auto' }}>
+          <nav className="live-nav" aria-label="Main navigation">
             {navGroups.map((group, groupIdx) => (
-              <div key={groupIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {group.heading && !collapsed && (
-                  <p className="live-nav-heading" style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--sidebar-muted)', padding: '0 11px 5px', margin: 0 }}>
-                    {group.heading}
-                  </p>
+              <div key={groupIdx} className="live-nav-section">
+                {group.heading && (
+                  <p className={`live-nav-heading ${groupIdx > 0 ? 'live-nav-subheading' : ''}`}>{group.heading}</p>
                 )}
-                {group.items.map(({ label, href, icon: Icon, badge }) => {
-                  const isActive = isActiveLink(href, location);
-                  return (
-                    <Link
-                      key={href}
-                      to={href}
-                      title={collapsed ? label : undefined}
-                      onClick={() => setMobileOpen(false)}
-                      className={`live-nav-link ${isActive ? 'active' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: collapsed ? 'center' : 'space-between',
-                        padding: '0 11px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                        <Icon size={16} style={{ flexShrink: 0 }} />
-                        {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
-                      </div>
-                      {!collapsed && badge !== undefined && badge > 0 && (
-                        <span
-                          style={{
-                            background: '#d9f27a',
-                            color: '#21422f',
-                            borderRadius: '10px',
-                            padding: '1px 6px',
-                            fontSize: '9px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            marginLeft: 'auto',
-                          }}
-                        >
-                          {badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+                {group.items.map(({ label, href, icon: Icon, badge }) => (
+                  <Link
+                    key={href}
+                    to={href}
+                    title={collapsed ? label : undefined}
+                    onClick={() => setMobileOpen(false)}
+                    className={`live-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+                  >
+                    <Icon size={16} /><span>{label}</span>
+                    {badge !== undefined && badge > 0 && (
+                      <em className="live-nav-count" aria-label={`${badge} waiting`}>{badge}</em>
+                    )}
+                  </Link>
+                ))}
               </div>
             ))}
           </nav>
         )}
 
         {!collapsed && (
-          <div
-            style={{
-              margin: '12px 4px',
-              padding: '10px 12px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.09)',
-              borderRadius: '7px',
-              color: '#d6dfd7',
-              fontSize: '10px',
-              fontWeight: 700,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d7ef67', display: 'inline-block' }} />
-              <span>Demonstration workspace</span>
-            </div>
-            <small style={{ display: 'block', fontSize: '9px', color: '#9db2a2', marginTop: '3px', fontWeight: 500 }}>
-              Role-based prototype · sample data
-            </small>
+          <div className="live-sidebar-notice">
+            <div><span className="dot" /><span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span></div>
+            <small>{isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}</small>
           </div>
         )}
 
-        <div className="live-profile" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 6px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
-            <span className="avatar" style={{ background: '#d7ef67', color: '#17241b', fontWeight: 800 }}>
-              {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
-            </span>
-            <span className="live-profile-copy" style={{ minWidth: 0 }}>
-              <b style={{ color: '#fff', fontSize: '13px', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
-              <small style={{ color: '#9db2a2', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                {role}
-                <ChevronDown size={11} style={{ opacity: 0.7 }} />
-              </small>
-            </span>
-          </div>
-          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out" style={{ color: '#c6d4c9' }}>
+        <div className="live-profile">
+          <span className="avatar">
+            {name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+          </span>
+          <span className="live-profile-copy">
+            <b>{name}</b>
+            <small>{role}{!collapsed && <ChevronDown size={11} style={{ opacity: 0.7 }} />}</small>
+          </span>
+          <button className="icon-button" onClick={onLogout} aria-label="Sign out" title="Sign out">
             <LogOut size={16} />
           </button>
         </div>
       </aside>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
-        <header className="live-topbar" style={{ borderBottom: '1px solid #e2e6dc' }}>
-          <button className="icon-button mobile-nav-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
+        <header className="live-topbar">
           <div className="live-breadcrumb">
-            <span>Workspace</span>
-            <i style={{ fontStyle: 'normal', margin: '0 6px', color: '#889186' }}>‹</i>
-            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? 'Register submission' : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
+            <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
+            <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
             <button className="global-search-trigger" onClick={() => setSearchOpen(true)} aria-label="Search cases (Ctrl+K)">
-              <Search size={14} /><span>Search submissions…</span><kbd>⌘K</kbd>
+              <Search size={14} /><span>{isTelecoms ? 'Search requests & equipment…' : 'Search submissions…'}</span><kbd>⌘K</kbd>
             </button>
+            {isTelecomsDomainOwner(session.roles) ? (
+              <Link to="/telecoms/requests/new" className="btn btn-primary topbar-action-btn">
+                <span>New request</span> <Plus size={15} />
+              </Link>
+            ) : null}
+            <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
             <div className="top-pop-wrap">
-              <button className="top-circle-btn notification-btn" onClick={() => togglePopover('notifications')} aria-label="Notifications">
+              <button
+                className="top-circle-btn notification-btn"
+                onClick={() => togglePopover('notifications')}
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              >
                 <Bell size={15} />
-                {hasUnread && <span className="notification-mark" />}
+                {hasUnread && (
+                  <span className="notification-count" aria-hidden="true">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {openPopover === 'notifications' && (
                 <div className="notification-popover">
@@ -384,24 +477,87 @@ export function BackendWorkspace({
                       <CheckCheck size={12} /> Mark all read
                     </button>
                   </div>
+                  <div className="notification-push">
+                    <div className="notification-push-copy">
+                      <b>Browser push</b>
+                      <small>
+                        {browserPush.loading
+                          ? 'Checking push availability…'
+                          : !browserPush.supported
+                            ? 'Background push is not supported in this browser.'
+                            : !browserPush.enabled
+                              ? 'Push alerts are not configured on the server.'
+                              : browserPush.permission === 'denied'
+                                ? 'Blocked in browser site settings.'
+                                : browserPush.subscribed
+                                  ? 'Enabled on this browser.'
+                                  : 'Opt in to alerts when the app is closed.'}
+                      </small>
+                    </div>
+                    {browserPush.enabled && browserPush.supported && browserPush.permission !== 'denied' && (
+                      <button
+                        type="button"
+                        className="notification-push-toggle"
+                        disabled={browserPush.working || browserPush.loading}
+                        onClick={async () => {
+                          const wasSubscribed = browserPush.subscribed;
+                          const succeeded = wasSubscribed
+                            ? await browserPush.disable()
+                            : await browserPush.enable();
+                          if (succeeded) {
+                            toast.success(wasSubscribed
+                              ? 'Browser push disabled'
+                              : 'Browser push enabled');
+                          }
+                        }}
+                      >
+                        {browserPush.working
+                          ? 'Updating…'
+                          : browserPush.subscribed
+                            ? 'Turn off'
+                            : 'Enable'}
+                      </button>
+                    )}
+                    {browserPush.error && <p role="alert">{browserPush.error}</p>}
+                    <small className="notification-push-privacy">
+                      Push alerts may appear when you are signed out.
+                    </small>
+                  </div>
                   <div className="notification-list">
                     {notificationsQuery.isLoading ? (
                       <p>Loading…</p>
-                    ) : notificationsQuery.isError ? (
-                      <p>Notifications aren't available for this account yet.</p>
+                    ) : notificationsQuery.isError || unreadCountQuery.isError ? (
+                      <p role="alert">
+                        Notifications could not be loaded.
+                        <button
+                          type="button"
+                          onClick={() => {
+                            notificationsQuery.refetch();
+                            unreadCountQuery.refetch();
+                          }}
+                        >
+                          Retry
+                        </button>
+                      </p>
                     ) : notificationItems.length ? (
                       notificationItems.map((item) => (
                         <Link
                           key={item.id}
                           to={item.link}
                           className={`notification-item ${item.read ? '' : 'unread'}`}
-                          onClick={() => setOpenPopover(null)}
+                          onClick={() => {
+                            if (!item.read) markRead.mutate(item.id);
+                            setOpenPopover(null);
+                          }}
                         >
                           <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
                         </Link>
                       ))
                     ) : (
                       <p>No notifications yet.</p>
+                    )}
+                    {(markRead.isError || markAllRead.isError || unreadCountQuery.isError) && (
+                      <p role="alert">The notification status could not be updated or loaded.</p>
                     )}
                   </div>
                 </div>
@@ -410,31 +566,20 @@ export function BackendWorkspace({
             <button className="top-circle-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <div className="top-pop-wrap">
-              <button className="top-circle-btn" onClick={() => togglePopover('help')} aria-label="Help"><CircleHelp size={16} /></button>
-              {openPopover === 'help' && (
-                <div className="top-popover">
-                  <b>Workspace guide</b>
-                  <p>Stages are a flexible guide; exact roles and destinations remain configurable with the backend team.</p>
-                  <a href="https://backend-unipod.onrender.com/api/actuator/health" target="_blank" rel="noreferrer" onClick={() => setOpenPopover(null)}>
-                    Check backend health <ArrowUpRight size={13} />
-                  </a>
-                </div>
-              )}
-            </div>
-            <Link
-              to="/submissions/new"
-              className="top-register"
-              style={{ borderRadius: '9999px' }}
-              data-testid="link-register-top"
-            >
-              <span>Register submission</span>
-              <span className="register-plus">+</span>
-            </Link>
+            {mayCreateSubmission && !isTelecoms && (
+              <Link
+                to="/submissions/new"
+                className="top-register"
+                data-testid="link-register-top"
+              >
+                <span>{isSubmitter ? 'Submit an idea' : 'Register submission'}</span>
+                <span className="register-plus">+</span>
+              </Link>
+            )}
           </div>
         </header>
         <main className="live-content">{children}</main>
-        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span><Activity size={12} /> Live data from the backend</span></footer>
+        <footer className="live-footer"><span>MUTIC ERP <i>·</i> MAKERERE UNIVERSITY</span><span></span></footer>
       </div>
       {searchOpen && <div className="case-search-overlay" onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -492,6 +637,7 @@ export function BackendWorkspace({
           </div>
         </section>
       </div>}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

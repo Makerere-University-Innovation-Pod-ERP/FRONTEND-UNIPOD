@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { CircleAlert, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
+import { canCreateSubmission } from '@/lib/auth';
 import { SubmissionRows } from '@/components/SubmissionRows';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function LiveSubmissions({
   token,
@@ -62,21 +63,43 @@ export function LiveSubmissions({
   return (
     <div className="live-page page-enter">
       <div className="live-page-heading">
-        <div><p className="eyebrow">WORKSPACE · CASE REGISTER</p><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
-        {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
+        <div><h1>{fixedCategory === 'student' ? 'Student projects' : fixedCategory === 'general' ? 'General innovations' : 'Submissions'}</h1><p>Search and review cases visible to your account.</p></div>
+        {canCreateSubmission(roles) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
       </div>
       <section className="live-panel">
         <form className="submission-filters" onSubmit={submitSearch}>
           <label className="live-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title…" aria-label="Search submissions" /></label>
-          {!fixedCategory && <select aria-label="Filter by category" value={category} onChange={(event) => { setError(''); setLoading(true); setPage(0); setCategory(event.target.value); }}>
-            <option value="">All categories</option><option value="student">Student projects</option><option value="general">General innovations</option>
-          </select>}
-          <select aria-label="Filter by stage" value={stage} onChange={(event) => { setError(''); setLoading(true); setPage(0); setStage(event.target.value); }}>
-            <option value="">All stages</option>{['DRAFT','RECEIVED','REGISTERED','FACT_FINDING','UNDER_REVIEW','REFINEMENT_REQUESTED','FURTHER_HANDLING','FORWARDED','IN_PROGRESS','COMPLETED'].map((value) => <option value={value} key={value}>{value.replaceAll('_', ' ')}</option>)}
-          </select>
-          <select aria-label="Filter by sector" value={sector} onChange={(event) => { setError(''); setLoading(true); setPage(0); setSector(event.target.value); }}>
-            <option value="">All sectors</option>{sectors.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
-          </select>
+          {!fixedCategory && (
+            <Select value={category || '__all__'} onValueChange={(value) => { setError(''); setLoading(true); setPage(0); setCategory(value === '__all__' ? '' : value); }}>
+              <SelectTrigger aria-label="Filter by category" className="submission-filter-select-trigger">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent className="submission-filter-select-content" sideOffset={6}>
+                <SelectItem value="__all__">All categories</SelectItem>
+                <SelectItem value="student">Student projects</SelectItem>
+                <SelectItem value="general">General innovations</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={stage || '__all__'} onValueChange={(value) => { setError(''); setLoading(true); setPage(0); setStage(value === '__all__' ? '' : value); }}>
+            <SelectTrigger aria-label="Filter by stage" className="submission-filter-select-trigger">
+              <SelectValue placeholder="All stages" />
+            </SelectTrigger>
+            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+              <SelectItem value="__all__">All stages</SelectItem>
+              {['DRAFT', 'RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'REFINEMENT_REQUESTED', 'FURTHER_HANDLING', 'FORWARDED', 'IN_PROGRESS', 'COMPLETED']
+                .map((value) => <SelectItem value={value} key={value}>{value.replaceAll('_', ' ')}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sector || '__all__'} onValueChange={(value) => { setError(''); setLoading(true); setPage(0); setSector(value === '__all__' ? '' : value); }}>
+            <SelectTrigger aria-label="Filter by sector" className="submission-filter-select-trigger">
+              <SelectValue placeholder="All sectors" />
+            </SelectTrigger>
+            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+              <SelectItem value="__all__">All sectors</SelectItem>
+              {sectors.map((item) => <SelectItem value={item.id} key={item.id}>{item.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <button className="btn btn-outline" type="submit">Search</button>
         </form>
         {sectorError && <div className="api-error api-error-banner" role="alert">{sectorError}</div>}

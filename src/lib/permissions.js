@@ -1,6 +1,12 @@
 export const ROLE_FACT_FINDING_OFFICER = 'ROLE_FACT_FINDING_OFFICER';
 export const ROLE_REVIEWER = 'ROLE_REVIEWER';
+export const ROLE_INNOVATION_COORDINATOR = 'ROLE_INNOVATION_COORDINATOR';
 export const ROLE_TEXTILE_DOMAIN_OWNER = 'ROLE_TEXTILE_DOMAIN_OWNER';
+export const ROLE_TELECOMS_DOMAIN_OWNER = 'ROLE_TELECOMS_DOMAIN_OWNER';
+export const ROLE_RECEPTIONIST = 'ROLE_RECEPTIONIST';
+export const ROLE_FINANCE_OFFICER = 'ROLE_FINANCE_OFFICER';
+export const ROLE_MULTIMEDIA_OFFICER = 'ROLE_MULTIMEDIA_OFFICER';
+export const ROLE_CNC_DOMAIN_OWNER = 'ROLE_CNC_DOMAIN_OWNER';
 
 export function isFactFindingOfficer(roles) {
   return roles.includes(ROLE_FACT_FINDING_OFFICER);
@@ -15,6 +21,24 @@ export function isTextileDomainOwner(roles) {
   return roles.includes(ROLE_TEXTILE_DOMAIN_OWNER);
 }
 
+/** Telecoms Operations (service requests, lab booking, equipment lending, bootcamps, stock). */
+export function isTelecomsDomainOwner(roles) {
+  return roles.includes(ROLE_TELECOMS_DOMAIN_OWNER);
+}
+
+/**
+ * The Innovation Coordinator owns reviewer assignment and the decision
+ * pipeline (Assignment 2) — the counterpart to REVIEWER_CANNOT_ASSIGN_REASON
+ * below. Frontend gating is a usability affordance, never a security
+ * boundary: the backend remains the authorization authority.
+ */
+export function isInnovationCoordinator(roles) {
+  return roles.includes(ROLE_INNOVATION_COORDINATOR);
+}
+
+export const COORDINATOR_ONLY_REASON =
+  'The coordinator workspace is only available to innovation coordinators.';
+
 /**
  * Reviewers can view and decide on their assigned cases but never assign
  * reviewers to a case — that is an Innovation Coordinator / Sector Officer
@@ -23,3 +47,23 @@ export function isTextileDomainOwner(roles) {
  * engineering standard for restricted actions.
  */
 export const REVIEWER_CANNOT_ASSIGN_REASON = 'Reviewers cannot assign reviewers to a case.';
+
+/** Reception screens (Assignment 3): home, check & forward, missing documents. */
+export function isReceptionist(roles) {
+  return roles.includes(ROLE_RECEPTIONIST);
+}
+
+/** Finance & Partners shared modules (Assignment 6): price list, invoices, payment checks, receipts, partners. */
+export function isFinanceOfficer(roles) {
+  return roles.includes(ROLE_FINANCE_OFFICER);
+}
+
+/** Multimedia domain (Assignments 7-8): services, quoting, scheduling, skilling, equipment and contracts. */
+export function isMultimediaOfficer(roles) {
+  return roles.includes(ROLE_MULTIMEDIA_OFFICER);
+}
+
+/** CNC & Carpentry domain (Assignment 10): jobs, design checks, machines, safety course and stock. */
+export function isCncDomainOwner(roles) {
+  return roles.includes(ROLE_CNC_DOMAIN_OWNER) || roles.includes('ROLE_ADMINISTRATOR');
+}

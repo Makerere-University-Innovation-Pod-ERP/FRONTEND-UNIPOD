@@ -25,11 +25,11 @@ export const partnerSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.string(),
-  renewalDate: z.string(),
+  renewalDate: z.string().nullable(),
   status: partnerStatusSchema,
-  contactPerson: z.string().optional(),
-  contactEmail: z.string().optional(),
-  notes: z.string().optional(),
+  contactPerson: z.string().nullable().optional(),
+  contactEmail: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const partnersOverviewSchema = z.object({
@@ -39,6 +39,16 @@ export const partnersOverviewSchema = z.object({
 });
 
 export const partnersApi = {
+  async createPartner(body, token, signal) {
+    const data = await request('/operations/partners', {
+      method: 'POST',
+      body,
+      token,
+      signal,
+    });
+    return partnerSchema.parse(data);
+  },
+
   async getOverview(token, signal) {
     const data = await request('/operations/partners/overview', { token, signal });
     return partnersOverviewSchema.parse(data);
@@ -64,10 +74,10 @@ export const partnersApi = {
     return partnerSchema.parse(data);
   },
 
-  async renewMOU(id, renewalDate, token, signal) {
-    const data = await request(`/operations/partners/${id}/renew`, {
-      method: 'POST',
-      body: { renewalDate },
+  async renewMOU(id, body, token, signal) {
+    const data = await request(`/operations/partners/${id}/mou`, {
+      method: 'PUT',
+      body,
       token,
       signal,
     });

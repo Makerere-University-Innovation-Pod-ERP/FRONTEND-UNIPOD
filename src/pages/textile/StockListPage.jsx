@@ -12,6 +12,11 @@ export function StockListPage({ token, onUnauthorized }) {
   useUnauthorizedRedirect(onUnauthorized, stock.error, movements.error);
   const items = stock.data?.items ?? [];
   const lowCount = items.filter(isLowStock).length;
+  const [query, setQuery] = useState('');
+  const [lowOnly, setLowOnly] = useState(false);
+  const needle = query.trim().toLowerCase();
+  const visibleItems = items.filter((item) =>
+    (!lowOnly || isLowStock(item)) && (!needle || `${item.name} ${item.location}`.toLowerCase().includes(needle)));
 
   return (
     <div className="live-page page-enter">
@@ -27,11 +32,16 @@ export function StockListPage({ token, onUnauthorized }) {
             <article className="live-metric"><p>Movements this week <Activity size={14} /></p><strong>{stock.data?.movementsThisWeek ?? 0}</strong></article>
           </section>
           <section className="live-panel tx-table-panel">
+            <div className="tx-stock-filters">
+              <input type="search" aria-label="Search stock" placeholder="Search by item or location" value={query} onChange={(event) => setQuery(event.target.value)} />
+              <label className="tx-check"><input type="checkbox" checked={lowOnly} onChange={(event) => setLowOnly(event.target.checked)} /><span>Low stock only</span></label>
+            </div>
+            {visibleItems.length === 0 && <p className="live-empty">No items match{needle ? ` “${query.trim()}”` : ''}{lowOnly ? ' among low-stock items' : ''}.</p>}
             <div className="live-table-wrap">
               <table className="live-table">
                 <thead><tr><th>Item</th><th>Quantity</th><th>Minimum</th><th>Location</th><th>Status</th></tr></thead>
                 <tbody>
-                  {items.map((item) => (
+                  {visibleItems.map((item) => (
                     <tr key={item.id}>
                       <td><b className="tx-strong">{item.name}</b></td>
                       <td className="tx-mono">{item.quantity}</td>
@@ -85,13 +95,16 @@ function MinimumCell({ token, item, onUnauthorized }) {
 }
 
 export function MovementTable({ movements, limit = 12 }) {
+  const [showAll, setShowAll] = useState(false);
   if (!movements.length) return <p className="live-empty">No stock movements recorded yet.</p>;
+  const shown = showAll ? movements : movements.slice(0, limit);
   return (
+    <>
     <div className="live-table-wrap">
       <table className="live-table">
         <thead><tr><th>When</th><th>Item</th><th>Movement</th><th>Change</th><th>Balance</th><th>Order / note</th><th>By</th></tr></thead>
         <tbody>
-          {movements.slice(0, limit).map((movement) => {
+          {shown.map((movement) => {
             const delta = movementDelta(movement.type, movement.quantity);
             return (
               <tr key={movement.id}>
@@ -108,5 +121,11 @@ export function MovementTable({ movements, limit = 12 }) {
         </tbody>
       </table>
     </div>
+    {movements.length > limit && (
+      <button type="button" className="tx-link-button" onClick={() => setShowAll((value) => !value)}>
+        {showAll ? `Show the latest ${limit} only` : `Show all ${movements.length} movements`}
+      </button>
+    )}
+    </>
   );
 }

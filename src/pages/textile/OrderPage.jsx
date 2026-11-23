@@ -1,15 +1,35 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Boxes, LoaderCircle, PackageCheck, Save } from 'lucide-react';
-import { ORDER_STATUS_LABELS, formatUgx, isChecklistComplete, isMachineBookable, nextOrderStep } from '@/lib/textile';
+import { ArrowLeft, ArrowRight, Boxes, LoaderCircle, PackageCheck, Printer, Save } from 'lucide-react';
+import {
+  COLLECTION_LIMIT_DAYS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, collectionDeadline, formatUgx, isChecklistComplete, isMachineBookable,
+  matchesOrderSearch, nextOrderStep, todayIso,
+} from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import {
   useMachines, useOrderTransition, useRecordCollection, useSaveProduction, useSaveQuality, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
-import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus } from './shared';
+import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
 import { formatDateTime, useUnauthorizedRedirect } from './helpers';
+import { DemoPaymentButton } from './DemoPaymentButton';
 
 const PRODUCTION_STATUSES = ['SCHEDULED', 'BEING_MADE', 'READY', 'COLLECTED'];
+/** Orders a collection slip can be printed for: finished and waiting for, or handed to, the customer. */
+const SLIP_STATUSES = ['READY', 'COLLECTED'];
+/** Body class that switches on the print-only slip styles (see .tx-printing-slip in api.css). */
+const PRINTING_CLASS = 'tx-printing-slip';
+
+/** Prints only the collection slip; the class is removed again once the print dialog closes. */
+function printSlip() {
+  document.body.classList.add(PRINTING_CLASS);
+  const done = () => {
+    document.body.classList.remove(PRINTING_CLASS);
+    window.removeEventListener('afterprint', done);
+  };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
 const ignore = () => {};
 
 export function OrderPage({ token, onUnauthorized }) {
@@ -41,6 +61,9 @@ function OrderView({ token, order, machines, onUnauthorized }) {
       <Link to="/textile/board" className="back-link"><ArrowLeft size={15} />Order board</Link>
       <div className="tx-order-meta"><OrderStatus status={order.status} /><span className="tx-mono">{order.code ?? 'Draft'}</span></div>
       <PageHeading eyebrow={`${order.customerName} · ${order.customerType}`} title={order.whatIsWanted}>
+        {SLIP_STATUSES.includes(order.status) && (
+          <button type="button" className="btn tx-ghost" onClick={printSlip}><Printer size={15} />Print collection slip</button>
+        )}
         {step && order.status !== 'BEING_MADE' && (
           <button type="button" className="btn btn-primary" disabled={Boolean(step.blockedReason) || transition.isPending}
             title={step.blockedReason ?? undefined}
@@ -60,9 +83,9 @@ function OrderView({ token, order, machines, onUnauthorized }) {
 
       <div className="detail-grid">
         <div className="tx-stack">
-          {inProduction
-            ? <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />
-            : <OrderSummary order={order} />}
+          {/* Always visible: the maker needs the size/design and date while producing. */}
+          <OrderSummary order={order} />
+          {inProduction && <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />}
           {inProduction && <QualityPanel token={token} order={order} onUnauthorized={onUnauthorized} />}
         </div>
         <div className="tx-stack">
@@ -75,6 +98,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
                 <div><dt>Payment</dt><dd><PaymentStatus status={order.payment.status} />{order.payment.reference ? ` ${order.payment.reference}` : ''}</dd></div>
               </dl>
             ) : <p className="live-empty">No quote sent yet.</p>}
+            <DemoPaymentButton token={token} order={order} />
           </section>
           <section className="live-panel">
             <h2 className="tx-panel-title">History</h2>
@@ -90,7 +114,48 @@ function OrderView({ token, order, machines, onUnauthorized }) {
           </section>
         </div>
       </div>
+      {SLIP_STATUSES.includes(order.status) && <CollectionSlip order={order} />}
     </div>
+  );
+}
+
+/**
+ * Print-only slip handed over with the finished order (hidden on screen). Rendered
+ * into <body> so no animated (transformed) page wrapper offsets it on paper.
+ */
+function CollectionSlip({ order }) {
+  const deadline = collectionDeadline(order, todayIso());
+  return createPortal(
+    <section className="tx-print-slip" aria-hidden="true">
+      <header>
+        <p>Makerere University Innovation Pod · Textile workshop</p>
+        <h2>Collection slip</h2>
+        <p className="tx-mono">{order.code}</p>
+      </header>
+      <dl>
+        <div><dt>Customer</dt><dd>{order.customerName} ({order.customerType})</dd></div>
+        <div><dt>Item</dt><dd>{order.whatIsWanted}</dd></div>
+        <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
+        <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
+        {order.quote && <div><dt>Amount</dt><dd>{formatUgx(order.quote.amount)}</dd></div>}
+        <div><dt>Payment</dt><dd>{PAYMENT_STATUS_LABELS[order.payment.status] ?? order.payment.status}{order.payment.reference ? ` · ${order.payment.reference}` : ''}</dd></div>
+        {order.collection ? (
+          <>
+            <div><dt>Collected by</dt><dd>{order.collection.collectedBy}</dd></div>
+            <div><dt>Collected on</dt><dd>{formatDateTime(order.collection.collectedAt)}</dd></div>
+            <div><dt>Handed over by</dt><dd>{order.collection.recordedBy}</dd></div>
+          </>
+        ) : deadline && (
+          <div><dt>Collect by</dt><dd>{formatDate(deadline.deadline)}</dd></div>
+        )}
+      </dl>
+      <p className="tx-slip-note">Orders not collected within {COLLECTION_LIMIT_DAYS} days of being marked Ready may be disposed of.</p>
+      <div className="tx-slip-signatures">
+        <p>Customer signature</p>
+        <p>Workshop signature</p>
+      </div>
+    </section>,
+    document.body,
   );
 }
 
@@ -102,7 +167,7 @@ function OrderSummary({ order }) {
         <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
         <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
         <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-        <div><dt>Reference photo</dt><dd>{order.photo?.name ?? 'None'}</dd></div>
+        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
       </dl>
     </section>
   );
@@ -234,17 +299,42 @@ function CollectionPanel({ token, order, step, transition, onUnauthorized }) {
 export function OrdersIndexPage({ token, onUnauthorized }) {
   const orders = useTextileOrders(token);
   useUnauthorizedRedirect(onUnauthorized, orders.error);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('');
+  const all = orders.data ?? [];
+  // Only offer the statuses that actually occur, in workflow order.
+  const statuses = Object.keys(ORDER_STATUS_LABELS).filter((key) => all.some((order) => order.status === key));
+  const visible = all
+    .filter((order) => matchesOrderSearch(order, query) && (!status || order.status === status))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return (
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · ORDERS" title="Order pages" intro="Open an order to record materials, machine, staff, quality checks and collection." />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" /> : !all.length ? (
         <section className="live-panel">
+          <p className="live-empty">No orders yet. <Link to="/textile/orders/new">Create the first order</Link>.</p>
+        </section>
+      ) : (
+        <section className="live-panel tx-table-panel">
+          <div className="tx-filters">
+            <input type="search" aria-label="Search orders" placeholder="Search by customer, order code or item" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">All statuses</option>
+              {statuses.map((key) => <option key={key} value={key}>{ORDER_STATUS_LABELS[key]}</option>)}
+            </select>
+          </div>
+          {visible.length === 0 && (
+            <p className="live-empty">
+              No orders match.{' '}
+              <button type="button" className="tx-link-button" onClick={() => { setQuery(''); setStatus(''); }}>Clear filters</button>
+            </p>
+          )}
           <div className="live-table-wrap">
             <table className="live-table">
               <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Date needed</th><th>Updated</th></tr></thead>
               <tbody>
-                {(orders.data ?? []).map((order) => (
+                {visible.map((order) => (
                   <tr key={order.id}>
                     <td><Link className="case-title" to={`/textile/orders/${encodeURIComponent(order.id)}`}><b>{order.whatIsWanted || 'Untitled order'}</b><small>{order.code ?? 'Draft'}</small></Link></td>
                     <td>{order.customerName} · {order.customerType}</td>

@@ -7,8 +7,50 @@ export const backendApi = {
     request('/actuator/health', { signal }),
   login: (email, password) =>
     request('/auth/login', { body: { email, password } }),
+  passkeyAuthenticationOptions: () =>
+    request('/auth/passkeys/authentication/options', { body: {} }),
+  finishPasskeyAuthentication: (body) =>
+    request('/auth/passkeys/authentication/verify', { body }),
+  passkeyRegistrationOptions: (token, password) =>
+    request('/auth/passkeys/registration/options', { token, body: { password } }),
+  finishPasskeyRegistration: (token, body) =>
+    request('/auth/passkeys/registration/verify', { token, body }),
+  forgotPassword: (email) =>
+    request('/auth/forgot-password', { body: { email } }),
+  signup: (body) =>
+    request('/auth/signup', { body }),
   createUser: (token, body) =>
     request('/admin/users', { token, body }),
+  adminUsers: (token) =>
+    request('/admin/users', { token }),
+  updateAdminUser: (token, id, body) =>
+    request(`/admin/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body }),
+  setAdminUserActive: (token, id, active, version) =>
+    request(`/admin/users/${encodeURIComponent(id)}/status`, {
+      token,
+      method: 'PATCH',
+      body: { active, version },
+    }),
+  adminRoles: (token) =>
+    request('/admin/roles', { token }),
+  adminPermissions: (token) =>
+    request('/admin/permissions', { token }),
+  updateRolePermissions: (token, id, body) =>
+    request(`/admin/roles/${encodeURIComponent(id)}/permissions`, {
+      token,
+      method: 'PUT',
+      body,
+    }),
+  adminDepartments: (token) =>
+    request('/admin/departments', { token }),
+  createDepartment: (token, body) =>
+    request('/admin/departments', { token, body }),
+  updateDepartment: (token, id, body) =>
+    request(`/admin/departments/${encodeURIComponent(id)}`, {
+      token,
+      method: 'PUT',
+      body,
+    }),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (
@@ -42,6 +84,8 @@ export const backendApi = {
     request('/me/capabilities', { token, signal }),
   createSubmission: (token, body) =>
     request('/submissions', { token, body }),
+  submitSubmission: (token, id) =>
+    request(`/submissions/${encodeURIComponent(id)}/submit`, { token, method: 'POST' }),
   submissionCaseFile: (token, id, signal) =>
     request(
       `/submissions/${encodeURIComponent(id)}`,

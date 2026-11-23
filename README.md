@@ -13,12 +13,55 @@ npm install
 npm run dev
 ```
 
+### Mock testing logins
+
+The local mock API is disabled by default. To use the test accounts, set
+`VITE_ENABLE_MOCKS=true` in `.env.local`, then start or restart the dev server.
+Use any non-empty password for these mock-only accounts:
+
+| Email | Role |
+| --- | --- |
+| `admin@unipod.test` | Administrator |
+| `factfinding@unipod.test` | Fact-finding officer |
+| `reviewer@unipod.test` | Reviewer |
+
+These accounts work only with the local mock API; they are not provisioned on
+the deployed backend. The admin account is for testing role-gated UI; some
+administrator management actions require backend endpoints and may not work
+with mock data. For live testing, use credentials supplied by an administrator.
+
 By default, both local development and production builds call
 `https://backend-unipod.onrender.com/api` directly. The backend must allow the
 frontend's exact browser origin in `CORS_ALLOWED_ORIGINS`. Override the API
 origin by copying `.env.example` to `.env.local` and setting
 `VITE_API_BASE_URL`. For a local Java backend, set it to
 `http://localhost:8080/api`.
+
+Submitters can optionally register a passkey after sign-up and use it to sign
+in instead of entering their password. The device handles fingerprint, face,
+or screen-lock verification; UniPod does not receive or store biometric data.
+Email and password remain available as a fallback. Passkeys require HTTPS in
+production and a browser/device with WebAuthn support.
+
+## Sign-in and sign-up
+
+The sign-in screen sends credentials to `POST /auth/login`. **Forgot password?**
+submits an email to `POST /auth/forgot-password`; the backend sends a one-time
+reset link for active accounts (valid for one hour) and always returns the same
+accepted response whether or not an account exists.
+
+Public submitter registration uses `POST /auth/signup` and is available without
+enabling mocks. The form has two steps. Students enter one university email,
+which the frontend sends as both `email` (the sign-in address) and
+`universityEmail`, plus their student number and course. All account types
+provide a phone number, 12–72 character password, and rules acceptance;
+organisations also provide their organisation name.
+
+Password visibility controls are available on sign-in and sign-up. Pressing
+Enter moves from the sign-in email to password, advances from the first sign-up
+step, and submits valid credentials or a completed sign-up. Contact details
+remain in the form when moving between sign-up steps, and the browser can
+autofill supported fields.
 
 The backend must allow the frontend's exact browser origin in
 `CORS_ALLOWED_ORIGINS`. The current backend defaults include
@@ -74,17 +117,85 @@ belongs in the frontend service.
   general submission lists with category, stage, and sector filters.
 - Give submitters a dedicated, read-only My Submissions home with account
   capabilities and locked-module guidance.
-- Review the reception queue and create administrator-provisioned accounts.
-- Manage sectors and sector-officer assignments as an Administrator.
+- Review the reception queue; create staff accounts and manage staff roles,
+  department assignments, and active/deactivated account status as an
+  Administrator.
+- Manage departments, role permissions, sectors, and sector-officer assignments.
 - Create submission drafts and view case details.
 - Register drafts, forward received cases to a sector, and apply backend-approved
   case-stage transitions, outcomes, reviewer assignments, and document metadata.
 - Check service health from the workspace connection indicator.
 
+### Finance invoices and payment verification
+
+The **Price Lists & Invoices** screen is available at `/finance/invoices` (also
+aliased at `/finance/prices`, `/invoices`, and `/price-lists`). It requires an
+Administrator or Finance Officer account; public submitter sign-up does not
+grant finance access. Finance summary cards use all fields from
+`GET /finance/summary`, with UGX amounts displayed in full.
+
+The invoice list and finance actions use these backend endpoints:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /invoices?size=100` | Load invoices and submitted payment-proof metadata. |
+| `GET /invoices/{id}/proof/file` | Download payment proof for finance review. |
+| `POST /invoices/{id}/verify?proofId={proofId}` | Verify the inspected proof. |
+| `POST /invoices/{id}/reject` | Reject proof with `proofId` and a required reason. |
+| `POST /invoices/{id}/receipt` | Issue a receipt after payment verification. |
+| `GET /invoices/{id}/receipt/download` | Download the issued receipt. |
+
+Payment-proof uploads are submitted by the customer, not by finance staff. The
+submitter-only evidence endpoint is not used by the finance screen. The current
+OpenAPI document does not define a price-list endpoint, so the screen displays
+an empty state when no authorised price list is available.
+
 Access tokens are kept in `sessionStorage` and sent as bearer tokens. The
 backend remains authoritative for authorization and validates every write.
 Frontend environment variables must never contain database URLs with
 credentials, database passwords, JWT signing secrets, or admin passwords.
+
+### Partners and MOUs
+
+The **Partners & MOUs** screen at `/partners` loads its counts and partner rows
+from `GET /operations/partners/overview`. It does not seed or substitute
+fixture data: while the request is pending it shows a loading state, and if the
+backend request fails it shows the error and a retry action.
+
+Administrators and department coordinators can create partners with
+`POST /operations/partners`. They can record an MOU renewal with
+`PUT /operations/partners/{id}/mou`, including the new ISO-format `renewalDate`
+and an optional `documentReference`. Leaving the reference blank clears any
+previous saved reference.
+
+### Administrator user and access management
+
+The administrator screen at `/management` supports staff account creation,
+searchable account management, role/department assignment, reversible account
+deactivation, department lifecycle management, and permission configuration
+for system roles. The Administrator role is protected from changes in the UI;
+the backend must enforce the same restriction and prevent removal of the last
+active administrator.
+
+The frontend expects these authenticated administrator API contracts:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /admin/users` | Return staff with `id`, `fullName`, `email`, `role`, `departmentId`, `active`, and `version`. |
+| `POST /admin/users` | Create an account with `fullName`, `email`, `password`, `role`, and `departmentId`. Never return or store the supplied password. |
+| `PATCH /admin/users/{id}` | Update `role` and `departmentId` using the current `version`. |
+| `PATCH /admin/users/{id}/status` | Change `active` using the current `version`; retain the account and its history. |
+| `GET /admin/departments` | Return departments with `id`, `name`, `active`, and `version`. |
+| `POST /admin/departments`, `PUT /admin/departments/{id}` | Create or update a department; updates include `version`. |
+| `GET /admin/roles`, `GET /admin/permissions` | Return role definitions and the available permission catalog. |
+| `PUT /admin/roles/{id}/permissions` | Replace a role’s permission IDs using the current role `version`. |
+
+These account, department, role, and permission endpoints are implemented by
+the frontend’s MSW mock API for local testing; the deployed backend must provide
+the same contract before these administration workflows can be used live.
+Every endpoint must authorize the administrator server-side, validate role and
+permission IDs, reject stale versions, and write an audit event for changes.
+The frontend role checks and protected controls are only usability safeguards.
 
 ## Textile Operations (customer orders, stock and machines)
 
@@ -124,7 +235,52 @@ is not deployed yet. Run with `VITE_ENABLE_MOCKS=true` and sign in as
 `textile@unipod.test` (any password) to use the MSW implementation in
 `src/mocks/textile-handlers.js`.
 
+To run **only the Textile screens**, use `npm run dev:textile`. It turns the
+mock API on, signs in as the Textile domain owner automatically, opens the
+order board, applies the Textile green theme and shows the Textile sidebar.
+Links to other teams' modules open a placeholder page. Plain `npm run dev` is
+unchanged.
+
+In mock mode, quoted orders show a **Simulate Finance confirming payment**
+button, so an order can be taken all the way to Collected without the
+Finance screens. It calls a demo-only mock endpoint
+(`/__demo__/finance/confirm-payment`), is hidden when the real backend is
+used, and is not part of the `/textile` contract.
+
 Tests: `src/lib/textile.test.js` (rules) and `src/services/textile.test.js`
 (API contract through MSW) run in Vitest's node environment.
 `src/pages/textile/Textile.test.jsx` (screens) needs jsdom, which needs
-Node ≥ 22.18 under the installed Vitest 5 / undici.
+Node ≥ 22.22.2 (or ≥ 24.15) under the installed Vitest 5 / undici. On older
+Node it fails to start with "Cannot read properties of undefined (reading
+'bind')" in undici.
+
+## Reception (Assignment 3 - Peter Arnold Mukasa)
+
+Screens for `ROLE_RECEPTIONIST`, shown in the sidebar.
+
+| Screen | Route |
+|---|---|
+| Reception home (counters + searchable new briefs) | `/reception/home` |
+| Brief check & forward, ask for missing information, comments, history | `/reception/briefs/:id` |
+| Missing documents list & search | `/reception/missing-documents` |
+| Sign up (student / public / organisation) - **mock only** | "Create an account" on the sign-in page |
+| Assisted (walk-in) submission: find or create the person's account, then the 5-step form on their behalf | `/reception/walk-in` |
+| Walk-in confirmation (owner = walk-in, assisted by = receptionist) | `/reception/walk-in/confirmation` |
+
+Rules (enforced by the mock in `src/mocks/reception-handlers.js`; the real backend must enforce them too):
+
+- Forward is refused (`409`) unless every check list item is ticked.
+- Asking for missing information needs at least one item and a due date.
+- Every forward, missing-information request and comment is written to history with date, user and destination.
+- The receptionist can comment but cannot edit the submitter's content.
+- A walk-in brief is created with the walk-in's `submitterId` (they stay the owner); the backend must record the signed-in receptionist as the person who registered it.
+
+The walk-in reuses `NewSubmissionPage` (Assignment 4) through three optional props: `onBehalfOf`, `confirmationPath`, `cancelPath`. Without them the page behaves as before.
+
+`POST /auth/signup` is available on the deployed backend and creates a submitter account.
+Login and sign up use the Render API by default. The `/reception/*` workflow screens
+remain mock-only; enable `VITE_ENABLE_MOCKS=true` to test them with
+`reception@unipod.test` (any password).
+
+The walk-in account step (`POST /reception/walk-in-accounts`) is mock only until the backend decides how minimal accounts are created.
+Check list items, department list and stage names are placeholders.

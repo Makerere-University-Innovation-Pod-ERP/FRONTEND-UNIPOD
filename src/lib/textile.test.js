@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
-  BOARD_COLUMNS, SCHEDULE_BLOCKED_REASON, READY_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder,
+  BOARD_COLUMNS, SCHEDULE_BLOCKED_REASON, READY_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder, describeMaterialLine,
   evaluateMovement, findBookingClashes, groupOrdersByColumn, isLowStock, isMachineBookable, isoWeekday,
-  nextOrderStep, startOfWeek, transitionError,
+  nextOrderStep, startOfWeek, transitionError, collectionDeadline, isOrderOverdue, matchesOrderSearch, summarizeBoard,
 } from './textile';
 import { isTextileDomainOwner } from './permissions';
 
@@ -104,13 +104,19 @@ describe('estimated materials against stock', () => {
   ];
 
   it('marks lines as available, low after use, or short', () => {
-    const [cotton, thread, short] = assessMaterials(
-      [{ itemId: 'cotton', quantity: 9 }, { itemId: 'thread', quantity: 1 }, { itemId: 'cotton', quantity: 100 }],
-      stock,
-    );
+    const [cotton, thread] = assessMaterials([{ itemId: 'cotton', quantity: 9 }, { itemId: 'thread', quantity: 1 }], stock);
     expect(cotton).toMatchObject({ sufficient: true, lowAfter: false, remaining: 77 });
     expect(thread).toMatchObject({ sufficient: true, lowAfter: true });
+    const [short] = assessMaterials([{ itemId: 'cotton', quantity: 100 }], stock);
     expect(short).toMatchObject({ sufficient: false });
+  });
+
+  it('adds up repeated lines for the same item before checking stock', () => {
+    // 50 + 50 = 100 m of cotton, but only 86 m exist: both lines must be short.
+    const lines = assessMaterials([{ itemId: 'cotton', quantity: 50 }, { itemId: 'cotton', quantity: 50 }], stock);
+    expect(lines.map((line) => line.sufficient)).toEqual([false, false]);
+    expect(lines[0]).toMatchObject({ requested: 100, remaining: -14 });
+    expect(describeMaterialLine(lines[0])).toBe('not enough — only 86 in stock for 100 across these lines');
   });
 });
 
@@ -161,5 +167,57 @@ describe('textile permissions', () => {
     expect(isTextileDomainOwner(['ROLE_TEXTILE_DOMAIN_OWNER'])).toBe(true);
     expect(isTextileDomainOwner(['ROLE_REVIEWER'])).toBe(false);
     expect(isTextileDomainOwner(['ROLE_TEXTILE_DOMAIN_OWNER_ASSISTANT'])).toBe(false);
+  });
+});
+
+describe('overdue orders and the 30-day collection limit', () => {
+  const today = '2026-11-20';
+
+  it('flags unfinished work whose date needed has passed', () => {
+    expect(isOrderOverdue({ status: 'BEING_MADE', dateNeeded: '2026-11-19' }, today)).toBe(true);
+    expect(isOrderOverdue({ status: 'SCHEDULED', dateNeeded: '2026-11-20' }, today)).toBe(false);
+    expect(isOrderOverdue({ status: 'BEING_MADE', dateNeeded: null }, today)).toBe(false);
+  });
+
+  it('never flags finished, returned or draft orders', () => {
+    for (const status of ['READY', 'COLLECTED', 'RETURNED', 'DRAFT']) {
+      expect(isOrderOverdue({ status, dateNeeded: '2026-01-01' }, today)).toBe(false);
+    }
+  });
+
+  it('counts the collection limit from the day the order became Ready', () => {
+    const order = { status: 'READY', updatedAt: '2026-11-19T09:00:00Z', history: [{ status: 'READY', at: '2026-10-25T10:00:00Z' }] };
+    expect(collectionDeadline(order, today)).toEqual({ deadline: '2026-11-24', daysLeft: 4, warn: true });
+    expect(collectionDeadline(order, '2026-11-01')).toMatchObject({ daysLeft: 23, warn: false });
+    expect(collectionDeadline(order, '2026-11-26')).toMatchObject({ daysLeft: -2, warn: true });
+    expect(collectionDeadline({ ...order, status: 'COLLECTED' }, today)).toBeNull();
+  });
+});
+
+describe('finding orders', () => {
+  const order = { code: 'TXO-2026-015', customerName: 'Robert Ssali', customerType: 'Public', whatIsWanted: 'Custom curtain set' };
+
+  it('matches code, customer and item text, ignoring case and spaces around the query', () => {
+    expect(matchesOrderSearch(order, '')).toBe(true);
+    expect(matchesOrderSearch(order, '  ssali ')).toBe(true);
+    expect(matchesOrderSearch(order, 'txo-2026-015')).toBe(true);
+    expect(matchesOrderSearch(order, 'CURTAIN')).toBe(true);
+    expect(matchesOrderSearch(order, 'apron')).toBe(false);
+  });
+
+  it('copes with drafts that have no code yet', () => {
+    expect(matchesOrderSearch({ ...order, code: null }, 'curtain')).toBe(true);
+  });
+
+  it('counts overdue work, collections coming due and paid quotes waiting to be scheduled', () => {
+    const today = '2026-11-21';
+    const orders = [
+      { status: 'BEING_MADE', dateNeeded: '2026-11-17', history: [] },
+      { status: 'QUOTED', dateNeeded: '2026-12-01', payment: { status: 'CONFIRMED' }, history: [] },
+      { status: 'QUOTED', dateNeeded: '2026-12-01', payment: { status: 'AWAITING_PROOF' }, history: [] },
+      { status: 'READY', dateNeeded: '2026-10-01', history: [{ status: 'READY', at: '2026-10-25T10:00:00Z' }], updatedAt: '2026-10-25T10:00:00Z' },
+      { status: 'COLLECTED', dateNeeded: '2026-10-01', history: [] },
+    ];
+    expect(summarizeBoard(orders, today)).toEqual({ overdue: 1, collectSoon: 1, readyToSchedule: 1 });
   });
 });

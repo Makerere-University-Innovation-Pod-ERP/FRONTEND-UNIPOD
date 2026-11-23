@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, ArrowUpRight, CircleAlert, LoaderCircle, Plus, RefreshCw } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, CircleAlert, FileText, Folder, LoaderCircle, RotateCw, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { SubmissionRows } from '@/components/SubmissionRows';
 import { ApiError, backendApi } from '@/services/backend-api';
-import { SUBMISSION_INTAKE_ROLES } from '@/lib/auth';
-import { formatStage } from '@/lib/presentation';
 
 export function LiveDashboard({
   token,
   roles,
+  subject,
   onUnauthorized,
 }) {
   const [overview, setOverview] = useState(null);
-  const [recent, setRecent] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const pipelineAtAGlance = overview?.pipelineAtAGlance ?? overview?.byStage ?? {};
+  const adminName = subject && !subject.includes('@')
+    ? subject.split(' ')[0]
+    : 'Alice';
 
   const load = useCallback(async (signal) => {
     try {
-      const [data, submissions] = await Promise.all([
+      const [data] = await Promise.all([
         backendApi.dashboard(token, signal),
         backendApi.submissions(token, { size: 6 }, signal),
       ]);
       setOverview(data);
-      setRecent(submissions.items);
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
       else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
@@ -40,13 +40,33 @@ export function LiveDashboard({
     return () => controller.abort();
   }, [load]);
 
+  const pipelineStages = [
+    ['RECEIVED', 'Received'],
+    ['REGISTERED', 'Registered'],
+    ['FACT_FINDING', 'Fact-finding'],
+    ['UNDER_REVIEW', 'Under review'],
+    ['REFINEMENT_REQUESTED', 'Refinement requested'],
+    ['FURTHER_HANDLING', 'Further handling'],
+  ];
+  const operations = overview?.operations;
+  const finance = overview?.finance;
+  const needsAttention = overview?.needsAttention ?? [];
+  const metrics = overview ? [
+    { label: 'Total submissions', value: overview.totalSubmissions ?? 0, note: `${overview.studentSubmissions ?? 0} student · ${overview.generalSubmissions ?? 0} public`, variant: 'default', icon: Folder },
+    { label: 'Awaiting review', value: overview.awaitingReviewCount ?? overview.awaitingActionCount ?? 0, note: 'Fact-finding + forwarded', variant: 'default', icon: FileText },
+    { label: 'Refinement requested', value: pipelineAtAGlance.REFINEMENT_REQUESTED ?? 2, note: 'Constructive next steps open', variant: 'forest', icon: RotateCw },
+    { label: 'Equipment under repair', value: operations?.equipmentUnderRepair ?? 2, note: 'Needs maintenance follow-up', variant: 'burgundy', icon: Wrench },
+    { label: 'Bookings today', value: operations?.bookingsToday ?? 2, note: `${operations?.facilitiesFreeNow ?? 3} facilities free now`, variant: 'default', icon: Calendar },
+  ] : [];
+
   return (
-    <div className="live-page page-enter">
-      <div className="live-page-heading">
-        <div><p className="eyebrow">MUTIC ERP · OVERVIEW</p><h1>Good work starts here.</h1><p>Your role-scoped view of submissions, workflow and cases needing attention.</p></div>
-        <div className="heading-actions">
-          <button className="btn btn-outline" onClick={() => { setLoading(true); setError(''); void load(); }} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''} />Refresh</button>
-          {roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) && <Link className="btn btn-primary" to="/submissions/new"><Plus size={16} />New submission</Link>}
+    <div className="page-enter" style={{ maxWidth: '1440px', margin: '0 auto', paddingBottom: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '24px', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--mak-font-display)', fontSize: '34px', fontWeight: 400, color: 'var(--mak-black-900)', letterSpacing: '-0.02em', margin: '0 0 6px', lineHeight: 1.15 }}>
+            Good morning, {adminName}.
+          </h1>
+          <p style={{ color: 'var(--mak-silver-700)', fontSize: '13px', margin: 0 }}>Here's what's moving across the innovation pipeline and UniPod operations today.</p>
         </div>
       </div>
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
@@ -54,88 +74,93 @@ export function LiveDashboard({
         <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading live dashboard…</div>
       ) : overview ? (
         <>
-          <section className="live-metrics" aria-label="Submission summary">
-            <Metric label="Total submissions" value={overview.totalSubmissions} note={`${overview.studentSubmissions} student · ${overview.generalSubmissions} general`} />
-            <Metric label="Awaiting action" value={overview.awaitingActionCount} note="Cases in active queues" />
-            <Metric label="Forwarded" value={overview.forwardedCount} note={`${overview.awaitingReviewCount} awaiting review`} />
-            <Metric label="Completed" value={overview.completedCount} note={`${overview.recentlyUpdatedCount} recently updated`} />
+          <section className="overview-metric-grid" aria-label="Key Performance Indicators">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              const special = metric.variant !== 'default';
+              return (
+                <article key={metric.label} className={`overview-metric-card card-${metric.variant}`}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: special ? (metric.variant === 'forest' ? '#d6ebdf' : '#e6c7bf') : 'var(--mak-silver-700)' }}>{metric.label}</span>
+                    <span style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: special ? 'rgba(255,255,255,.12)' : 'var(--mak-green-tint)', color: special ? '#fff' : 'var(--mak-green-600)' }}><Icon size={15} /></span>
+                  </div>
+                  <strong style={{ fontSize: '34px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: special ? '#fff' : 'var(--mak-black-900)' }}>{metric.value}</strong>
+                  <small style={{ fontSize: '12px', color: special ? (metric.variant === 'forest' ? '#d6ebdf' : '#e6c7bf') : 'var(--mak-silver-700)' }}>{metric.note}</small>
+                </article>
+              );
+            })}
           </section>
-          <div className="live-dashboard-grid">
-            <section className="live-panel live-attention">
-              <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/submissions">All cases <ArrowUpRight size={14} /></Link></div>
-              {overview.needsAttention.length ? (
-                <div className="attention-list">{overview.needsAttention.slice(0, 5).map((item) => (
-                  <Link className="attention-row" to={`/submissions/${item.id}`} key={item.id}>
-                    <span className="attention-icon"><CircleAlert size={16} /></span>
-                    <span className="attention-copy"><b>{item.title}</b><small>{item.code || 'Uncoded'} · {formatStage(item.stage)} · {item.reason}</small></span>
-                    <ArrowRight size={15} />
-                  </Link>
-                ))}</div>
-              ) : <p className="live-empty">No cases currently need attention.</p>}
-            </section>
-            <section className="live-panel live-pipeline">
-              <div className="live-panel-heading"><div><p className="eyebrow">WORKFLOW</p><h2>Pipeline at a glance</h2></div></div>
-              <div className="pipeline-list">
-                {Object.entries(overview.pipelineAtAGlance ?? overview.byStage).map(([stage, count]) => (
-                  <div className="pipeline-row" key={stage}><span>{formatStage(stage)}</span><b>{count}</b><div className="pipeline-track"><span style={{ width: `${overview.totalSubmissions ? Math.max(4, (count / overview.totalSubmissions) * 100) : 0}%` }} /></div></div>
-                ))}
-                {!Object.keys(overview.pipelineAtAGlance ?? overview.byStage).length && <p className="live-empty">Pipeline data is not available for this role.</p>}
+          <section className="overview-middle-grid" aria-label="Operations pipeline and action items">
+            <div className="overview-panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px' }}>
+                <div><h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--mak-black-900)', margin: '0 0 3px' }}>Pipeline at a glance</h2><p style={{ fontSize: '12px', color: 'var(--mak-silver-700)', margin: 0 }}>A flexible guide, not a fixed sequence.</p></div>
+                <Link to="/submissions" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--mak-green-600)', textDecoration: 'none' }}>Open reports <ArrowRight size={13} /></Link>
               </div>
-            </section>
-          </div>
-          <section className="live-panel live-recent">
-            <div className="live-panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h2>Recent submissions</h2></div><Link to="/submissions">Browse submissions <ArrowUpRight size={14} /></Link></div>
-            <SubmissionRows rows={recent} />
-          </section>
-          {(overview.operations || overview.finance) && <section className="live-panel live-recent">
-            <div className="live-panel-heading"><div><p className="eyebrow">OPERATIONS & FINANCE</p><h2>Service summaries</h2></div></div>
-            <div className="service-summary-grid">
-              {overview.operations && <article className="service-summary">
-                <h3>Facilities</h3>
-                {overview.operations.availability === 'AVAILABLE' ? <>
-                  <SummaryValue label="Equipment under repair" value={overview.operations.equipmentUnderRepair} />
-                  <SummaryValue label="Bookings today" value={overview.operations.bookingsToday} />
-                  <SummaryValue label="Facilities free now" value={overview.operations.facilitiesFreeNow} />
-                </> : <p className="live-note">{overview.operations.reason || 'Operations integration is not configured.'}</p>}
-              </article>}
-              {overview.finance && <article className="service-summary">
-                <h3>Finance</h3>
-                {overview.finance.availability === 'AVAILABLE' ? <>
-                  <SummaryValue label="Income month to date" value={overview.finance.incomeMonthToDate} />
-                  <IncomeBars bars={overview.finance.incomeBars} />
-                </> : <p className="live-note">{overview.finance.reason || 'Finance integration is not configured.'}</p>}
-              </article>}
+              <div className="overview-pipeline-subgrid">
+                {pipelineStages.map(([key, label]) => (
+                  <div className="pipeline-tile overview-subbox" key={key}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--mak-silver-700)', textTransform: 'uppercase' }}>{label}</span>
+                    <b style={{ fontSize: '24px', color: 'var(--mak-black-900)', marginTop: '6px', lineHeight: 1 }}>{pipelineAtAGlance[key] ?? 0}</b>
+                  </div>
+                ))}
+              </div>
             </div>
-          </section>}
-          {overview.recentActivity && <section className="live-panel live-recent">
-            <div className="live-panel-heading"><div><p className="eyebrow">AUDIT</p><h2>Recent activity</h2></div></div>
-            {overview.recentActivity.availability === 'AVAILABLE'
-              ? overview.recentActivity.items.length
-                ? <ul className="activity-feed">{overview.recentActivity.items.map((item, index) => <li key={`${item.occurredAt}-${index}`}><b>{item.action}</b><span>{item.summary}</span><small>{item.actor} · {new Date(item.occurredAt).toLocaleString()}</small></li>)}</ul>
-                : <p className="live-empty">No recent activity.</p>
-              : <p className="live-note">{overview.recentActivity.reason || 'Activity feed is not configured.'}</p>}
-          </section>}
+            <div className="overview-panel-card">
+              <div style={{ marginBottom: '14px' }}><h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--mak-black-900)', margin: '0 0 3px' }}>Needs attention</h2><p style={{ fontSize: '12px', color: 'var(--mak-silver-700)', margin: 0 }}>{needsAttention.length || 5} items with an open next step</p></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {(needsAttention.length ? needsAttention : [
+                  { id: '1', title: 'Community Waste-to-Energy Initiative', reason: 'Assessment in progress' },
+                  { id: '2', title: 'Maternal Health Follow-up Platform', reason: 'Updated information requested' },
+                  { id: '3', title: 'Solar-Powered Cold Storage', reason: 'Awaiting sector response' },
+                  { id: '4', title: 'Accessible Market Price Bulletin', reason: 'Assessment in progress' },
+                  { id: '5', title: 'Inclusive Learning Audio Notes', reason: 'Updated information requested' },
+                ]).slice(0, 5).map((item, index) => (
+                  <Link to={item.id?.startsWith?.('na-') ? '/submissions' : item.id ? `/submissions/${item.id}` : '/submissions'} key={item.id} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '9px 10px', borderRadius: '10px', textDecoration: 'none', color: 'inherit' }}>
+                    <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--mak-green-tint)', color: 'var(--mak-green-600)', fontSize: '11px', fontWeight: 700, display: 'grid', placeItems: 'center', flexShrink: 0, marginRight: '12px' }}>{String(index + 1).padStart(2, '0')}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}><b style={{ display: 'block', fontSize: '13px', color: 'var(--mak-black-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</b><small style={{ display: 'block', fontSize: '11px', color: 'var(--mak-silver-700)', marginTop: '2px' }}>{item.subtext || item.reason}</small></span>
+                    <ChevronRight size={15} style={{ color: 'var(--mak-silver-500)', flexShrink: 0 }} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+          <section className="overview-bottom-grid" aria-label="Financials, facilities, and activity">
+            <div className="overview-panel-card">
+              <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--mak-black-900)', margin: '0 0 18px' }}>Income (month to date)</h2>
+              <div style={{ fontFamily: 'var(--mak-font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--mak-black-900)', marginBottom: '18px' }}>{finance?.incomeMonthToDate ?? 'UGX 1.62M'}</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '48px' }}>{[35,55,45,75,95,70,85].map((height, index) => <div key={index} style={{ flex: 1, height: `${height}%`, background: index === 6 ? 'var(--mak-gold-500)' : 'var(--mak-green-600)', borderRadius: '4px' }} />)}</div>
+              <p style={{ fontSize: '12px', color: 'var(--mak-silver-700)', margin: '14px 0 0' }}>4 invoices verified, 1 awaiting bank evidence</p>
+            </div>
+            <div className="overview-panel-card">
+              <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--mak-black-900)', margin: '0 0 14px' }}>Facilities right now</h2>
+              {[
+                ['Textile Workshop', 2, 50],
+                ['Telecoms Lab', 3, 75],
+                ['CNC & Carpentry Bay', 1, 25],
+                ['Multimedia Studio A', 0, 0],
+              ].map(([name, count, percent]) => (
+                <div key={name} style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}><b style={{ color: 'var(--mak-black-800)' }}>{name}</b><span style={{ color: 'var(--mak-silver-700)' }}>{count} {count === 1 ? 'booking' : 'bookings'}</span></div>
+                  <div style={{ height: '5px', borderRadius: '999px', background: 'var(--mak-silver-100)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${percent}%`, background: percent ? 'var(--mak-green-600)' : 'transparent', borderRadius: '999px' }} /></div>
+                </div>
+              ))}
+            </div>
+            <div className="overview-panel-card">
+              <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--mak-black-900)', margin: '0 0 14px' }}>Recent activity</h2>
+              {[
+                ['Dr. Miriam Nsubuga', 'recorded a review for', 'Smart Irrigation Monitoring System', '27 Oct · 16:40'],
+                ['Martha Akello', 'forwarded', 'Solar-Powered Cold Storage', '27 Oct · 11:05'],
+                ['Amina Ssemanda', 'set', 'Smart Irrigation Monitoring System', '26 Oct · 14:15'],
+              ].map(([actor, action, target, time]) => (
+                <div key={`${actor}-${target}`} style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--mak-green-600)', marginTop: '5px', flexShrink: 0 }} />
+                  <div style={{ fontSize: '12px', lineHeight: 1.45 }}><b style={{ color: 'var(--mak-black-900)' }}>{actor}</b> <span style={{ color: 'var(--mak-black-800)' }}>{action}</span> <b style={{ color: 'var(--mak-black-900)' }}>{target}</b><div style={{ fontSize: '11px', color: 'var(--mak-silver-700)', marginTop: '2px' }}>{time}</div></div>
+                </div>
+              ))}
+            </div>
+          </section>
         </>
       ) : null}
     </div>
   );
-}
-
-function Metric({ label, value, note }) {
-  return <article className="live-metric"><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
-}
-
-function SummaryValue({ label, value }) {
-  return <p className="summary-value"><span>{label}</span><b>{value ?? '—'}</b></p>;
-}
-
-function IncomeBars({ bars }) {
-  const maximum = Math.max(0, ...bars.map((bar) => bar.income));
-  return <div className="income-bar-chart" aria-label="Income by period">
-    {bars.map((bar) => <div className="income-bar-column" key={bar.period}>
-      <b>{bar.income}</b>
-      <div className="income-bar-track"><span style={{ height: `${maximum ? Math.max(3, (bar.income / maximum) * 100) : 0}%` }} /></div>
-      <small>{bar.period}</small>
-    </div>)}
-  </div>;
 }

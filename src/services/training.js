@@ -1,16 +1,24 @@
 import { z } from 'zod';
 import { request } from './api-client';
 
+export const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'EXCUSED', 'UNMARKED'];
+export const REGISTRATION_STATUSES = ['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED'];
+export const TRAINING_STATUSES = ['DRAFT', 'UPCOMING', 'IN_PROGRESS', 'COMPLETED'];
+export const FOLLOW_UP_STATUSES = ['PENDING_FOLLOW_UP', 'ACTION_REQUIRED', 'SCHEDULED', 'COMPLETED'];
+export const FOLLOW_UP_PRIORITIES = ['NORMAL', 'HIGH', 'URGENT'];
+
 export const participantSchema = z.object({
   id: z.string(),
   name: z.string(),
   regNumber: z.string(),
   department: z.string(),
-  attendance: z.enum(['Present', 'Absent', 'Excused', 'Unmarked', 'PRESENT', 'ABSENT', 'EXCUSED']).default('Unmarked'),
+  contactEmail: z.string().nullish(),
+  userId: z.string().nullish(),
+  status: z.enum(REGISTRATION_STATUSES),
+  attendance: z.enum(ATTENDANCE_STATUSES).nullish().transform((value) => value ?? 'UNMARKED'),
+  passed: z.boolean(),
+  passedAt: z.string().nullish(),
   registeredAt: z.string(),
-  contactEmail: z.string().optional(),
-  safetyPass: z.boolean().default(false),
-  paymentStatus: z.enum(['Paid', 'Pending', 'Waived', 'PAID', 'PENDING', 'WAIVED']).default('Paid'),
 });
 
 export const trainingSessionSchema = z.object({
@@ -18,12 +26,17 @@ export const trainingSessionSchema = z.object({
   title: z.string(),
   facilitator: z.string(),
   date: z.string(),
+  endsAt: z.string().nullish(),
   enrolledCount: z.number(),
   capacity: z.number(),
   venue: z.string(),
-  status: z.enum(['Upcoming', 'In Progress', 'Completed', 'Draft', 'UPCOMING', 'IN_PROGRESS', 'COMPLETED']).default('Upcoming'),
-  description: z.string(),
+  status: z.enum(TRAINING_STATUSES),
+  description: z.string().nullish(),
   participants: z.array(participantSchema).default([]),
+  departmentId: z.string().nullish(),
+  fee: z.number().default(0),
+  safetyCourse: z.boolean().default(false),
+  published: z.boolean().default(true),
 });
 
 export const mentorshipFollowUpSchema = z.object({
@@ -33,9 +46,10 @@ export const mentorshipFollowUpSchema = z.object({
   mentor: z.string(),
   scheduledDate: z.string(),
   focus: z.string(),
-  status: z.enum(['Pending Follow-up', 'Action Required', 'Scheduled', 'Completed', 'PENDING', 'ACTION_REQUIRED', 'SCHEDULED', 'COMPLETED']),
-  notes: z.string().default(''),
-  priority: z.enum(['Normal', 'High', 'Urgent']).default('Normal'),
+  status: z.enum(FOLLOW_UP_STATUSES),
+  notes: z.string().nullish().transform((value) => value ?? ''),
+  priority: z.enum(FOLLOW_UP_PRIORITIES).nullish().transform((value) => value ?? 'NORMAL'),
+  version: z.number(),
 });
 
 export const trainingOverviewSchema = z.object({
@@ -47,74 +61,101 @@ export const trainingOverviewSchema = z.object({
   followUps: z.array(mentorshipFollowUpSchema),
 });
 
+export const departmentOptionSchema = z.object({ id: z.string(), name: z.string() });
+
+const base = '/operations/training';
+
 export const trainingApi = {
   async getOverview(token, signal) {
-    const data = await request('/operations/training/overview', { token, signal });
-    return trainingOverviewSchema.parse(data);
-  },
-
-  async getSessions(token, signal) {
-    const data = await request('/operations/training/sessions', { token, signal });
-    return z.array(trainingSessionSchema).parse(data);
+    return trainingOverviewSchema.parse(await request(`${base}/overview`, { token, signal }));
   },
 
   async getSession(id, token, signal) {
-    const data = await request(`/operations/training/sessions/${id}`, { token, signal });
-    return trainingSessionSchema.parse(data);
+    return trainingSessionSchema.parse(
+      await request(`${base}/sessions/${encodeURIComponent(id)}`, { token, signal }),
+    );
+  },
+
+  /**
+   * @param {{title: string, facilitator: string, date: string, endsAt?: string, capacity: number,
+   *   venue: string, description?: string, departmentId: string, fee?: number,
+   *   safetyCourse?: boolean, publish?: boolean}} body
+   */
+  async createSession(body, token, signal) {
+    return trainingSessionSchema.parse(
+      await request(`${base}/sessions`, { method: 'POST', body, token, signal }),
+    );
   },
 
   async registerParticipant(sessionId, participant, token, signal) {
-    const data = await request(`/operations/training/sessions/${sessionId}/registrations`, {
-      method: 'POST',
-      body: participant,
-      token,
-      signal,
-    });
-    return participantSchema.parse(data);
+    return trainingSessionSchema.parse(
+      await request(`${base}/sessions/${encodeURIComponent(sessionId)}/participants`, {
+        method: 'POST',
+        body: participant,
+        token,
+        signal,
+      }),
+    );
+  },
+
+  async removeParticipant(sessionId, participantId, token, signal) {
+    await request(
+      `${base}/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}`,
+      { method: 'DELETE', token, signal },
+    );
   },
 
   async markAttendance(sessionId, participantId, attendance, token, signal) {
-    const data = await request(`/operations/training/sessions/${sessionId}/attendance`, {
-      method: 'POST',
-      body: { participantId, attendance },
-      token,
-      signal,
-    });
-    return trainingSessionSchema.parse(data);
+    return trainingSessionSchema.parse(
+      await request(`${base}/sessions/${encodeURIComponent(sessionId)}/attendance`, {
+        method: 'PATCH',
+        body: { participantId, attendance },
+        token,
+        signal,
+      }),
+    );
   },
 
-  async recordPayment(sessionId, participantId, paymentData, token, signal) {
-    const data = await request('/operations/training/payments', {
-      method: 'POST',
-      body: { sessionId, participantId, ...paymentData },
-      token,
-      signal,
-    });
-    return data;
+  async confirmPayment(sessionId, participantId, token, signal) {
+    return trainingSessionSchema.parse(
+      await request(
+        `${base}/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}/confirm-payment`,
+        { method: 'POST', token, signal },
+      ),
+    );
   },
 
-  async recordSafetyPass(sessionId, participantId, token, signal) {
-    const data = await request('/operations/training/safety-passes', {
-      method: 'POST',
-      body: { sessionId, participantId, passed: true },
-      token,
-      signal,
-    });
-    return data;
+  async markPassed(sessionId, participantId, token, signal) {
+    return trainingSessionSchema.parse(
+      await request(
+        `${base}/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}/pass`,
+        { method: 'POST', token, signal },
+      ),
+    );
   },
 
-  async getMentorshipFollowUps(token, signal) {
-    const data = await request('/operations/training/mentorship-followups', { token, signal });
-    return z.array(mentorshipFollowUpSchema).parse(data);
+  /**
+   * @param {{title: string, mentee: string, mentor: string, scheduledDate: string, focus: string,
+   *   priority?: string, notes?: string}} body
+   */
+  async createFollowUp(body, token, signal) {
+    return mentorshipFollowUpSchema.parse(
+      await request(`${base}/mentorship`, { method: 'POST', body, token, signal }),
+    );
   },
 
-  async updateMentorshipFollowUp(id, body, token, signal) {
-    const data = await request(`/operations/training/mentorship-followups/${id}`, {
-      method: 'PATCH',
-      body,
-      token,
-      signal,
-    });
-    return mentorshipFollowUpSchema.parse(data);
+  async updateFollowUp(id, { status, notes, version }, token, signal) {
+    return mentorshipFollowUpSchema.parse(
+      await request(`${base}/mentorship/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: { status, notes, version },
+        token,
+        signal,
+      }),
+    );
+  },
+
+  async departments(token, signal) {
+    return z.array(departmentOptionSchema).parse(await request('/departments', { token, signal }));
   },
 };

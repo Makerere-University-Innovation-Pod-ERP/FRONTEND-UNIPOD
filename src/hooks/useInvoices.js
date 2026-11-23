@@ -1,12 +1,57 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@/services/api-client';
 import { invoicesApi } from '@/services/invoices';
-import { initialInvoicesOverview } from '@/mocks/fixtures/invoices';
+
+export function useSubmitterInvoices(token, { page = 0, size = 25, status } = {}) {
+  return useQuery({
+    queryKey: ['submitter', 'invoices', page, size, status ?? null],
+    queryFn: ({ signal }) => invoicesApi.listMyInvoices(token, { page, size, status }, signal),
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+export function useSubmitterInvoice(token, id, enabled = true) {
+  return useQuery({
+    queryKey: ['submitter', 'invoice', id],
+    queryFn: ({ signal }) => invoicesApi.myInvoice(id, token, signal),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+export function useSubmitterReceipt(token, id, enabled = true) {
+  return useQuery({
+    queryKey: ['submitter', 'receipt', id],
+    queryFn: ({ signal }) => invoicesApi.myReceipt(id, token, signal),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+export function useUploadSubmitterPaymentProof(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, proof }) => invoicesApi.uploadMyPaymentProof(id, proof, token),
+    onSuccess: (invoice, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['submitter', 'invoices'] });
+      queryClient.setQueryData(['submitter', 'invoice', id], invoice);
+    },
+    onError: (error, { id }) => {
+      if (error instanceof ApiError && error.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['submitter', 'invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['submitter', 'invoice', id] });
+      }
+    },
+  });
+}
 
 export function useInvoicesOverview(token) {
   return useQuery({
     queryKey: ['finance', 'invoices', 'overview'],
     queryFn: ({ signal }) => invoicesApi.getOverview(token, signal),
-    initialData: initialInvoicesOverview,
     staleTime: 1000 * 60,
   });
 }
@@ -14,29 +59,17 @@ export function useInvoicesOverview(token) {
 export function useVerifyInvoice(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id }) => invoicesApi.verifyPayment(id, token),
-    onSuccess: (updatedInvoice) => {
-      queryClient.setQueryData(['finance', 'invoices', 'overview'], (old) => {
-        if (!old) return old;
-        const newInvoices = old.invoices.map((inv) =>
-          inv.id === updatedInvoice.id ? updatedInvoice : inv,
-        );
-        const awaitingCount = newInvoices.filter(
-          (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
-        ).length;
-        const receiptedCount = newInvoices.filter((inv) => inv.status === 'Receipted').length;
+    mutationFn: ({ id, proofId }) => invoicesApi.verifyPayment(id, proofId, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finance', 'invoices', 'overview'] }),
+  });
+}
 
-        return {
-          ...old,
-          invoices: newInvoices,
-          metrics: old.metrics.map((m) => {
-            if (m.id === 'awaiting') return { ...m, value: awaitingCount };
-            if (m.id === 'receipted') return { ...m, value: receiptedCount };
-            return m;
-          }),
-        };
-      });
-    },
+export function useRejectInvoice(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, proofId, reason }) =>
+      invoicesApi.rejectPayment(id, proofId, reason, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finance', 'invoices', 'overview'] }),
   });
 }
 
@@ -44,48 +77,19 @@ export function useReleaseReceipt(token) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id }) => invoicesApi.releaseReceipt(id, token),
-    onSuccess: (updatedInvoice) => {
-      queryClient.setQueryData(['finance', 'invoices', 'overview'], (old) => {
-        if (!old) return old;
-        const newInvoices = old.invoices.map((inv) =>
-          inv.id === updatedInvoice.id ? updatedInvoice : inv,
-        );
-        const awaitingCount = newInvoices.filter(
-          (inv) => inv.status === 'Awaiting verification' || inv.status === 'Pending evidence',
-        ).length;
-        const receiptedCount = newInvoices.filter((inv) => inv.status === 'Receipted').length;
-
-        return {
-          ...old,
-          invoices: newInvoices,
-          metrics: old.metrics.map((m) => {
-            if (m.id === 'awaiting') return { ...m, value: awaitingCount };
-            if (m.id === 'receipted') return { ...m, value: receiptedCount };
-            return m;
-          }),
-        };
-      });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finance', 'invoices', 'overview'] }),
   });
 }
 
-export function useRecordEvidence(token) {
-  const queryClient = useQueryClient();
+export function useDownloadPaymentProof(token) {
   return useMutation({
-    mutationFn: ({ id, paymentReference }) =>
-      invoicesApi.recordEvidence(id, paymentReference, token),
-    onSuccess: (updatedInvoice) => {
-      queryClient.setQueryData(['finance', 'invoices', 'overview'], (old) => {
-        if (!old) return old;
-        const newInvoices = old.invoices.map((inv) =>
-          inv.id === updatedInvoice.id ? updatedInvoice : inv,
-        );
-        return {
-          ...old,
-          invoices: newInvoices,
-        };
-      });
-    },
+    mutationFn: ({ id }) => invoicesApi.downloadPaymentProof(id, token),
+  });
+}
+
+export function useDownloadInvoiceReceipt(token) {
+  return useMutation({
+    mutationFn: ({ id }) => invoicesApi.downloadReceipt(id, token),
   });
 }
 
