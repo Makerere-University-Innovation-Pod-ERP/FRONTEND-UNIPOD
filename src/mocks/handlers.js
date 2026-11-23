@@ -20,7 +20,6 @@ import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
 import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
-import { initialFinanceOverview } from './fixtures/overview';
 import {
   initialInvoices,
   initialPriceList,
@@ -723,7 +722,7 @@ export const handlers = [
     return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/submissions/:id/respond`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/submissions/:id/reply`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -1564,11 +1563,6 @@ export const handlers = [
     const result = findSubmitterInvoice(request, params.id);
     if (!result.invoice?.receipt) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
     return new HttpResponse(new Blob([`Mock receipt PDF for ${result.invoice.receipt.receiptNumber}`], { type: 'application/pdf' }));
-  }),
-
-  // Finance / Overview (Daniel Kato, Finance Officer)
-  http.get(`${API_BASE_URL}/finance/overview`, () => {
-    return HttpResponse.json(initialFinanceOverview);
   }),
 
   http.get(`${API_BASE_URL}/finance/summary`, () => {

@@ -59,14 +59,9 @@ export const partnersApi = {
     return z.array(partnerSchema).parse(data);
   },
 
-  async getPartner(id, token, signal) {
-    const data = await request(`/operations/partners/${id}`, { token, signal });
-    return partnerSchema.parse(data);
-  },
-
   async updatePartner(id, body, token, signal) {
     const data = await request(`/operations/partners/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body,
       token,
       signal,

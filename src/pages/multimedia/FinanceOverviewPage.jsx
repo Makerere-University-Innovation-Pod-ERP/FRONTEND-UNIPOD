@@ -11,21 +11,19 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
-  CheckCircle,
   Building2,
-  AlertCircle,
 } from 'lucide-react';
 import { useFinanceOverview } from '@/hooks/useOverview';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /**
  * Finance Officer - Overview Page
- * Role-based dashboard tailored for Daniel Kato, Finance Officer.
+ * Finance Officer dashboard driven entirely by the /finance/overview endpoint.
  * Displays operations KPIs, innovation pipeline at a glance, priority items needing attention,
  * month-to-date income analytics, live facility occupancy, and recent activity log.
  */
 export function FinanceOverviewPage({ token, onUnauthorized }) {
-  const { data: overview, isLoading, error } = useFinanceOverview(token);
+  const { data: overview, isLoading, isError, error, refetch } = useFinanceOverview(token);
 
   // Modal interaction states
   const [selectedAttentionItem, setSelectedAttentionItem] = useState(null);
@@ -41,17 +39,30 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
     return <LoadingSkeleton label="Loading finance and operational overview…" variant="dashboard" />;
   }
 
+  if (isError) {
+    return (
+      <div className="api-error api-error-banner" role="alert">
+        <span>{error instanceof Error ? error.message : 'Could not load the finance overview.'}</span>
+        <button type="button" className="btn btn-outline" onClick={() => void refetch()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!overview) return null;
+
   const {
-    eyebrow = 'FINANCE OFFICER',
-    greeting = 'Good morning, Daniel.',
-    subtitle = "Here's what's moving across the innovation pipeline and UniPod operations today.",
-    metrics = [],
-    pipelineStages = [],
-    needsAttention = [],
-    income = {},
-    facilities = [],
-    recentActivities = [],
-  } = overview || {};
+    eyebrow,
+    greeting,
+    subtitle,
+    metrics,
+    pipelineStages,
+    needsAttention,
+    income,
+    facilities,
+    recentActivities,
+  } = overview;
 
   // Render metric icon dynamically based on card spec
   const renderMetricIcon = (iconName, variant) => {
@@ -568,12 +579,6 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     {selectedAttentionItem.category} submission
                   </strong>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
-                    Assigned Officer
-                  </span>
-                  <strong style={{ color: 'var(--ink)' }}>Daniel Kato (Finance)</strong>
-                </div>
               </div>
             </div>
 
@@ -628,22 +633,16 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Cases</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>8</div>
-              </div>
-              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Avg. Velocity</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>4.2 d</div>
-              </div>
-              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Rate</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>92%</div>
-              </div>
+              {pipelineStages.map((stage) => (
+                <div key={stage.key} style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{stage.label}</span>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>{stage.count}</div>
+                </div>
+              ))}
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--ink-soft)', lineHeight: 1.5, margin: '0 0 20px 0' }}>
-              All 10 recorded submissions are indexed across Mak engineering faculties. Revenue verification and MOU renewal checks are on track.
+              {subtitle}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
@@ -687,70 +686,17 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-041 · Studio Hire</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Kampala AgriTech Collective · Verified</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 550,000</strong>
-                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                    <CheckCircle size={10} /> Verified
+              {income.bars.map((bar) => (
+                <div key={bar.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>{bar.label}</strong>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <strong style={{ fontSize: '13px', color: 'var(--green)' }}>{bar.value}%</strong>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)' }}>{income.currency} · of month-to-date volume</div>
                   </div>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-039 · CNC Prototyping</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>EcoBuild Uganda Ltd · Verified</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 420,000</strong>
-                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                    <CheckCircle size={10} /> Verified
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-037 · Media Production</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Makerere Health Sciences · Verified</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 380,000</strong>
-                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                    <CheckCircle size={10} /> Verified
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-035 · Equipment Testing</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Telecoms Lab · Verified</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 270,000</strong>
-                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                    <CheckCircle size={10} /> Verified
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--amber-bg)', border: '1px solid color-mix(in srgb, var(--amber) 35%, var(--border))' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--amber)' }}>INV-2026-042 · Audio Recording</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--amber)' }}>Innovation Spotlight · Awaiting bank evidence</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--amber)' }}>UGX 150,000</strong>
-                  <div style={{ fontSize: '10px', color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-                    <AlertCircle size={10} /> Pending
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

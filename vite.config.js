@@ -13,4 +13,12 @@ export default defineConfig({
       '@': path.resolve(projectRoot, 'src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://backend-unipod.onrender.com',
+        changeOrigin: true,
+      },
+    },
+  },
 })

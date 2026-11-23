@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { http, HttpResponse } from 'msw';
+import { API_BASE_URL } from '@/services/api-client';
+import { server } from '@/mocks/server';
+import { initialFinanceOverview } from '@/mocks/fixtures/overview';
 import { FinanceOverviewPage } from './FinanceOverviewPage';
 
 function renderPage() {
@@ -21,6 +25,12 @@ function renderPage() {
 }
 
 describe('FinanceOverviewPage', () => {
+  beforeEach(() => {
+    server.use(
+      http.get(`${API_BASE_URL}/finance/overview`, () => HttpResponse.json(initialFinanceOverview)),
+    );
+  });
+
   it('renders page eyebrow, greeting, and subtitle matching the design', async () => {
     renderPage();
 
