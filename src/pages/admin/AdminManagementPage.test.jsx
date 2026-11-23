@@ -13,12 +13,12 @@ describe('AdminManagementPage', () => {
     renderPage();
 
     const row = await screen.findByRole('row', { name: /martha\.akello@unipod\.test/i });
-    await user.selectOptions(within(row).getByLabelText('Role for martha.akello@unipod.test'), 'DEPARTMENT_HEAD');
+    await user.selectOptions(within(row).getByLabelText('Role for martha.akello@unipod.test'), 'DEPARTMENT_COORDINATOR');
     await user.selectOptions(within(row).getByLabelText('Department for martha.akello@unipod.test'), 'dept-2');
     await user.click(within(row).getByRole('button', { name: /save/i }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('Access settings updated for martha.akello@unipod.test.');
-    expect(within(row).getByLabelText('Role for martha.akello@unipod.test')).toHaveValue('DEPARTMENT_HEAD');
+    expect(within(row).getByLabelText('Role for martha.akello@unipod.test')).toHaveValue('DEPARTMENT_COORDINATOR');
     expect(within(row).getByLabelText('Department for martha.akello@unipod.test')).toHaveValue('dept-2');
   });
 
@@ -49,6 +49,7 @@ describe('AdminManagementPage', () => {
 
     await screen.findByRole('heading', { name: 'Manage departments' });
     await user.type(screen.getByLabelText('Department name'), 'Community Health');
+    await user.type(screen.getByLabelText('Department notification email'), 'community-health@example.test');
     await user.click(screen.getByRole('button', { name: 'Create department' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('Department created.');

@@ -15,14 +15,13 @@ import './AdminManagementPage.css';
 const FALLBACK_ROLES = [
   { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator' },
   { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator' },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head' },
   { id: 'FINANCE_OFFICER', name: 'Finance Officer' },
   { id: 'RECEPTIONIST', name: 'Receptionist' },
   { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer' },
   { id: 'REVIEWER', name: 'Reviewer' },
   { id: 'SECTOR_OFFICER', name: 'Sector Officer' },
   { id: 'IP_LIAISON', name: 'IP Liaison' },
-  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner' },
+  { id: 'TELECOMS_DOMAIN_OWNER', name: 'Telecoms Domain Owner' },
   { id: 'SUBMITTER', name: 'Submitter' },
   { id: 'OBSERVER', name: 'Observer' },
 ];
@@ -51,6 +50,7 @@ export function AdminManagementPage({
   const [createdUser, setCreatedUser] = useState(null);
   const [departmentId, setDepartmentId] = useState('');
   const [departmentName, setDepartmentName] = useState('');
+  const [departmentNotificationEmail, setDepartmentNotificationEmail] = useState('');
   const [departmentActive, setDepartmentActive] = useState(true);
   const [sectors, setSectors] = useState([]);
   const [selectedId, setSelectedId] = useState('');
@@ -137,7 +137,7 @@ export function AdminManagementPage({
         email: email.trim(),
         password,
         role,
-        departmentId: accountDepartmentId,
+        departmentId: accountDepartmentId || null,
       });
       setUsers((current) => [created, ...current]);
       setUserDrafts((current) => ({
@@ -165,6 +165,7 @@ export function AdminManagementPage({
     try {
       const updated = await backendApi.updateAdminUser(token, user.id, {
         ...draft,
+        departmentId: draft.departmentId || null,
         version: user.version,
       });
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
@@ -199,6 +200,7 @@ export function AdminManagementPage({
     setDepartmentId(id);
     const department = departments.find((item) => item.id === id);
     setDepartmentName(department?.name ?? '');
+    setDepartmentNotificationEmail(department?.notificationEmail ?? '');
     setDepartmentActive(department?.active ?? true);
   }
 
@@ -210,6 +212,7 @@ export function AdminManagementPage({
     try {
       const body = {
         name: departmentName.trim(),
+        notificationEmail: departmentNotificationEmail.trim(),
         active: departmentActive,
         ...(selectedDepartment ? { version: selectedDepartment.version } : {}),
       };
@@ -411,6 +414,7 @@ export function AdminManagementPage({
         <label className="form-field">Existing department<select value={departmentId} onChange={(event) => selectDepartment(event.target.value)}><option value="">Create a new department…</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (inactive)'}</option>)}</select></label>
         <form className="management-form" onSubmit={saveDepartment}>
           <label className="form-field">Department name<input required maxLength={120} value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} /></label>
+          <label className="form-field">Department notification email<input required type="email" maxLength={320} value={departmentNotificationEmail} onChange={(event) => setDepartmentNotificationEmail(event.target.value)} /></label>
           <label className="management-checkbox"><input type="checkbox" checked={departmentActive} onChange={(event) => setDepartmentActive(event.target.checked)} />Active and available for staff assignments</label>
           <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : <Save size={15} />}{selectedDepartment ? 'Save department' : 'Create department'}</button></div>
         </form>

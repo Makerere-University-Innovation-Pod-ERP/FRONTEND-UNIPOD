@@ -1,35 +1,221 @@
-.management-search{max-width:420px}
+.management-panel{
+  position:relative;
+  margin-bottom:16px;
+  padding:24px 26px;
+  border-color:color-mix(in srgb,var(--ink) 10%,var(--border));
+  border-radius:16px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 98%,white) 0%,var(--surface) 100%);
+  box-shadow:0 1px 2px rgba(25,27,24,.04),0 12px 34px rgba(25,27,24,.055);
+  overflow:hidden;
+}
+.management-panel::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:3px;
+  background:linear-gradient(180deg,var(--mak-red-600),var(--mak-gold-500));
+  opacity:.82;
+}
+.management-panel .live-panel-heading{
+  align-items:flex-start;
+  margin-bottom:18px;
+  padding-bottom:15px;
+  border-bottom:1px solid var(--border-soft);
+}
 .management-panel .live-panel-heading h2,
 .management-panel .management-role-heading h3,
-.management-panel .management-members h3{color:#FDB515}
-.management-panel .live-panel-heading .eyebrow{color:var(--muted)}
+.management-panel .management-members h3{
+  color:var(--ink);
+  font-family:var(--font-serif);
+  letter-spacing:-.025em;
+}
+.management-panel .live-panel-heading h2{font-size:21px}
+.management-panel .live-panel-heading .eyebrow{
+  color:var(--mak-red-600);
+  font-family:var(--font-mono);
+  letter-spacing:.16em;
+}
+.management-help{
+  max-width:760px;
+  margin:-2px 0 20px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.65;
+}
+.management-search{
+  max-width:440px;
+  margin-bottom:16px;
+}
+.management-panel .form-field{
+  margin-bottom:16px;
+  color:var(--ink);
+  font-size:11px;
+  letter-spacing:.01em;
+}
 .management-panel .form-field input,
 .management-panel .form-field select,
-.management-panel .management-table select{border:1px solid var(--border)}
+.management-panel .management-table select{
+  min-height:43px;
+  border:1px solid color-mix(in srgb,var(--ink) 14%,var(--border));
+  border-radius:9px;
+  background:var(--surface-raised);
+  box-shadow:0 1px 2px rgba(25,27,24,.025);
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.management-panel .form-field input:hover,
+.management-panel .form-field select:hover,
+.management-panel .management-table select:hover{
+  border-color:color-mix(in srgb,var(--mak-red-600) 38%,var(--border));
+  background:var(--surface);
+}
 .management-panel .form-field input:focus,
 .management-panel .form-field select:focus,
-.management-panel .management-table select:focus{border-color:var(--mak-green-600);outline-color:var(--mak-green-600);box-shadow:0 0 0 3px color-mix(in srgb,var(--mak-green-600) 20%,transparent)}
-.management-panel .management-checkbox{padding:10px 12px}
-.management-panel .management-checkbox input{accent-color:var(--mak-green-600)}
+.management-panel .management-table select:focus{
+  border-color:var(--mak-red-600);
+  outline:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--mak-red-600) 12%,transparent);
+}
+.management-form{
+  max-width:980px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:18px;
+}
 .management-form>.form-field{align-content:start}
-.management-panel .management-form .form-actions{justify-content:center}
-.management-staff-name{display:block;color:var(--ink);font-weight:700}
-.management-table td small{display:block;margin-top:4px;color:var(--muted);font-size:9px}
-.management-table select{max-width:210px;border:1px solid var(--border);border-radius:5px;background:var(--surface);padding:7px;color:var(--ink-soft);font-size:10px}
-.management-row-actions{display:flex;align-items:center;gap:6px}
-.management-row-actions .btn{min-height:31px;padding:0 9px;font-size:9px}
-.management-empty{text-align:center;color:var(--muted)}
-.management-role{border-top:1px solid var(--border-soft);padding:15px 0}
-.management-role-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.management-role-heading h3{margin:0 0 4px;color:var(--ink);font-size:12px}
-.management-role-heading small{color:var(--muted);font-size:9px}
+.management-panel .management-form .form-actions{
+  justify-content:flex-end;
+  padding:4px 0 0;
+}
+.management-panel .management-form .form-actions .btn-primary{
+  min-width:150px;
+  min-height:43px;
+  border-radius:9px;
+  background:var(--mak-red-600);
+  border-color:var(--mak-red-600);
+  box-shadow:0 7px 18px color-mix(in srgb,var(--mak-red-600) 18%,transparent);
+}
+.management-panel .management-form .form-actions .btn-primary:hover{
+  background:var(--mak-red-700);
+  border-color:var(--mak-red-700);
+  transform:translateY(-1px);
+}
+.management-panel .management-checkbox{
+  align-items:center;
+  min-height:43px;
+  margin:0 0 16px;
+  padding:10px 12px;
+  border:1px solid var(--border-soft);
+  border-radius:9px;
+  background:var(--surface-raised);
+  color:var(--ink-soft);
+  font-size:11px;
+}
+.management-panel .management-checkbox input{
+  width:15px;
+  height:15px;
+  accent-color:var(--mak-red-600);
+}
+.management-notice{
+  border-color:color-mix(in srgb,var(--mak-green-600) 24%,var(--border));
+  border-radius:10px;
+  background:var(--mak-green-tint);
+  color:var(--mak-green-600);
+  box-shadow:none;
+}
+.management-success{
+  margin-top:14px;
+  border-color:color-mix(in srgb,var(--mak-green-600) 24%,var(--border));
+  border-radius:10px;
+  background:var(--mak-green-tint);
+  color:var(--mak-green-600);
+}
+.management-table{border-collapse:separate;border-spacing:0}
+.management-table thead th{
+  height:42px;
+  border-bottom:1px solid var(--border);
+  color:var(--muted);
+  background:var(--surface-raised);
+  font-family:var(--font-mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.management-table tbody tr{transition:background .14s ease}
+.management-table tbody tr:hover{background:color-mix(in srgb,var(--mak-red-600) 3%,var(--surface))}
+.management-table td{height:66px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+.management-table tbody tr:last-child td{border-bottom:0}
+.management-staff-name{display:block;color:var(--ink);font-size:12px;font-weight:800}
+.management-table td small{display:block;margin-top:5px;color:var(--muted);font-size:10px}
+.management-table select{
+  max-width:210px;
+  min-height:36px;
+  border-radius:8px;
+  background:var(--surface);
+  padding:7px 9px;
+  font-size:11px;
+}
+.management-row-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.management-row-actions .btn{min-height:34px;border-radius:8px;padding:0 10px;font-size:10px}
+.management-row-actions .btn:not(:disabled):hover{border-color:var(--mak-red-600);color:var(--mak-red-600)}
+.management-empty{text-align:center;color:var(--muted);padding:28px 10px}
+.management-role{border-top:1px solid var(--border-soft);padding:17px 0}
+.management-role:first-of-type{border-top:0}
+.management-role-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.management-role-heading h3{margin:0 0 4px;color:var(--ink);font-size:15px}
+.management-role-heading small{color:var(--muted);font-size:10px}
+.management-role-heading .btn{border-radius:8px}
 .management-permissions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-.management-permissions label{display:flex;align-items:flex-start;gap:7px;padding:9px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink-soft);font-size:10px;line-height:1.45}
-.management-permissions input{accent-color:var(--mak-green-600);margin:1px 0 0}
-.management-permissions span{padding:9px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink-soft);font-size:10px}
+.management-permissions label{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  min-height:48px;
+  padding:11px 12px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--surface-raised);
+  color:var(--ink-soft);
+  font-size:11px;
+  line-height:1.45;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease;
+}
+.management-permissions label:hover{
+  border-color:color-mix(in srgb,var(--mak-red-600) 32%,var(--border));
+  background:var(--surface);
+  transform:translateY(-1px);
+}
+.management-permissions input{width:15px;height:15px;accent-color:var(--mak-red-600);margin:1px 0 0}
+.management-permissions span{padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-raised);color:var(--ink-soft);font-size:11px}
+.management-members{border-top:1px solid var(--border-soft);margin-top:18px;padding-top:20px}
+.management-members h3{margin:0 0 14px;color:var(--ink);font-size:17px}
+.management-member-form{align-items:flex-end}
+.management-member-form .btn{min-height:43px;border-radius:9px;margin-bottom:14px}
+.management-member-list{border:1px solid var(--border-soft);border-radius:10px;overflow:hidden}
+.management-member-list li{min-height:48px;padding:8px 12px;border-top:1px solid var(--border-soft);color:var(--ink-soft);font-size:11px}
+.management-member-list li:first-child{border-top:0}
+.management-member-list li .icon-button{border-radius:8px}
+.live-page-heading .eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--mak-red-600);
+  font-family:var(--font-mono);
+}
+.live-page-heading .eyebrow::before{content:"";width:24px;height:2px;border-radius:2px;background:var(--mak-gold-500)}
+.live-page-heading h1{letter-spacing:-.04em;text-wrap:balance}
+.live-page-heading>.btn{min-height:42px;border-radius:9px;box-shadow:0 4px 14px rgba(25,27,24,.05)}
+@media(max-width:900px){
+  .management-form{grid-template-columns:1fr}
+  .management-permissions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media(max-width:720px){
+  .management-panel{padding:19px 16px;border-radius:13px}
+  .management-panel::before{width:2px}
   .management-table{min-width:880px}
   .management-row-actions{align-items:flex-start;flex-direction:column}
   .management-permissions{grid-template-columns:1fr}
   .management-role-heading{align-items:flex-start;flex-direction:column}
+  .management-member-form{align-items:stretch;flex-direction:column}
+  .management-member-form>.btn{align-self:flex-start}
+  .live-page-heading>.btn{width:100%}
 }
