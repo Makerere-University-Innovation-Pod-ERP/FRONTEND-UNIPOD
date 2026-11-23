@@ -15,7 +15,7 @@ export function JobBoardPage({ token }) {
       </PageHeading>
       <ErrorBanner error={jobsQuery.error} fallback="Could not load the job board." />
 
-      {jobsQuery.isPending ? <Loading label="Loading jobs…" /> : (
+      {jobsQuery.isPending ? <Loading label="Loading jobs…" variant="board" columns={CNC_STAGES.length} /> : (
         <div className="tx-board">
           {CNC_STAGES.map((stage) => {
             const column = jobs.filter((job) => job.stage === stage);

@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CircleAlert, Download, LoaderCircle } from 'lucide-react';
+import { CircleAlert, Download } from 'lucide-react';
 import { backendApi, ApiError } from '@/services/backend-api';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './reports-analytics.css';
 
 const STAGES = [
@@ -59,12 +60,7 @@ export function ReportsAnalyticsPage({ token, onUnauthorized }) {
   }, [error, onUnauthorized]);
 
   if (isLoading) {
-    return (
-      <div className="reports-state" role="status">
-        <LoaderCircle className="spin" size={20} />
-        Loading reports…
-      </div>
-    );
+    return <LoadingSkeleton label="Loading reports…" variant="reports" />;
   }
 
   if (error) {

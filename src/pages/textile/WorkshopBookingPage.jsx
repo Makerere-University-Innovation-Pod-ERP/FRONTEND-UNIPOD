@@ -91,7 +91,7 @@ export function WorkshopBookingPage({ token, onUnauthorized }) {
                 <button type="button" className="icon-button" aria-label="Next week" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight size={15} /></button>
               </div>
             </div>
-            {calendar.isLoading ? <Loading label="Loading calendar…" /> : (
+            {calendar.isLoading ? <Loading label="Loading calendar…" variant="calendar" /> : (
               <ol className="tx-days">
                 {days.map((day) => {
                   const classes = timetable.filter((entry) => entry.weekday === isoWeekday(day));

@@ -2,6 +2,7 @@
 @import 'tw-animate-css';
 @import './styles/tokens.css';
 @plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   /* Mapped onto the Mak palette: red = primary emphasis, black = text,
@@ -46,9 +47,46 @@
   --font-mono: var(--mak-font-mono);
   --radius: 0.65rem;
 }
+.dark {
+  color-scheme: dark;
+  --background: 20 9% 8%;
+  --foreground: 25 20% 93%;
+  --card: 10 8% 11%;
+  --card-foreground: 25 20% 93%;
+  --card-border: 20 8% 27%;
+  --popover: 10 8% 11%;
+  --popover-foreground: 25 20% 93%;
+  --popover-border: 20 8% 27%;
+  --primary: 357 75% 40%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 20 8% 17%;
+  --secondary-foreground: 25 20% 93%;
+  --muted: 20 8% 17%;
+  --muted-foreground: 20 10% 63%;
+  --accent: 42 98% 56%;
+  --accent-foreground: 10 7% 13%;
+  --destructive: 2 65% 58%;
+  --destructive-foreground: 10 7% 13%;
+  --border: 20 8% 27%;
+  --input: 20 8% 24%;
+  --ring: 357 75% 62%;
+  --chart-1: 357 75% 62%;
+  --chart-2: 42 98% 56%;
+  --chart-3: 150 45% 58%;
+  --chart-4: 20 8% 55%;
+  --chart-5: 25 20% 80%;
+  --sidebar: 10 8% 9%;
+  --sidebar-foreground: 25 20% 93%;
+  --sidebar-border: 20 8% 19%;
+  --sidebar-primary: 357 75% 40%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 20 8% 17%;
+  --sidebar-accent-foreground: 25 20% 93%;
+  --sidebar-ring: 42 98% 56%;
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: #f8f8f5; color: var(--mak-black-900); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; }
 button, a, input, select, textarea { outline-color: var(--mak-red-600); }
 button { cursor: pointer; }

@@ -93,7 +93,7 @@ export function MachineBookingPage({ token }) {
       <div className="detail-grid">
         <section className="live-panel tx-table-panel">
           <h3 className="tx-panel-title">Upcoming machine bookings</h3>
-          {allBookings.isPending ? <Loading label="Loading bookings…" /> : (
+          {allBookings.isPending ? <Loading label="Loading bookings…" variant="table" /> : (
             <div className="live-table-wrap">
               <table className="live-table">
                 <thead><tr><th>MACHINE</th><th>DATE</th><th>TIME</th><th>OPERATOR</th><th>STATUS</th></tr></thead>

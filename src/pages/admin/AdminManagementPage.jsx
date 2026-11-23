@@ -9,6 +9,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './AdminManagementPage.css';
 
 const FALLBACK_ROLES = [
@@ -377,7 +378,7 @@ export function AdminManagementPage({
         <p className="management-help">Change a staff member’s role or department, or deactivate/reactivate their account. Deactivation preserves account history.</p>
         <label className="form-field management-search">Search staff<input type="search" value={userFilter} onChange={(event) => setUserFilter(event.target.value)} placeholder="Name, email, or role" /></label>
         {loadingAdmin
-          ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading staff and access settings…</div>
+          ? <LoadingSkeleton label="Loading staff and access settings…" variant="table" />
           : <div className="live-table-wrap">
             <table className="live-table management-table">
               <thead><tr><th>Staff member</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
@@ -419,7 +420,7 @@ export function AdminManagementPage({
         <div className="live-panel-heading"><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div></div>
         <p className="management-help">Configure permissions for each role. Administrator access is protected. The backend must enforce every permission on each request.</p>
         {loadingAdmin
-          ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading roles…</div>
+          ? <LoadingSkeleton label="Loading roles…" variant="table" />
           : roles.map((item) => {
             const selected = roleDrafts[item.id] ?? item.permissions;
             const changed = selected.length !== item.permissions.length || selected.some((permission) => !item.permissions.includes(permission));
@@ -442,7 +443,7 @@ export function AdminManagementPage({
 
       <section className="live-panel management-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">SECTOR ROUTING</p><h2>Manage sectors</h2></div><button className="btn btn-outline" onClick={startNewSector}><Plus size={14} />New sector</button></div>
-        {loadingSectors && <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading sectors…</div>}
+        {loadingSectors && <LoadingSkeleton label="Loading sectors…" variant="list" />}
         {!loadingSectors && sectorCatalogLoaded && sectors.length === 0 && <p className="management-help">No sectors are configured yet. Create one to enable forwarding submissions to a sector.</p>}
         {sectors.length > 0 && <label className="form-field">Existing sector<select value={selectedId} onChange={(event) => void selectSector(event.target.value)}><option value="">Create a new sector…</option>{sectors.map((sector) => <option key={sector.id} value={sector.id}>{sector.name}{sector.active ? '' : ' (inactive)'}</option>)}</select></label>}
         <form className="management-form" onSubmit={saveSector}>

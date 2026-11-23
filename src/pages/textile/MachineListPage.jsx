@@ -23,7 +23,7 @@ export function MachineListPage({ token, onUnauthorized }) {
       </PageHeading>
       <ErrorBanner error={machines.error} fallback="Could not load machines." />
       {unavailable > 0 && <p className="tx-inline-note">{unavailable} machine{unavailable === 1 ? ' is' : 's are'} unavailable. {MACHINE_UNAVAILABLE_REASON}</p>}
-      {machines.isLoading ? <Loading label="Loading machines…" /> : (
+      {machines.isLoading ? <Loading label="Loading machines…" variant="table" /> : (
         <section className="live-panel tx-table-panel">
           <div className="live-table-wrap">
             <table className="live-table">

@@ -3,6 +3,7 @@ import { ArrowLeft, Check, CircleAlert, LoaderCircle, Undo2 } from 'lucide-react
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function DepartmentResponsePage({ token, onUnauthorized }) {
   const { id = '' } = useParams();
@@ -58,7 +59,7 @@ export function DepartmentResponsePage({ token, onUnauthorized }) {
     }
   }
 
-  if (loading) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case…</div>;
+  if (loading) return <div className="live-page"><LoadingSkeleton label="Loading case…" variant="detail" /></div>;
   if (!caseFile) {
     return (
       <div className="live-page">

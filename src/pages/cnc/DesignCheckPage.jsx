@@ -78,7 +78,7 @@ export function DesignCheckPage({ token }) {
       <PageHeading title="Design Check & Quote" intro="Confirm the job can be made, then price it from the CNC price list. Work starts only after payment." />
       <ErrorBanner error={jobsQuery.error || pricesQuery.error} fallback="Could not load jobs for checking." />
 
-      {jobsQuery.isPending ? <Loading label="Loading jobs…" /> : (
+      {jobsQuery.isPending ? <Loading label="Loading jobs…" variant="split" /> : (
         <div className="detail-grid">
           <section className="live-panel tx-table-panel">
             <h3 className="tx-panel-title">Waiting for a design check ({waiting.length})</h3>

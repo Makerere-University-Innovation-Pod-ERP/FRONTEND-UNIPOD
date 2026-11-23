@@ -33,6 +33,7 @@ import {
 } from '@/hooks/useNotifications';
 import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
 import { formatDate } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
@@ -443,7 +444,7 @@ export function BackendWorkspace({
         <header className="live-topbar">
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
-            <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
+            <i style={{ fontStyle: 'normal', margin: '0 8px', color: 'var(--muted)' }}>›</i>
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
           <div className="live-top-actions">
@@ -525,7 +526,7 @@ export function BackendWorkspace({
                   </div>
                   <div className="notification-list">
                     {notificationsQuery.isLoading ? (
-                      <p>Loading…</p>
+                      <LoadingSkeleton label="Loading notifications…" variant="compact" />
                     ) : notificationsQuery.isError || unreadCountQuery.isError ? (
                       <p role="alert">
                         Notifications could not be loaded.
@@ -617,7 +618,7 @@ export function BackendWorkspace({
             <button className="icon-button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} aria-label="Close search"><X size={15} /></button>
           </div>
           <div className="case-search-results" aria-live="polite">
-            {searchLoading && <p className="global-search-message">Searching cases…</p>}
+            {searchLoading && <LoadingSkeleton label="Searching cases…" variant="compact" />}
             {searchQuery.trim().length >= 2 && searchError && <p className="global-search-message api-error-text" role="alert">{searchError}</p>}
             {searchQuery.trim().length >= 2 && !searchLoading && !searchError && searchResults.length === 0 && <p className="global-search-message">No matching cases.</p>}
             {searchResults.map((item) => (

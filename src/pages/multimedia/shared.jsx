@@ -1,6 +1,7 @@
-import { CircleAlert, LoaderCircle } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
 import { EQUIPMENT_STATE_LABELS } from '@/lib/equipment';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function ErrorBanner({ error, fallback }) {
   if (!error || (error instanceof ApiError && error.status === 401)) return null;
@@ -13,13 +14,8 @@ export function ErrorBanner({ error, fallback }) {
   );
 }
 
-export function Loading({ label }) {
-  return (
-    <div className="live-loading">
-      <LoaderCircle className="spin" size={22} />
-      {label}
-    </div>
-  );
+export function Loading({ label, variant = 'list', columns }) {
+  return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
 }
 
 const EQUIPMENT_TONE = {

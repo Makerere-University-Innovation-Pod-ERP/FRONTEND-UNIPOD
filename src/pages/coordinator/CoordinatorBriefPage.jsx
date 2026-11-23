@@ -25,6 +25,7 @@ import {
 import { ApiError } from '@/services/api-client';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { coordinatorNextStep, reviewProgressLabel } from '@/lib/case-status';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './coordinator.css';
 
 const QUEUE_FILTERS = [
@@ -138,10 +139,7 @@ export function CoordinatorBriefPage({ token, onUnauthorized }) {
       )}
 
       {briefsQuery.isLoading ? (
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={22} />
-          Loading coordinator briefs…
-        </div>
+        <LoadingSkeleton label="Loading coordinator briefs…" variant="queue-detail" />
       ) : (
         <div className="queue-grid">
           <section aria-label="Case queue">
@@ -209,10 +207,7 @@ function BriefPanel({ token, id, query, unauthorized }) {
   if (isLoading) {
     return (
       <section className="live-panel">
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={20} />
-          Loading brief…
-        </div>
+        <LoadingSkeleton label="Loading brief…" variant="detail" />
       </section>
     );
   }
@@ -401,10 +396,7 @@ function AssignmentForm({ token, id, brief }) {
       <h3>Review assignments</h3>
 
       {reviewerPoolQuery.isLoading ? (
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={18} />
-          Loading reviewers…
-        </div>
+        <LoadingSkeleton label="Loading reviewers…" variant="list" />
       ) : reviewerPoolQuery.error ? (
         <div className="api-error api-error-banner" role="alert">
           <CircleAlert size={16} />

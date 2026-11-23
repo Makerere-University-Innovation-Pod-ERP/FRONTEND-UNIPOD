@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Calendar,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +10,6 @@ import {
   Sparkles,
   Sun,
   Sunrise,
-  Users,
   Zap,
 } from 'lucide-react';
 import { addDays, findLabBookingClashes, isoWeekday, startOfWeek, todayIso } from '@/lib/telecoms';
@@ -161,7 +159,7 @@ export function LabBookingPage({ token, onUnauthorized }) {
             </div>
 
             {calendar.isLoading ? (
-              <Loading label="Loading lab schedule…" />
+              <Loading label="Loading lab schedule…" variant="calendar" />
             ) : (
               <div className="tx-days">
                 {days.map((day) => {
@@ -180,15 +178,15 @@ export function LabBookingPage({ token, onUnauthorized }) {
                     >
                       <div className="tx-day-header">
                         <div className="tx-day-date-badge" style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                          <span className="tx-day-num" style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>{dayLabel(day, { day: 'numeric' })}</span>
-                          <span className="tx-day-name" style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dayLabel(day, { weekday: 'short' })}</span>
+                          <span className="tx-day-num" style={{ fontSize: '26px', fontWeight: 800, color: 'var(--ink)' }}>{dayLabel(day, { day: 'numeric' })}</span>
+                          <span className="tx-day-name" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dayLabel(day, { weekday: 'short' })}</span>
                         </div>
-                        {isToday && <span className="today-pill" style={{ background: '#176b52', color: '#ffffff', fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '6px' }}>TODAY</span>}
-                        {isSelected && !isToday && <span className="selected-pill" style={{ background: '#e4efe6', color: '#176b52', fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '6px' }}>SELECTED</span>}
+                        {isToday && <span className="today-pill" style={{ background: 'var(--green-bg)', color: 'var(--green)', fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '6px' }}>TODAY</span>}
+                        {isSelected && !isToday && <span className="selected-pill" style={{ background: 'var(--green-bg)', color: 'var(--green)', fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '6px' }}>SELECTED</span>}
                         <button
                           type="button"
                           className="tx-quick-book-btn"
-                          style={{ color: '#176b52', borderColor: '#176b52', fontWeight: 700, fontSize: '12px' }}
+                          style={{ color: 'var(--green)', borderColor: '#176b52', fontWeight: 700, fontSize: '12px' }}
                           onClick={() => {
                             setForm((prev) => ({ ...prev, date: day }));
                             setConfirmed(null);
@@ -204,17 +202,17 @@ export function LabBookingPage({ token, onUnauthorized }) {
                           <div key={entry.id} className="tx-slot tx-slot-class" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '10px' }}>
                             <div className="tx-slot-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <div className="tx-slot-title-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <GraduationCap size={16} style={{ color: '#4f46e5', flexShrink: 0 }} />
-                                <b style={{ color: '#0f172a', fontSize: '14px', fontWeight: 750 }}>{entry.label}</b>
+                                <GraduationCap size={16} style={{ color: 'var(--blue)', flexShrink: 0 }} />
+                                <b style={{ color: 'var(--ink)', fontSize: '14px', fontWeight: 750 }}>{entry.label}</b>
                               </div>
-                              <span className="tx-slot-time" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '13px', fontWeight: 500 }}>
-                                <Clock size={13} style={{ color: '#6366f1', flexShrink: 0 }} />
+                              <span className="tx-slot-time" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--ink-soft)', fontSize: '13px', fontWeight: 500 }}>
+                                <Clock size={13} style={{ color: 'var(--blue)', flexShrink: 0 }} />
                                 <span>{entry.start} – {entry.end}</span>
-                                <span style={{ color: '#94a3b8' }}>·</span>
+                                <span style={{ color: 'var(--muted)' }}>·</span>
                                 <span>University Class Timetable</span>
                               </span>
                             </div>
-                            <span className="tx-slot-badge class-badge" style={{ background: '#e0e2fe', color: '#4338ca', fontWeight: 750, fontSize: '11px', padding: '4px 10px', borderRadius: '6px' }}>Class</span>
+                            <span className="tx-slot-badge class-badge" style={{ background: 'var(--blue-bg)', color: 'var(--blue)', fontWeight: 750, fontSize: '11px', padding: '4px 10px', borderRadius: '6px' }}>Class</span>
                           </div>
                         ))}
 
@@ -222,17 +220,17 @@ export function LabBookingPage({ token, onUnauthorized }) {
                           <div key={b.id} className="tx-slot tx-slot-booking" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '10px' }}>
                             <div className="tx-slot-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <div className="tx-slot-title-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CheckCircle2 size={16} style={{ color: '#059669', flexShrink: 0 }} />
-                                <b style={{ color: '#0f172a', fontSize: '14px', fontWeight: 750 }}>{b.purpose}</b>
+                                <CheckCircle2 size={16} style={{ color: 'var(--green)', flexShrink: 0 }} />
+                                <b style={{ color: 'var(--ink)', fontSize: '14px', fontWeight: 750 }}>{b.purpose}</b>
                               </div>
-                              <span className="tx-slot-time" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '13px', fontWeight: 500 }}>
-                                <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                              <span className="tx-slot-time" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--ink-soft)', fontSize: '13px', fontWeight: 500 }}>
+                                <Clock size={13} style={{ color: 'var(--green)', flexShrink: 0 }} />
                                 <span>{b.start} – {b.end}</span>
-                                <span style={{ color: '#94a3b8' }}>·</span>
+                                <span style={{ color: 'var(--muted)' }}>·</span>
                                 <span>{b.bookedBy} ({b.customerType})</span>
                               </span>
                             </div>
-                            <span className="tx-slot-badge booking-badge" style={{ background: '#d1fae5', color: '#065f46', fontWeight: 750, fontSize: '11px', padding: '4px 10px', borderRadius: '6px' }}>Confirmed</span>
+                            <span className="tx-slot-badge booking-badge" style={{ background: 'var(--green-bg)', color: 'var(--green)', fontWeight: 750, fontSize: '11px', padding: '4px 10px', borderRadius: '6px' }}>Confirmed</span>
                           </div>
                         ))}
 
@@ -245,7 +243,7 @@ export function LabBookingPage({ token, onUnauthorized }) {
                             }}
                             title="Click to select this date"
                           >
-                            <Sparkles size={14} style={{ color: '#10b981' }} />
+                            <Sparkles size={14} style={{ color: 'var(--green)' }} />
                             <span>Benches open all day (08:00 – 18:00) · <em>Click to book</em></span>
                           </div>
                         )}
@@ -280,7 +278,7 @@ export function LabBookingPage({ token, onUnauthorized }) {
 
             <form className="tx-form" onSubmit={onSubmit}>
               <div className="form-field">
-                <label htmlFor="tl-book-date" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                <label htmlFor="tl-book-date" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                   Reservation Date *
                 </label>
                 <input
@@ -290,13 +288,13 @@ export function LabBookingPage({ token, onUnauthorized }) {
                   min={todayIso()}
                   value={form.date}
                   onChange={set('date')}
-                  style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: '#0f172a', border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', width: '100%' }}
+                  style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', background: 'var(--surface)', width: '100%' }}
                 />
               </div>
 
               {/* Quick Time Preset Buttons */}
               <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: '12.5px', fontWeight: 750, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 750, color: 'var(--ink-soft)', display: 'block', marginBottom: '8px' }}>
                   Quick Time Presets
                 </label>
                 <div className="tx-time-presets" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -309,9 +307,9 @@ export function LabBookingPage({ token, onUnauthorized }) {
                         type="button"
                         className={`time-preset-chip ${active ? 'active' : ''}`}
                         style={{
-                          background: active ? '#176b52' : '#ffffff',
-                          color: active ? '#ffffff' : '#1e293b',
-                          borderColor: active ? '#176b52' : '#cbd5e1',
+                          background: active ? '#176b52' : 'var(--surface)',
+                          color: active ? '#ffffff' : 'var(--ink)',
+                          borderColor: active ? '#176b52' : 'var(--border)',
                           fontWeight: 700,
                           fontSize: '12.5px',
                           padding: '7px 14px',
@@ -325,7 +323,7 @@ export function LabBookingPage({ token, onUnauthorized }) {
                         }}
                         onClick={() => applyPreset(preset)}
                       >
-                        <Icon size={13} style={{ color: active ? '#ffffff' : '#176b52' }} />
+                        <Icon size={13} style={{ color: active ? '#ffffff' : 'var(--green)' }} />
                         {preset.label}
                       </button>
                     );
@@ -335,7 +333,7 @@ export function LabBookingPage({ token, onUnauthorized }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '12px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-book-start" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-book-start" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                     Start Time *
                   </label>
                   <input
@@ -344,11 +342,11 @@ export function LabBookingPage({ token, onUnauthorized }) {
                     required
                     value={form.start}
                     onChange={set('start')}
-                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: '#0f172a', border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', width: '100%' }}
+                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', background: 'var(--surface)', width: '100%' }}
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="tl-book-end" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-book-end" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                     End Time *
                   </label>
                   <input
@@ -357,13 +355,13 @@ export function LabBookingPage({ token, onUnauthorized }) {
                     required
                     value={form.end}
                     onChange={set('end')}
-                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: '#0f172a', border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', width: '100%' }}
+                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', background: 'var(--surface)', width: '100%' }}
                   />
                 </div>
               </div>
 
               <div className="form-field" style={{ marginBottom: '12px' }}>
-                <label htmlFor="tl-book-purpose" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                <label htmlFor="tl-book-purpose" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                   Purpose of Lab Session *
                 </label>
                 <input
@@ -373,13 +371,13 @@ export function LabBookingPage({ token, onUnauthorized }) {
                   placeholder="e.g. LoRa antenna tuning, RF spectrum analysis & PCB rework"
                   value={form.purpose}
                   onChange={set('purpose')}
-                  style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: '#0f172a', border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', width: '100%' }}
+                  style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', background: 'var(--surface)', width: '100%' }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '14px', marginBottom: '14px' }}>
                 <div className="form-field">
-                  <label htmlFor="tl-book-groupsize" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-book-groupsize" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                     Group Size (People)
                   </label>
                   <input
@@ -389,11 +387,11 @@ export function LabBookingPage({ token, onUnauthorized }) {
                     max="20"
                     value={form.groupSize}
                     onChange={set('groupSize')}
-                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: '#0f172a', border: '1.5px solid #94a3b8', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', width: '100%' }}
+                    style={{ minHeight: '42px', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', background: 'var(--surface)', width: '100%' }}
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="tl-book-type" style={{ fontWeight: 750, color: '#0f172a', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
+                  <label htmlFor="tl-book-type" style={{ fontWeight: 750, color: 'var(--ink)', fontSize: '13.5px', marginBottom: '6px', display: 'block' }}>
                     User Group
                   </label>
                   <CurvedSelect
@@ -411,8 +409,8 @@ export function LabBookingPage({ token, onUnauthorized }) {
               </div>
 
               {clashes.length > 0 && (
-                <div className="tx-clash" role="alert" style={{ background: '#fef2f2', border: '1.5px solid #f87171', borderRadius: '8px', padding: '12px 14px', color: '#991b1b', fontSize: '13px', margin: '14px 0' }}>
-                  <ShieldAlert size={18} style={{ flex: 'none', marginTop: 2, color: '#dc2626' }} />
+                <div className="tx-clash" role="alert" style={{ background: 'var(--rose-bg)', border: '1.5px solid color-mix(in srgb, var(--rose) 35%, var(--border))', borderRadius: '8px', padding: '12px 14px', color: 'var(--rose)', fontSize: '13px', margin: '14px 0' }}>
+                  <ShieldAlert size={18} style={{ flex: 'none', marginTop: 2, color: 'var(--rose)' }} />
                   <div>
                     <b style={{ display: 'block', marginBottom: 4, fontWeight: 750 }}>Schedule Conflict Detected:</b>
                     <ul style={{ margin: 0, paddingLeft: '18px' }}>
@@ -439,8 +437,8 @@ export function LabBookingPage({ token, onUnauthorized }) {
                   justifyContent: 'center',
                   gap: '8px',
                   marginTop: '10px',
-                  background: (!ready || clashes.length > 0) ? '#94a3b8' : '#176b52',
-                  color: '#ffffff',
+                  background: (!ready || clashes.length > 0) ? 'var(--surface-raised)' : '#176b52',
+                  color: (!ready || clashes.length > 0) ? 'var(--muted)' : '#ffffff',
                   border: 'none',
                   cursor: (!ready || clashes.length > 0) ? 'not-allowed' : 'pointer',
                   opacity: 1,

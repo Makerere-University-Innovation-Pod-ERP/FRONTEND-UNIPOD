@@ -8,6 +8,7 @@ import { useFactFindingQueue, useFactFindingCase, useSaveAssessment } from '@/ho
 import { checklistItemSchema } from '@/services/fact-finding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const assessmentFormSchema = z.object({
   checklist: z.array(checklistItemSchema),
@@ -36,7 +37,7 @@ export function FactFindingWorkspace({ token, onUnauthorized }) {
         <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{queueError instanceof Error ? queueError.message : 'Could not load the fact-finding queue.'}</div>
       )}
       {queueLoading ? (
-        <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading queue…</div>
+        <LoadingSkeleton label="Loading queue…" variant="table" />
       ) : !queue?.length ? (
         <p className="live-empty">Nothing is waiting for fact-finding right now.</p>
       ) : (
@@ -75,7 +76,7 @@ function AssessmentPanel({ token, id, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  if (isLoading) return <section className="live-panel"><div className="live-loading"><LoaderCircle className="spin" size={20} />Loading case…</div></section>;
+  if (isLoading) return <section className="live-panel"><LoadingSkeleton label="Loading case…" variant="detail" /></section>;
   if (!caseFile) return <section className="live-panel"><p className="live-empty">Select a case to begin.</p></section>;
 
   const onSubmit = handleSubmit((values) => {

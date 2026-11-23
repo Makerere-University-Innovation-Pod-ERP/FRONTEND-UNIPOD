@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, CircleAlert, ClipboardList, LoaderCircle } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CircleAlert, ClipboardList } from 'lucide-react';
 import { useFactFindingQueue } from '@/hooks/useFactFinding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function FactFindingOverview({ token, onUnauthorized }) {
   const { data: queue, isLoading, error } = useFactFindingQueue(token);
@@ -25,7 +26,7 @@ export function FactFindingOverview({ token, onUnauthorized }) {
         <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error instanceof Error ? error.message : 'Could not load the fact-finding queue.'}</div>
       )}
       {isLoading ? (
-        <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading fact-finding queue…</div>
+        <LoadingSkeleton label="Loading fact-finding queue…" variant="metrics-list" />
       ) : (
         <>
           <section className="live-metrics" aria-label="Fact-finding summary">

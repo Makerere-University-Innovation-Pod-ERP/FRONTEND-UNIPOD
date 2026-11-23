@@ -4,7 +4,6 @@ import {
   CircleHelp,
   FileText,
   Inbox,
-  LoaderCircle,
   LockKeyhole,
   Search,
   X,
@@ -13,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 function isSubmitterCapabilities(value) {
   return value !== null
@@ -141,7 +141,7 @@ export function MySubmissionsPage({
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5}><div className="my-submissions-table-state"><LoaderCircle className="spin" size={20} />Loading your submissions…</div></td></tr>
+                  <tr><td colSpan={5}><LoadingSkeleton label="Loading your submissions…" variant="table" className="my-submissions-table-state" /></td></tr>
                 ) : visibleSubmissions.length ? visibleSubmissions.map((item) => {
                   const waitingOnYou = item.stage === 'REFINEMENT_REQUESTED';
                   const stageClass = item.stage.toLowerCase().replaceAll('_', '-');

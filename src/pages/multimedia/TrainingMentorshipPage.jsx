@@ -177,7 +177,7 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
 
       <section className="live-panel tx-table-panel">
         {overviewQuery.isPending ? (
-          <Loading label="Loading training sessions…" />
+          <Loading label="Loading training sessions…" variant="table" />
         ) : (
           <div className="live-table-wrap">
             <table className="live-table">

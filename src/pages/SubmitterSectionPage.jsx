@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import {
   useCancelSubmitterBooking,
   useCreateSubmitterBooking,
@@ -340,7 +341,7 @@ function SubmitterInvoiceDetails({ invoiceId, token, onUnauthorized, onDownload 
   }, [invoiceQuery.error, onUnauthorized, receiptQuery.error]);
 
   if (invoiceQuery.isPending) {
-    return <div className="submitter-invoice-details__loading" role="status"><LoaderCircle className="spin" size={16} />Loading invoice details…</div>;
+    return <LoadingSkeleton label="Loading invoice details…" variant="compact" />;
   }
   if (invoiceQuery.error || !invoice) {
     return <div className="submitter-invoice-details__error" role="alert">
@@ -511,7 +512,7 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           ? `${query.data.totalElements} ${query.data.totalElements === 1 ? 'invoice' : 'invoices'}${status ? ` · ${invoiceStatusLabels[status]}` : ''}`
           : 'Your invoice list'}
       </p>
-      {query.isPending && <div className="submitter-invoice-state" role="status"><LoaderCircle className="spin" size={20} />Loading your invoices…</div>}
+      {query.isPending && <LoadingSkeleton label="Loading your invoices…" variant="table" />}
       {query.data && filteredInvoices.length === 0 && (
         <div className="submitter-invoice-state">
           <span className="submitter-invoice-state__icon"><Receipt size={21} /></span>
@@ -885,7 +886,7 @@ const bookingStatusLabels = {
 
 function SubmitterBookingDetails({ query }) {
   if (query.isPending) {
-    return <p className="submitter-booking-details__state"><LoaderCircle className="spin" size={15} />Loading booking details…</p>;
+    return <LoadingSkeleton label="Loading booking details…" variant="compact" />;
   }
   if (query.error) {
     return <p className="submitter-booking-alert" role="alert">{query.error.message || 'Could not load booking details.'}</p>;
@@ -1143,7 +1144,7 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         )}
         {bookingsQuery.isPending ? (
-          <div className="submitter-booking-state"><LoaderCircle className="spin" size={19} /><span>Loading your bookings…</span></div>
+          <LoadingSkeleton label="Loading your bookings…" variant="list" />
         ) : list.length === 0 ? (
           <div className="submitter-booking-state">
             <span className="submitter-hub__empty-icon"><CalendarDays size={22} aria-hidden="true" /></span>
