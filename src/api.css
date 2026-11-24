@@ -3583,7 +3583,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-theme .tx-status.tx-attention {
   background: var(--amber-bg) !important;
-  color: #78350f !important;
+  color: var(--amber) !important;
   border: 1.5px solid color-mix(in srgb, var(--amber) 35%, var(--border)) !important;
 }
 .telecoms-theme .tx-status.tx-attention i { background: #d97706 !important; }
@@ -3655,7 +3655,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 .telecoms-theme .form-field textarea:focus,
 .telecoms-theme .tx-form input:focus,
 .telecoms-theme .tx-form textarea:focus {
-  border-color: #176b52 !important;
+  border-color: var(--forest) !important;
   outline: none !important;
   box-shadow: 0 0 0 3px rgba(23, 107, 82, 0.2) !important;
 }
