@@ -6508,7 +6508,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   .case-pipeline-current>span{max-width:100px}
 }
 
-.submission-category-options--submitter{grid-template-columns:repeat(3,minmax(0,1fr))}
+.submission-category-options--submitter{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 .submission-create-form input[type="datetime-local"]{min-width:0;min-height:38px}
 .submitter-hub__hero-action{
   display:inline-flex;
