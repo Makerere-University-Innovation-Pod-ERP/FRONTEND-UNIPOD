@@ -4,7 +4,13 @@ import { makeMockToken } from './jwt';
 import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
-import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
+import {
+  documentsBySubmission,
+  sectors,
+  submissions,
+  submitterServiceRequests,
+  toCaseFile,
+} from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
 import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
@@ -29,6 +35,7 @@ import {
 } from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
+import { cncStockHandlers } from './cnc-handlers';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -550,7 +557,9 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
-    const mine = submissions.filter((item) => item.submitterId);
+    const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
+      ? submitterServiceRequests
+      : submissions.filter((item) => item.submitterId);
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
   }),
@@ -573,7 +582,8 @@ export const handlers = [
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = submissions.find((submission) => submission.id === params.id)
+      ?? submitterServiceRequests.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
@@ -1721,4 +1731,5 @@ export const handlers = [
   }),
   ...textileHandlers,
   ...telecomsHandlers,
+  ...cncStockHandlers,
 ];

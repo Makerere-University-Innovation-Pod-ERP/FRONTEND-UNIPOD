@@ -14,6 +14,13 @@ import { JobPage } from './JobPage';
 import { MachineListPage } from './MachineListPage';
 import { MachineBookingPage } from './MachineBookingPage';
 import { SafetyCoursePage } from './SafetyCoursePage';
+import { StockListPage } from './StockListPage';
+import { StockMovementPage } from './StockMovementPage';
+
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 
 afterEach(() => {
   server.resetHandlers();
@@ -226,5 +233,38 @@ describe('Safety course', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/your current role cannot view training records/i);
     expect(screen.getByRole('link', { name: /return to machine booking/i })).toHaveAttribute('href', '/cnc/machines/book');
     expect(screen.queryByText(/loading training sessions/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('CNC stock', () => {
+  it('lists stock with low-stock flags and the job linked to a movement', async () => {
+    renderAt('/cnc/stock', [['/cnc/stock', StockListPage]]);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stock List' })).toBeInTheDocument();
+    expect((await screen.findAllByText('18 mm plywood sheets')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Low stock').length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'ORD-CNC-2026-000002' })).toHaveAttribute('href', '/cnc/jobs/cnc-2');
+    });
+  });
+
+  it('records use of stock against an active job', async () => {
+    const user = userEvent.setup();
+    renderAt('/cnc/stock/movements?type=USED_ON_ORDER&job=cnc-2', [['/cnc/stock/movements', StockMovementPage]]);
+    await user.selectOptions(await screen.findByLabelText('Item*'), 'cnc-stk-mdf');
+    await user.type(screen.getByLabelText('Quantity*'), '4');
+    expect(screen.getByLabelText('Job*')).toHaveValue('cnc-2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/Saved: Used on job 4 sheets of MDF sheets/);
+  });
+
+  it('registers a new stock item with its opening movement', async () => {
+    const user = userEvent.setup();
+    renderAt('/cnc/stock/movements', [['/cnc/stock/movements', StockMovementPage]]);
+    await user.type(await screen.findByLabelText('Item name*'), 'Acrylic offcuts');
+    await user.type(screen.getByLabelText('Unit*'), 'kg');
+    await user.type(screen.getByLabelText('Opening quantity'), '7');
+    await user.click(screen.getByRole('button', { name: 'Register item' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/Added Acrylic offcuts to the stock list/);
+    expect((await screen.findAllByText('Acrylic offcuts')).length).toBeGreaterThan(1);
   });
 });

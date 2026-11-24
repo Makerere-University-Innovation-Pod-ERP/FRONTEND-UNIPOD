@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { CircleAlert, LoaderCircle } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
+import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/presentation';
 import { categoryLabel } from './helpers';
 
@@ -17,7 +18,7 @@ export function ErrorBanner({ error, fallback, onRetry }) {
 }
 
 export function Loading({ label }) {
-  return <div className="live-loading"><LoaderCircle className="spin" size={20} />{label}</div>;
+  return <LoadingSkeleton label={label} />;
 }
 
 export function Counter({ label, value }) {

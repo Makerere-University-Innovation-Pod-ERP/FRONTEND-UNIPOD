@@ -95,6 +95,7 @@ import { MachineBookingPage as CncMachineBookingPage } from '@/pages/cnc/Machine
 import { MachineListPage as CncMachineListPage } from '@/pages/cnc/MachineListPage';
 import { SafetyCoursePage as CncSafetyCoursePage } from '@/pages/cnc/SafetyCoursePage';
 import { StockListPage as CncStockListPage } from '@/pages/cnc/StockListPage';
+import { StockMovementPage as CncStockMovementPage } from '@/pages/cnc/StockMovementPage';
 import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
 import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
 import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
@@ -342,6 +343,8 @@ function AuthenticatedApp({
           <Route path="/cnc/machines" element={cncEquipment(CncMachineListPage)} />
           <Route path="/cnc/machines/book" element={cnc(CncMachineBookingPage)} />
           <Route path="/cnc/safety" element={cncSafety(CncSafetyCoursePage)} />
+          <Route path="/cnc/stock" element={cncEquipment(CncStockListPage)} />
+          <Route path="/cnc/stock/movements" element={cncEquipment(CncStockMovementPage)} />
           <Route path="/cnc/stock" element={cnc(CncStockListPage)} />
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />

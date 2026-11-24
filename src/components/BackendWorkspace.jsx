@@ -215,6 +215,15 @@ export function BackendWorkspace({
   ];
 
   const standardNavGroups = [
+    ...(isSubmitter ? [{
+      heading: 'MY WORKSPACE',
+      items: [
+        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
+      ],
+    }] : []),
     ...(isAdministrator ? [{
       heading: 'MANAGEMENT',
       items: [
@@ -225,15 +234,6 @@ export function BackendWorkspace({
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
         { label: 'Settings', href: '/management', icon: Settings2 },
         { label: 'Department Rules', href: '/rules/manager', icon: FileText },
-      ],
-    }] : []),
-    ...(isSubmitter ? [{
-      heading: 'MY WORKSPACE',
-      items: [
-        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
-        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
-        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
-        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
       ],
     }] : []),
     {
@@ -315,6 +315,17 @@ export function BackendWorkspace({
   const allNavItems = textileOnly
     ? textileNavSections.flatMap((s) => s.links)
     : navGroups.flatMap((group) => group.items);
+
+  const showQuickNavMore = allNavItems.length > 4;
+  const quickNavItems = (() => {
+    if (!showQuickNavMore) return allNavItems;
+    const activeItem = allNavItems.find((item) => isActiveLink(item.href, location));
+    const leadingItems = allNavItems.slice(0, 2);
+    if (activeItem && !leadingItems.some((item) => item.href === activeItem.href)) {
+      return [...leadingItems, activeItem];
+    }
+    return [...leadingItems, allNavItems[2]];
+  })();
 
   function showTooltip(event, title, description, placement = 'right') {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -412,7 +423,7 @@ export function BackendWorkspace({
   }, [queryClient, session.accessToken]);
 
   return (
-    <div className={`live-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
+    <div className={`live-shell bottom-nav-shell ${isTelecoms ? 'telecoms-theme' : textileOnly || location.startsWith('/textile') ? 'textile-theme' : ''} ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'mobile-nav-open' : ''}`}>
       <aside className={`live-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="live-brand">
           <Link
@@ -519,6 +530,34 @@ export function BackendWorkspace({
           </nav>
         )}
 
+        <nav className="bottom-nav" aria-label="Quick navigation">
+          {quickNavItems.map(({ label, href, icon: Icon, badge, count }) => (
+            <Link
+              key={href}
+              to={href}
+              aria-label={label}
+              onClick={() => { setMobileOpen(false); setHoverTooltip(null); }}
+              className={`bottom-nav-link ${isActiveLink(href, location) ? 'active' : ''}`}
+            >
+              <Icon size={18} aria-hidden="true" /><span>{label}</span>
+              {(badge ?? count) > 0 && (
+                <em className="bottom-nav-count" aria-label={`${badge ?? count} waiting`}>{badge ?? count}</em>
+              )}
+            </Link>
+          ))}
+          {showQuickNavMore && (
+            <button
+              type="button"
+              className="bottom-nav-link bottom-nav-more"
+              onClick={() => { setMobileOpen(true); setHoverTooltip(null); }}
+              aria-label="More navigation"
+              aria-expanded={mobileOpen}
+            >
+              <Grid2x2 size={18} aria-hidden="true" /><span>More</span>
+            </button>
+          )}
+        </nav>
+
         {!collapsed && (
           <div className="live-sidebar-notice">
             <div><span className="dot" /><span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span></div>
@@ -543,6 +582,15 @@ export function BackendWorkspace({
             <LogOut size={16} />
           </button>
         </div>
+        <button
+          type="button"
+          className="mobile-signout-action"
+          onClick={onLogout}
+          aria-label="Sign out"
+        >
+          <LogOut size={15} aria-hidden="true" />
+          <span>Sign out</span>
+        </button>
       </aside>
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">

@@ -25,6 +25,7 @@ import {
 } from '@/hooks/useNotifications';
 import { notificationTarget } from '@/services/notifications';
 import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
+import { LoadingSkeleton } from '@/components/ui/skeleton';
 import './notifications.css';
 
 const PAGE_SIZE = 20;
@@ -199,6 +200,7 @@ export function NotificationsPage({ token, roles = [] }) {
           )}
 
           {notificationsQuery.isLoading ? (
+            <LoadingSkeleton label="Gathering your updates…" variant="compact" />
             <div className="inbox-loading" role="status"><span />Gathering your updates…</div>
           ) : !notificationsQuery.isError && groups.length ? (
             <div className="inbox-groups">

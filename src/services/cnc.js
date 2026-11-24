@@ -67,7 +67,41 @@ export const priceItemSchema = z.object({
   status: z.string(),
 });
 
+export const cncStockItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  unit: z.string(),
+  quantity: z.number(),
+  minimum: z.number(),
+  location: z.string(),
+});
+
+export const cncStockMovementSchema = z.object({
+  id: z.string(),
+  itemId: z.string(),
+  itemName: z.string(),
+  type: z.enum(['RECEIVED', 'USED_ON_ORDER', 'CORRECTION']),
+  quantity: z.number(),
+  balanceAfter: z.number(),
+  jobId: z.string().nullable(),
+  jobCode: z.string().nullable(),
+  note: z.string(),
+  by: z.string(),
+  at: z.string(),
+});
+
+const cncStockListSchema = z.object({
+  items: z.array(cncStockItemSchema),
+  movementsThisWeek: z.number(),
+});
+
+const cncMovementResultSchema = z.object({
+  movement: cncStockMovementSchema,
+  item: cncStockItemSchema,
+});
+
 const base = '/departments/cnc/orders';
+const stockBase = '/cnc/stock';
 
 export const cncApi = {
   async jobs(token, signal) {
@@ -121,6 +155,29 @@ export const cncApi = {
     const params = new URLSearchParams({ status: 'ACTIVE' });
     if (departmentId) params.set('departmentId', departmentId);
     return z.array(priceItemSchema).parse(await request(`/price-list-items?${params}`, { token, signal }));
+  },
+
+  async stock(token, signal) {
+    return cncStockListSchema.parse(await request(stockBase, { token, signal }));
+  },
+
+  async registerStockItem(item, token) {
+    return cncStockItemSchema.parse(await request(stockBase, { method: 'POST', body: item, token }));
+  },
+
+  async stockMovements(token, signal) {
+    return z.object({ items: z.array(cncStockMovementSchema) })
+      .parse(await request(`${stockBase}/movements`, { token, signal })).items;
+  },
+
+  async recordStockMovement(body, token) {
+    return cncMovementResultSchema.parse(await request(`${stockBase}/movements`, { method: 'POST', body, token }));
+  },
+
+  async updateStockMinimum(id, minimum, token) {
+    return cncStockItemSchema.parse(await request(`${stockBase}/${encodeURIComponent(id)}`, {
+      method: 'PATCH', body: { minimum }, token,
+    }));
   },
 
   async setFacilityStatus(id, status, token, signal) {

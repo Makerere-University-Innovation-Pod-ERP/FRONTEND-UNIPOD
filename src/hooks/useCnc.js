@@ -3,6 +3,13 @@ import { cncApi } from '@/services/cnc';
 
 const JOBS_KEY = ['cnc', 'jobs'];
 
+export const cncKeys = {
+  jobs: JOBS_KEY,
+  prices: (departmentId) => ['cnc', 'prices', departmentId],
+  stock: (token) => ['cnc', 'stock', token],
+  stockMovements: (token) => ['cnc', 'stock-movements', token],
+};
+
 export function useCncJobs(token) {
   return useQuery({
     queryKey: JOBS_KEY,
@@ -13,7 +20,7 @@ export function useCncJobs(token) {
 
 export function useCncPriceList(token, departmentId) {
   return useQuery({
-    queryKey: ['cnc', 'prices', departmentId],
+    queryKey: cncKeys.prices(departmentId),
     queryFn: ({ signal }) => cncApi.priceList(departmentId, token, signal),
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5,
@@ -54,4 +61,43 @@ export function useSetFacilityStatus(token) {
     mutationFn: ({ id, status }) => cncApi.setFacilityStatus(id, status, token),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['facilities'] }),
   });
+}
+
+export function useCncStock(token) {
+  return useQuery({
+    queryKey: cncKeys.stock(token),
+    queryFn: ({ signal }) => cncApi.stock(token, signal),
+    enabled: Boolean(token),
+  });
+}
+
+export function useCncStockMovements(token) {
+  return useQuery({
+    queryKey: cncKeys.stockMovements(token),
+    queryFn: ({ signal }) => cncApi.stockMovements(token, signal),
+    enabled: Boolean(token),
+  });
+}
+
+function useStockMutation(token, mutationFn) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cncKeys.stock(token) });
+      queryClient.invalidateQueries({ queryKey: cncKeys.stockMovements(token) });
+    },
+  });
+}
+
+export function useRegisterCncStockItem(token) {
+  return useStockMutation(token, (item) => cncApi.registerStockItem(item, token));
+}
+
+export function useRecordCncStockMovement(token) {
+  return useStockMutation(token, (body) => cncApi.recordStockMovement(body, token));
+}
+
+export function useUpdateCncStockMinimum(token) {
+  return useStockMutation(token, ({ id, minimum }) => cncApi.updateStockMinimum(id, minimum, token));
 }
