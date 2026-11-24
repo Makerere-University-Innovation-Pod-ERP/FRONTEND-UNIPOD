@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { X, Calendar, MapPin, User, FileText, ArrowRight } from 'lucide-react';
 import { useMediaOverview, useUpdateMediaStatus } from '@/hooks/useMedia';
 
@@ -59,10 +60,17 @@ const FALLBACK_REQUESTS = [
 
 export function MediaServicesPage({ token }) {
   const { data: overview } = useMediaOverview(token);
+  const [searchParams] = useSearchParams();
   const updateStatus = useUpdateMediaStatus(token);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const linkedRequestId = searchParams.get('request');
 
   const allRequests = overview?.requests ?? FALLBACK_REQUESTS;
+  useEffect(() => {
+    if (!linkedRequestId || !overview) return;
+    const request = overview.requests.find((item) => item.id === linkedRequestId);
+    if (request) setSelectedRequest(request);
+  }, [linkedRequestId, overview]);
 
   const handleAdvanceStatus = (request) => {
     let nextStatus = 'SCHEDULED';

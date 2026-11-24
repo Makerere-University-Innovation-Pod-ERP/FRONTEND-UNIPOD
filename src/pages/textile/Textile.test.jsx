@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import { makeMockToken } from '@/mocks/jwt';
+import { server } from '@/mocks/server';
+import { orders as fixtureOrders } from '@/mocks/fixtures/textile';
+import { API_BASE_URL } from '@/services/api-client';
+import { textileApi } from '@/services/textile';
 import { addDays, startOfWeek, todayIso } from '@/lib/textile';
 import { OrderReviewPage } from './OrderReviewPage';
 import { OrderBoardPage } from './OrderBoardPage';
-import { OrderPage } from './OrderPage';
+import { OrderPage, OrdersIndexPage } from './OrderPage';
 import { StockMovementPage } from './StockMovementPage';
 import { ReportFaultPage } from './ReportFaultPage';
 import { WorkshopBookingPage } from './WorkshopBookingPage';
@@ -206,5 +211,150 @@ describe('New Order', () => {
     await user.click(rules);
     await user.click(screen.getByRole('button', { name: 'Send order' }));
     expect(await screen.findByText('Navigated away')).toBeInTheDocument();
+  });
+
+  async function fillOrder(user) {
+    await user.type(screen.getByRole('textbox', { name: /customer name/i }), 'Robert Ssali');
+    await user.selectOptions(screen.getByRole('combobox', { name: /customer type/i }), 'Public');
+    await user.type(screen.getByRole('textbox', { name: /what is wanted/i }), 'Cushion covers');
+    await user.type(screen.getByRole('textbox', { name: /^quantity/i }), '4');
+    await user.type(screen.getByRole('textbox', { name: /size/i }), '45 × 45 cm');
+  }
+
+  it('uses the Textile rules published in the Rules Manager when there are any', async () => {
+    let sentOrder = null;
+    server.use(
+      http.get(`${API_BASE_URL}/sectors`, () => HttpResponse.json([{ id: 'sec-tx', name: 'Textile' }, { id: 'sec-1', name: 'Technical Assessment' }])),
+      http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json([
+        { id: 'r-tx', title: 'Fabric deposit', body: 'Customers pay for special-order fabric up front.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 2, published: true, updatedAt: '2026-11-20T08:00:00Z' },
+        { id: 'r-draft', title: 'Unpublished textile rule', body: 'Not live yet.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 1, published: false, updatedAt: '2026-11-20T08:00:00Z' },
+        { id: 'r-other', title: 'Technical Assessment turnaround', body: 'Other department.', scope: 'SECTOR', scopeId: 'sec-1', mustAccept: true, version: 1, published: true, updatedAt: '2026-11-20T08:00:00Z' },
+      ])),
+      http.post(`${API_BASE_URL}/textile/orders`, async ({ request }) => {
+        sentOrder = JSON.parse(await (await request.formData()).get('order').text());
+        return HttpResponse.json({ message: 'stop here' }, { status: 400 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage(NewOrderPage);
+    expect(await screen.findByText('Fabric deposit')).toBeInTheDocument();
+    expect(screen.queryByText('Unpublished textile rule')).not.toBeInTheDocument();
+    expect(screen.queryByText('Technical Assessment turnaround')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /accepts the Textile department/i })).not.toBeInTheDocument();
+
+    await fillOrder(user);
+    await user.click(screen.getByRole('button', { name: 'Send order' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/must accept every Textile rule/i);
+    expect(sentOrder).toBeNull();
+
+    await user.click(screen.getByRole('checkbox', { name: /read and accept this rule/i }));
+    await user.click(screen.getByRole('button', { name: 'Send order' }));
+    await screen.findByText('stop here');
+    expect(sentOrder).toMatchObject({ rulesAccepted: true, acceptedRules: [{ id: 'r-tx', version: 2 }] });
+  });
+
+  it('falls back to the built-in Textile rules when the published rules cannot be loaded', async () => {
+    server.use(http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json({ message: 'Forbidden' }, { status: 403 })));
+    renderPage(NewOrderPage);
+    expect(await screen.findByRole('checkbox', { name: /accepts the Textile department/i })).toBeRequired();
+    expect(screen.getByText(/Work starts only after the quote is accepted/i)).toBeInTheDocument();
+  });
+});
+
+describe('Order Board', () => {
+  it('searches orders across every column', async () => {
+    const user = userEvent.setup();
+    renderPage(OrderBoardPage);
+    expect(await screen.findByText('Market vendor apron')).toBeInTheDocument();
+    await user.type(screen.getByRole('searchbox', { name: /search orders/i }), 'ecobuild');
+    expect(screen.getByText('Branded workwear ×20')).toBeInTheDocument();
+    expect(screen.queryByText('Market vendor apron')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Showing 1 of/);
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+    expect(screen.getByText('Market vendor apron')).toBeInTheDocument();
+  });
+
+  it('flags a paid quote as ready to schedule and filters to it', async () => {
+    // Earlier tests schedule the shared mock orders, so serve a known pair of quotes here.
+    const byTitle = (title) => fixtureOrders.find((order) => order.whatIsWanted === title);
+    server.use(http.get(`${API_BASE_URL}/textile/orders`, () => HttpResponse.json({ items: [
+      { ...byTitle('Stage costume alterations'), status: 'QUOTED', payment: { status: 'CONFIRMED', reference: 'PAY-1', confirmedAt: '2026-11-18T10:00:00Z' } },
+      { ...byTitle('Branded aprons for bakery staff'), status: 'QUOTED', payment: { status: 'AWAITING_PROOF', reference: null, confirmedAt: null } },
+    ] })));
+    const user = userEvent.setup();
+    renderPage(OrderBoardPage);
+    expect(await screen.findByText('Paid · ready to schedule')).toBeInTheDocument();
+    const chip = screen.getByRole('button', { name: /ready to schedule/i });
+    expect(chip).toHaveTextContent('1');
+    await user.click(chip);
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Stage costume alterations')).toBeInTheDocument();
+    expect(screen.queryByText('Branded aprons for bakery staff')).not.toBeInTheDocument();
+  });
+});
+
+describe('Order pages index', () => {
+  it('filters the order list by status and search text', async () => {
+    const user = userEvent.setup();
+    renderPage(OrdersIndexPage);
+    expect(await screen.findByText('Market vendor apron')).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by status/i }), 'COLLECTED');
+    expect(screen.getByText('Market vendor apron')).toBeInTheDocument();
+    expect(screen.queryByText('Graduation sash set')).not.toBeInTheDocument();
+    await user.type(screen.getByRole('searchbox', { name: /search orders/i }), 'nothing like this');
+    expect(screen.getByText(/No orders match/)).toBeInTheDocument();
+  });
+});
+
+describe('Order Review queue', () => {
+  it('searches the review queue', async () => {
+    const user = userEvent.setup();
+    renderPage(OrderReviewPage, { path: '/textile/review', route: '/textile/review' });
+    const queue = await screen.findByRole('navigation', { name: /orders to review/i });
+    await user.type(within(queue).getByRole('searchbox', { name: /search orders to review/i }), 'bakers');
+    expect(within(queue).getByText('Branded aprons for bakery staff')).toBeInTheDocument();
+    expect(within(queue).queryByText('Custom curtain set, living room')).not.toBeInTheDocument();
+    await user.clear(within(queue).getByRole('searchbox'));
+    await user.type(within(queue).getByRole('searchbox'), 'zzz');
+    expect(within(queue).getByText(/No orders match/)).toBeInTheDocument();
+  });
+
+  it('discards a draft only after confirming', async () => {
+    await textileApi.createOrder(token, { order: { customerName: 'Draft Customer', whatIsWanted: 'Draft cushions', submit: false }, photo: null });
+    const user = userEvent.setup();
+    renderPage(OrderReviewPage, { path: '/textile/review', route: '/textile/review' });
+    await user.click(await screen.findByRole('button', { name: 'Discard draft: Draft cushions' }));
+    const confirm = screen.getByRole('group', { name: /discard draft cushions/i });
+    await user.click(within(confirm).getByRole('button', { name: 'Keep' }));
+    expect(screen.getByText('Draft cushions')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Discard draft: Draft cushions' }));
+    await user.click(within(screen.getByRole('group', { name: /discard draft cushions/i })).getByRole('button', { name: /discard/i }));
+    await waitFor(() => expect(screen.queryByText('Draft cushions')).not.toBeInTheDocument());
+  });
+
+  it('refuses to discard an order that has already been sent', async () => {
+    await expect(textileApi.discardDraft(token, 'TXO-2026-015')).rejects.toThrow(/only a draft/i);
+  });
+});
+
+describe('Collection slip', () => {
+  it('prints a slip for a ready order and only switches the print styles on while printing', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderPage(OrderPage, { path: '/textile/orders/:id', route: '/textile/orders/TXO-2026-012' });
+    await user.click(await screen.findByRole('button', { name: /print collection slip/i }));
+    expect(print).toHaveBeenCalledOnce();
+    expect(document.body).toHaveClass('tx-printing-slip');
+    window.dispatchEvent(new Event('afterprint'));
+    expect(document.body).not.toHaveClass('tx-printing-slip');
+    expect(document.querySelector('.tx-print-slip')).toHaveTextContent('TXO-2026-012');
+    print.mockRestore();
+  });
+
+  it('offers no slip while the order is still being made', async () => {
+    renderPage(OrderPage, { path: '/textile/orders/:id', route: '/textile/orders/TXO-2026-014' });
+    expect(await screen.findByRole('heading', { name: /branded tote bags/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /print collection slip/i })).not.toBeInTheDocument();
   });
 });

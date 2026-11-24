@@ -102,6 +102,14 @@ export function useCreateTelecomsRequest(token) {
   return useRequestMutation(token, (payload) => telecomsApi.createRequest(token, payload));
 }
 
+export function useUpdateTelecomsRequestDraft(token, id) {
+  return useRequestMutation(token, (payload) => telecomsApi.updateDraft(token, id, payload));
+}
+
+export function useSubmitTelecomsRequestDraft(token, id) {
+  return useRequestMutation(token, () => telecomsApi.submitDraft(token, id));
+}
+
 export function useSendTelecomsQuote(token, id) {
   return useRequestMutation(token, (body) => telecomsApi.sendQuote(token, id, body));
 }
@@ -151,6 +159,16 @@ export function useReportTelecomsFault(token) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body) => telecomsApi.reportEquipmentFault(token, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: telecomsKeys.equipment(token) });
+    },
+  });
+}
+
+export function useMarkTelecomsEquipmentWorking(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => telecomsApi.markEquipmentWorking(token, id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: telecomsKeys.equipment(token) });
     },

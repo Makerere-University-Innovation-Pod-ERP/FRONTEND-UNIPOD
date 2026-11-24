@@ -188,6 +188,10 @@ export const textileApi = {
     orderSchema.parse(await request('/textile/orders', { token, body: multipart('order', order, photo) })),
   updateDraft: async (token, id, { order, photo }) =>
     orderSchema.parse(await request(`/textile/orders/${path(id)}`, { token, method: 'PUT', body: multipart('order', order, photo) })),
+  /** Proposed endpoint: DELETE /textile/orders/:id → 204. Only a DRAFT can be discarded (409 otherwise). */
+  discardDraft: async (token, id) => {
+    await request(`/textile/orders/${path(id)}`, { token, method: 'DELETE' });
+  },
   sendQuote: async (token, id, body) =>
     orderSchema.parse(await request(`/textile/orders/${path(id)}/quote`, { token, body })),
   requestDetails: async (token, id, message) =>

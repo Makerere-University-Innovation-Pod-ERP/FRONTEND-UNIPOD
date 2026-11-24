@@ -1,6 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CircleAlert, ImageUp, LoaderCircle, X } from 'lucide-react';
 import { API_BASE_URL, ApiError } from '@/services/api-client';
+import { CircleAlert, ImageUp, X } from 'lucide-react';
+import { ApiError } from '@/services/api-client';
+import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
 import { MACHINE_STATE_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/textile';
 
@@ -11,7 +14,7 @@ export function ErrorBanner({ error, fallback }) {
 }
 
 export function Loading({ label }) {
-  return <div className="live-loading"><LoaderCircle className="spin" size={22} />{label}</div>;
+  return <LoadingSkeleton label={label} />;
 }
 
 export function PageHeading({ eyebrow, title, intro, children }) {

@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { textileApi } from '@/services/textile';
+import { backendApi } from '@/services/backend-api';
+import { useRules } from '@/hooks/useRules';
 
 export const textileKeys = {
   all: ['textile'],
@@ -92,6 +94,19 @@ export function useUpdateDraft(token, id) {
   return useOrderMutation(token, (payload) => textileApi.updateDraft(token, id, payload));
 }
 
+/** Discards a draft order; the draft disappears from the order lists. */
+export function useDiscardDraft(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => textileApi.discardDraft(token, id),
+    onSuccess: (_, id) => {
+      queryClient.removeQueries({ queryKey: textileKeys.order(token, id) });
+      queryClient.setQueryData(textileKeys.orders(token), (current) => current?.filter((order) => order.id !== id));
+      void queryClient.invalidateQueries({ queryKey: textileKeys.orders(token) });
+    },
+  });
+}
+
 export function useSendQuote(token, id) {
   return useOrderMutation(token, (body) => textileApi.sendQuote(token, id, body));
 }
@@ -180,4 +195,30 @@ export function useAddAttendee(token) {
 
 export function useSetAttendance(token) {
   return useBookingMutation(({ bookingId, attendeeId, attended }) => textileApi.setAttendance(token, bookingId, attendeeId, attended));
+}
+
+/** Sectors whose name marks them as the Textile department (rules are scoped to sectors). */
+const TEXTILE_SECTOR_NAME = /textile/i;
+
+/**
+ * Textile rules published in the shared Rules Manager (Assignment 12): the
+ * published rules scoped to a sector named "Textile". `rules` is empty while
+ * loading, when nothing is published, or when the lookup fails — callers then
+ * fall back to the built-in TEXTILE_RULES so an order can still be taken.
+ */
+export function usePublishedTextileRules(token) {
+  const rules = useRules(token);
+  // Same key as the Rules Manager, so both screens share the cached sector list.
+  const sectors = useQuery({
+    queryKey: ['sectors', token],
+    queryFn: ({ signal }) => backendApi.sectors(token, signal),
+    enabled: Boolean(token),
+    staleTime: 5 * 60_000,
+  });
+  const sectorList = Array.isArray(sectors.data) ? sectors.data : sectors.data?.items ?? [];
+  const textileSectorIds = sectorList.filter((sector) => TEXTILE_SECTOR_NAME.test(sector.name ?? '')).map((sector) => sector.id);
+  const published = (rules.data ?? []).filter(
+    (rule) => rule.published && rule.scope === 'SECTOR' && textileSectorIds.includes(rule.scopeId),
+  );
+  return { isLoading: rules.isLoading || sectors.isLoading, rules: published };
 }
