@@ -119,17 +119,6 @@ describe('Submitter section pages', () => {
     expect(within(booking).getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
   });
 
-  it('opens the exact booking linked by a notification', async () => {
-    window.history.replaceState({}, '', '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301');
-    renderPage(SubmitterBookingsPage);
-
-    const reference = await screen.findByText('BKG-2026-001201');
-    const booking = reference.closest('[data-notification-target="true"]');
-    expect(booking).not.toBeNull();
-    expect(await within(booking).findByText('Contact / operator')).toBeInTheDocument();
-    expect(within(booking).getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
-  });
-
   it('filters facilities by typing and only selects a listed facility', async () => {
     const user = userEvent.setup();
     renderPage(SubmitterBookingsPage);

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, Calendar, ChevronRight, CircleAlert, FileText, Folder, RotateCw, Wrench } from 'lucide-react';
-import { ArrowRight, Calendar, ChevronRight, CircleAlert, ClipboardCheck, FileText, Folder, LoaderCircle, Wrench } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, CircleAlert, ClipboardCheck, FileText, Folder, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError, backendApi } from '@/services/backend-api';
@@ -180,11 +179,6 @@ export function LiveDashboard({
               return (
                 <article key={metric.label} className={`overview-metric-card card-${metric.variant}`}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: special ? (metric.variant === 'forest' ? '#d6ebdf' : '#e6c7bf') : 'var(--dashboard-muted)' }}>{metric.label}</span>
-                    <span style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: special ? 'rgba(255,255,255,.12)' : 'var(--mak-green-tint)', color: special ? '#fff' : 'var(--mak-green-600)' }}><Icon size={15} /></span>
-                  </div>
-                  <strong style={{ fontSize: '34px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: special ? '#fff' : 'var(--dashboard-ink)' }}>{metric.value}</strong>
-                  <small style={{ fontSize: '12px', color: special ? (metric.variant === 'forest' ? '#d6ebdf' : '#e6c7bf') : 'var(--dashboard-muted)' }}>{metric.note}</small>
                     <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: special ? '#ffffff' : 'var(--mak-silver-700)' }}>{metric.label}</span>
                     <span style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: special ? 'rgba(255,255,255,.12)' : 'var(--mak-green-tint)', color: special ? '#fff' : 'var(--mak-green-600)' }}><Icon size={15} /></span>
                   </div>
@@ -195,16 +189,6 @@ export function LiveDashboard({
             })}
           </section>
           <section className="overview-middle-grid" aria-label="Operations pipeline and action items">
-            <div className="overview-panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px' }}>
-                <div><h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--dashboard-ink)', margin: '0 0 3px' }}>Pipeline at a glance</h2><p style={{ fontSize: '12px', color: 'var(--dashboard-muted)', margin: 0 }}>A flexible guide, not a fixed sequence.</p></div>
-                <Link to="/submissions" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--mak-green-600)', textDecoration: 'none' }}>Open reports <ArrowRight size={13} /></Link>
-              </div>
-              <div className="overview-pipeline-subgrid">
-                {pipelineStages.map(([key, label]) => (
-                  <div className="pipeline-tile overview-subbox" key={key}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--dashboard-muted)', textTransform: 'uppercase' }}>{label}</span>
-                    <b style={{ fontSize: '24px', color: 'var(--dashboard-ink)', marginTop: '6px', lineHeight: 1 }}>{pipelineAtAGlance[key] ?? 0}</b>
             <div className="overview-panel-card pipeline-panel-card">
               <div className="pipeline-panel-heading">
                 <div>
@@ -218,7 +202,7 @@ export function LiveDashboard({
                     <span className="pipeline-stage-index">{String(index + 1).padStart(2, '0')}</span>
                     <span className="pipeline-stage-label">{label}</span>
                     <div className="pipeline-stage-value">
-                      <b>{String(pipelineAtAGlance[key] ?? 0).padStart(2, '0')}</b>
+                      <b>{String(pipelineAtAGlance[key] ?? 0)}</b>
                       <span className="pipeline-stage-track"><i /></span>
                     </div>
                   </div>

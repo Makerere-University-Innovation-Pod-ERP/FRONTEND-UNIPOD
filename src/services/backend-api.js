@@ -48,6 +48,13 @@ export const backendApi = {
   adminDepartments: (token) =>
     request('/departments', { token })
       .then((departments) => departments.map((department) => ({ ...department, active: true }))),
+  createDepartment: (token, body) =>
+    request('/departments', { token, body }),
+  updateDepartment: (
+    token,
+    id,
+    body,
+  ) => request(`/departments/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (

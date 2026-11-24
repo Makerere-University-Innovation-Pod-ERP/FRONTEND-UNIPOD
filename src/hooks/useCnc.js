@@ -22,7 +22,7 @@ export function useCncPriceList(token, departmentId) {
   return useQuery({
     queryKey: cncKeys.prices(departmentId),
     queryFn: ({ signal }) => cncApi.priceList(departmentId, token, signal),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && Boolean(departmentId),
     staleTime: 1000 * 60 * 5,
   });
 }

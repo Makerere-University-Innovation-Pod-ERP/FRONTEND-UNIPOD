@@ -119,7 +119,6 @@ function OrderView({ token, order, machines, onUnauthorized }) {
   );
 }
 
-function OrderSummary({ order, token }) {
 /**
  * Print-only slip handed over with the finished order (hidden on screen). Rendered
  * into <body> so no animated (transformed) page wrapper offsets it on paper.
@@ -160,7 +159,7 @@ function CollectionSlip({ order }) {
   );
 }
 
-function OrderSummary({ order }) {
+function OrderSummary({ order, token }) {
   return (
     <section className="live-panel">
       <h2 className="tx-panel-title">Order details</h2>
