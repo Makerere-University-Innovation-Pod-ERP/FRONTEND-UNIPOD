@@ -435,8 +435,8 @@ export function BackendWorkspace({
           >
             {isTelecoms ? (
               <>
-                <div className="brand-mark" aria-hidden="true" style={{ background: '#d7ef67' }}><span /><span /><span /><span /></div>
-                <span><b>TELECOMS ERP</b><small style={{ color: '#9db2a2' }}>RF & IoT Operations</small></span>
+                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
+                <span><b>MUTIC ERP</b><small>RF & IoT Operations</small></span>
               </>
             ) : textileOnly ? (
               <>
