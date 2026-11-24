@@ -7905,8 +7905,8 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   padding: 6px 12px;
   border: 1px solid rgba(23, 107, 82, 0.18);
   border-radius: 999px;
-  background: #e2f4ea;
-  color: #176b52 !important;
+  background: var(--green-bg);
+  color: var(--forest) !important;
   font-size: 10.5px !important;
   font-weight: 800 !important;
   letter-spacing: 0.16em !important;
@@ -7917,7 +7917,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #15803d;
+  background: var(--green);
   box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
 }
 
@@ -7927,7 +7927,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   font-weight: 800 !important;
   letter-spacing: -0.045em !important;
   line-height: 1.1 !important;
-  background: linear-gradient(95deg, #0f172a 30%, #176b52 105%) !important;
+  background: linear-gradient(95deg, var(--ink) 30%, var(--forest) 105%) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   color: transparent !important;
@@ -7939,7 +7939,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   max-width: 780px !important;
   font-size: 15px !important;
   line-height: 1.65 !important;
-  color: #334155 !important;
+  color: var(--ink-soft) !important;
 }
 
 .telecoms-request-layout {
@@ -7964,7 +7964,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .live-panel {
   position: relative;
-  border-color: #cbd5e1 !important;
+  border-color: var(--border) !important;
   border-radius: 18px !important;
   padding: 26px 28px !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 32px rgba(15, 23, 42, 0.055) !important;
@@ -7980,20 +7980,20 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   right: 26px;
   height: 3px;
   border-radius: 0 0 6px 6px;
-  background: linear-gradient(90deg, #176b52 0%, #15803d 50%, #e2f4ea 100%);
+  background: linear-gradient(90deg, var(--forest) 0%, var(--green) 50%, var(--green-bg) 100%);
 }
 
 .telecoms-request-layout .telecoms-side-card:nth-child(2)::before {
-  background: linear-gradient(90deg, #0d6e43, #dcfce7);
+  background: linear-gradient(90deg, var(--forest-dim), var(--green-bg));
 }
 
 .telecoms-request-layout .telecoms-side-card:nth-child(3)::before {
-  background: linear-gradient(90deg, #1a6288, #e5f1f8);
+  background: linear-gradient(90deg, var(--blue), var(--blue-bg));
 }
 
 .telecoms-request-layout .telecoms-side-card:hover {
   transform: translateY(-3px);
-  border-color: #176b52 !important;
+  border-color: var(--forest) !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 22px 40px rgba(15, 23, 42, 0.09) !important;
 }
 
@@ -8003,7 +8003,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .form-group-head {
   padding-bottom: 4px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .telecoms-request-layout .form-group-head h2 {
@@ -8012,7 +8012,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   gap: 12px;
   margin: 0 0 8px !important;
   font-size: 24px !important;
-  color: #0f172a !important;
+  color: var(--ink) !important;
   letter-spacing: -0.02em;
 }
 
@@ -8021,8 +8021,8 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: linear-gradient(135deg, #176b52, #15803d);
-  box-shadow: 0 0 0 5px #e2f4ea;
+  background: linear-gradient(135deg, var(--forest), var(--green));
+  box-shadow: 0 0 0 5px var(--green-bg);
   flex: none;
 }
 
@@ -8032,7 +8032,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 }
 
 .telecoms-request-layout .tx-form .form-field label {
-  color: #0f172a !important;
+  color: var(--ink) !important;
   font-size: 13px !important;
   font-weight: 750 !important;
   letter-spacing: 0.01em;
@@ -8041,13 +8041,13 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .tx-form .form-field input,
 .telecoms-request-layout .tx-form .form-field textarea {
-  border: 1.5px solid #cbd5e1 !important;
+  border: 1.5px solid var(--border) !important;
   border-radius: 12px !important;
-  background: #f8fafc !important;
+  background: var(--surface-sunk) !important;
   padding: 12px 15px !important;
   min-height: 48px !important;
   font-size: 14.5px !important;
-  color: #0f172a !important;
+  color: var(--ink) !important;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.035) !important;
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
 }
@@ -8060,60 +8060,60 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .tx-form .form-field input::placeholder,
 .telecoms-request-layout .tx-form .form-field textarea::placeholder {
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .telecoms-request-layout .tx-form .form-field input:hover,
 .telecoms-request-layout .tx-form .form-field textarea:hover {
-  border-color: #94a3b8 !important;
-  background: #ffffff !important;
+  border-color: var(--muted) !important;
+  background: var(--surface) !important;
 }
 
 .telecoms-request-layout .tx-form .form-field input:focus,
 .telecoms-request-layout .tx-form .form-field textarea:focus {
-  border-color: #176b52 !important;
-  background: #ffffff !important;
+  border-color: var(--forest) !important;
+  background: var(--surface) !important;
   box-shadow: 0 0 0 4px rgba(23, 107, 82, 0.14) !important;
   transform: translateY(-1px);
 }
 
 .telecoms-request-layout .curved-select-trigger {
   min-height: 48px;
-  border-color: #cbd5e1;
+  border-color: var(--border);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--surface-sunk);
   padding: 0 15px;
   font-size: 14.5px;
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
 .telecoms-request-layout .curved-select-trigger:hover {
-  border-color: #94a3b8;
-  background: #ffffff;
+  border-color: var(--muted);
+  background: var(--surface);
 }
 
 .telecoms-request-layout .curved-select-container.is-open .curved-select-trigger,
 .telecoms-request-layout .curved-select-trigger:focus-visible {
-  border-color: #176b52;
-  background: #ffffff;
+  border-color: var(--forest);
+  background: var(--surface);
   box-shadow: 0 0 0 4px rgba(23, 107, 82, 0.14);
 }
 
 .telecoms-request-layout .curved-select-popup {
-  border-color: #cbd5e1;
+  border-color: var(--border);
   border-radius: 14px;
   box-shadow: 0 18px 40px rgba(11, 52, 38, 0.18);
 }
 
 .telecoms-request-layout .curved-select-option.is-selected {
-  background: #dcfce7;
-  color: #0b3426;
+  background: var(--green-bg);
+  color: var(--forest-deep);
 }
 
 .telecoms-request-layout .form-bottom-actions {
   margin-top: 2px !important;
   padding-top: 20px !important;
-  border-top: 1px dashed #cbd5e1 !important;
+  border-top: 1px dashed var(--border) !important;
   gap: 12px !important;
 }
 
@@ -8159,18 +8159,18 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 }
 
 .telecoms-request-layout .form-bottom-actions .btn-outline {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--ink-soft) !important;
   min-height: 44px !important;
   padding: 10px 18px !important;
   border-radius: 11px !important;
 }
 
 .telecoms-request-layout .form-bottom-actions .btn-outline:hover:not(:disabled) {
-  background: #f0f7f2 !important;
-  border-color: #176b52 !important;
-  color: #176b52 !important;
+  background: var(--green-bg) !important;
+  border-color: var(--forest) !important;
+  color: var(--forest) !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07) !important;
 }
@@ -8183,10 +8183,10 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .live-page:has(.telecoms-request-layout) .tx-success {
   border: 1px solid rgba(21, 128, 61, 0.2);
-  border-left: 4px solid #15803d;
+  border-left: 4px solid var(--green);
   border-radius: 12px;
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--green-bg);
+  color: var(--green);
   padding: 12px 16px;
   font-weight: 650;
   animation: tx-request-rise 0.35s ease both;
@@ -8194,7 +8194,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .live-page:has(.telecoms-request-layout) .api-error-banner {
   border-radius: 12px;
-  border-left: 4px solid #b91c1c;
+  border-left: 4px solid var(--rose);
   box-shadow: 0 8px 20px rgba(185, 28, 28, 0.08);
 }
 
@@ -8211,19 +8211,19 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #dcfce7, #e2f4ea) !important;
-  color: #176b52 !important;
+  background: var(--green-bg) !important;
+  color: var(--forest) !important;
   box-shadow: inset 0 0 0 1px rgba(23, 107, 82, 0.12), 0 6px 14px rgba(23, 107, 82, 0.12);
 }
 
 .telecoms-request-layout .side-card-icon.accent-green {
-  background: linear-gradient(135deg, #e2f4ea, #f0f7f2) !important;
-  color: #0d6e43 !important;
+  background: var(--green-bg) !important;
+  color: var(--forest-dim) !important;
 }
 
 .telecoms-request-layout .side-card-icon.accent-blue {
-  background: linear-gradient(135deg, #e5f1f8, #f1f5f9) !important;
-  color: #1a6288 !important;
+  background: var(--blue-bg) !important;
+  color: var(--blue) !important;
 }
 
 .telecoms-request-layout .side-card-header h3 {
@@ -8241,15 +8241,15 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .side-card-list li {
   padding: 9px 11px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-soft);
   border-radius: 11px;
-  background: #f8fafc;
+  background: var(--surface-sunk);
   transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
 
 .telecoms-request-layout .side-card-list li:hover {
-  border-color: #86efac;
-  background: #f0f7f2;
+  border-color: var(--green);
+  background: var(--green-bg);
   transform: translateX(3px);
 }
 
@@ -8258,35 +8258,35 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   height: 20px;
   padding: 3px;
   border-radius: 50%;
-  background: #dcfce7;
-  color: #0d6e43 !important;
+  background: var(--green-bg);
+  color: var(--forest-dim) !important;
   margin-top: 1px;
 }
 
 .telecoms-request-layout .rules-accept-box {
   margin-top: 4px;
   padding: 16px;
-  border: 1.5px solid #cbd5e1 !important;
+  border: 1.5px solid var(--border) !important;
   border-radius: 14px;
-  background: linear-gradient(120deg, #f0f7f2, #ffffff) !important;
+  background: linear-gradient(120deg, var(--green-bg), var(--surface)) !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .telecoms-request-layout .rules-accept-box:has(input:checked) {
-  border-color: #176b52 !important;
-  background: linear-gradient(120deg, #e2f4ea, #ffffff) !important;
+  border-color: var(--forest) !important;
+  background: linear-gradient(120deg, var(--green-bg), var(--surface)) !important;
   box-shadow: 0 0 0 4px rgba(23, 107, 82, 0.1);
 }
 
 .telecoms-request-layout .rules-accept-box .tx-check input {
   width: 18px;
   height: 18px;
-  accent-color: #176b52;
+  accent-color: var(--forest);
   cursor: pointer;
 }
 
 .telecoms-request-layout .rules-accept-box .tx-check strong {
-  color: #176b52;
+  color: var(--forest);
 }
 
 .telecoms-request-layout .capability-specs {
@@ -8295,28 +8295,28 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 
 .telecoms-request-layout .spec-item {
   padding: 12px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-soft);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--surface-sunk);
   transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .telecoms-request-layout .spec-item:hover {
-  border-color: #176b52;
+  border-color: var(--forest);
   transform: translateX(3px);
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
 }
 
 .telecoms-request-layout .spec-item > svg {
-  color: #176b52;
+  color: var(--forest);
 }
 
 .telecoms-request-layout .side-card-footer-note {
   padding: 12px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border) !important;
   border-radius: 12px;
-  background: linear-gradient(100deg, #f0f7f2, #e2f4ea) !important;
-  color: #19583b !important;
+  background: linear-gradient(100deg, var(--green-bg), var(--green-bg)) !important;
+  color: var(--forest-dim) !important;
 }
 
 .telecoms-request-layout .step-pipeline {
@@ -8331,7 +8331,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   top: 24px;
   bottom: 24px;
   width: 2px;
-  background: linear-gradient(#176b52, #e2e8f0);
+  background: linear-gradient(var(--forest), var(--border-soft));
 }
 
 .telecoms-request-layout .step-pipeline li {
@@ -8341,15 +8341,15 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 }
 
 .telecoms-request-layout .step-pipeline li.active-step {
-  background: linear-gradient(100deg, #f0f7f2, rgba(255, 255, 255, 0));
+  background: linear-gradient(100deg, var(--green-bg), transparent);
 }
 
 .telecoms-request-layout .step-num {
   width: 30px;
   height: 30px;
-  background: #ffffff !important;
-  border: 1.5px solid #cbd5e1 !important;
-  color: #64748b !important;
+  background: var(--surface) !important;
+  border: 1.5px solid var(--border) !important;
+  color: var(--muted) !important;
   font-size: 12.5px;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
