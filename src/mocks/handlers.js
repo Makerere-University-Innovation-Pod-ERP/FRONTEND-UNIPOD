@@ -418,7 +418,7 @@ export const handlers = [
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
-      acceptedRules: Array.isArray(body.acceptedRules) ? body.acceptedRules : [],
+      acceptedRulesVersion: body.acceptedRulesVersion ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
