@@ -261,9 +261,9 @@ const toApiInvoice = (invoice) => {
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
 const departments = [
-  { id: 'dept-1', name: 'Innovation & Research', active: true, version: 1 },
-  { id: 'dept-2', name: 'Finance & Administration', active: true, version: 1 },
-  { id: 'dept-3', name: 'Textile Operations', active: true, version: 1 },
+  { id: 'dept-1', name: 'Innovation & Research', notificationEmail: 'innovation@example.test', active: true, version: 1 },
+  { id: 'dept-2', name: 'Finance & Administration', notificationEmail: 'finance@example.test', active: true, version: 1 },
+  { id: 'dept-3', name: 'Textile Operations', notificationEmail: 'textile@example.test', active: true, version: 1 },
 ];
 let adminUsers = [
   { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
@@ -273,29 +273,31 @@ let adminUsers = [
   { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
 ];
 const adminPermissions = [
-  { id: 'USERS_MANAGE', name: 'Manage user accounts', description: 'Create, update, and deactivate staff accounts.' },
-  { id: 'ROLES_MANAGE', name: 'Manage roles and permissions', description: 'Configure role access to system capabilities.' },
-  { id: 'DEPARTMENTS_MANAGE', name: 'Manage departments', description: 'Create and maintain departments.' },
-  { id: 'SUBMISSIONS_VIEW', name: 'View submissions', description: 'View submitted innovation briefs.' },
-  { id: 'SUBMISSIONS_REGISTER', name: 'Register submissions', description: 'Register and route submissions.' },
-  { id: 'FACT_FINDING_MANAGE', name: 'Fact-finding', description: 'Perform fact-finding on assigned submissions.' },
-  { id: 'REVIEWS_MANAGE', name: 'Review submissions', description: 'Review assigned submissions.' },
-  { id: 'FINANCE_MANAGE', name: 'Manage finance', description: 'Access finance and invoice workflows.' },
+  { id: 'CASE_VIEW', name: 'View submissions', description: "View submissions within the role's assigned scope." },
+  { id: 'CASE_EDIT', name: 'Edit submissions', description: "Edit submissions within the role's assigned scope." },
+  { id: 'CASE_FORWARD', name: 'Route submissions', description: 'Forward submissions to the next workflow stage.' },
+  { id: 'CASE_ASSIGN_REVIEWER', name: 'Assign reviewers', description: 'Assign reviewers to submissions.' },
+  { id: 'CASE_REVIEW', name: 'Review submissions', description: 'Submit reviews for assigned submissions.' },
+  { id: 'CASE_DECIDE', name: 'Decide submissions', description: 'Make workflow decisions on submissions.' },
+  { id: 'AUDIT_VIEW', name: 'View audit log', description: 'View recorded system activity.' },
+  { id: 'USER_MANAGE', name: 'Manage user accounts', description: 'Create and manage user accounts.' },
+  { id: 'PRICE_LIST_MANAGE', name: 'Manage finance', description: 'Manage price lists and finance operations.' },
+  { id: 'PRICE_LIST_PROPOSE', name: 'Propose price list updates', description: 'Propose price-list updates within the assigned scope.' },
+  { id: 'REPORT_VIEW', name: 'View reports', description: 'View system reports.' },
 ];
 let adminRoles = [
   { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
-  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['FINANCE_MANAGE'], version: 1, editable: true },
-  { id: 'REVIEWER', name: 'Reviewer', permissions: ['SUBMISSIONS_VIEW', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
-  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner', permissions: [], version: 1, editable: true },
+  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['CASE_VIEW', 'CASE_EDIT', 'CASE_FORWARD'], version: 1, editable: true },
+  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['PRICE_LIST_MANAGE'], version: 1, editable: true },
+  { id: 'REVIEWER', name: 'Reviewer', permissions: ['CASE_VIEW', 'CASE_REVIEW'], version: 1, editable: true },
+  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['CASE_VIEW', 'PRICE_LIST_PROPOSE'], version: 1, editable: true },
+  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['CASE_VIEW', 'CASE_EDIT', 'CASE_ASSIGN_REVIEWER', 'CASE_DECIDE', 'AUDIT_VIEW', 'REPORT_VIEW'], version: 1, editable: true },
+  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['CASE_VIEW', 'CASE_EDIT'], version: 1, editable: true },
+  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['CASE_VIEW'], version: 1, editable: true },
+  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: [], version: 1, editable: true },
   { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
-  { id: 'OBSERVER', name: 'Observer', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+  { id: 'OBSERVER', name: 'Observer', permissions: ['CASE_VIEW', 'AUDIT_VIEW', 'REPORT_VIEW'], version: 1, editable: true },
+  { id: 'TELECOMS_DOMAIN_OWNER', name: 'Telecoms Domain Owner', permissions: [], version: 1, editable: true },
 ];
 
 export const handlers = [
@@ -544,7 +546,13 @@ export const handlers = [
     if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
       return HttpResponse.json({ message: 'A department with this name already exists.' }, { status: 409 });
     }
-    const created = { id: `dept-${Date.now()}`, name, active: body.active ?? true, version: 1 };
+    const created = {
+      id: `dept-${Date.now()}`,
+      name,
+      notificationEmail: String(body.notificationEmail ?? '').trim(),
+      active: body.active ?? true,
+      version: 1,
+    };
     departments.push(created);
     return HttpResponse.json(created, { status: 201 });
   }),
@@ -558,6 +566,7 @@ export const handlers = [
     }
     Object.assign(department, {
       name: String(body.name ?? department.name).trim(),
+      notificationEmail: String(body.notificationEmail ?? department.notificationEmail).trim(),
       active: Boolean(body.active),
       version: department.version + 1,
     });
