@@ -116,6 +116,14 @@ export const textileHandlers = [
     return HttpResponse.json(order, { status: 201 });
   }),
 
+  http.delete(`${base}/orders/:id`, ({ params }) => {
+    const order = findOrder(params.id);
+    if (!order) return problem(404, 'Order not found.');
+    if (order.status !== ORDER_STATUS.DRAFT) return problem(409, 'Only a draft order can be discarded.');
+    orders.splice(orders.indexOf(order), 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.put(`${base}/orders/:id`, async ({ params, request }) => {
     const order = findOrder(params.id);
     if (!order) return problem(404, 'Order not found.');

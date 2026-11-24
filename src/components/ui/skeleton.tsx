@@ -14,6 +14,7 @@ function Skeleton({
   return (
     <div
       className={cn('ui-skeleton rounded-md', className)}
+      className={cn('ui-skeleton rounded-md bg-primary/10', className)}
       {...props}
     />
   );

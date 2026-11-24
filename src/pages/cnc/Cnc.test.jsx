@@ -22,6 +22,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
+
 function renderAt(path, routes) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(

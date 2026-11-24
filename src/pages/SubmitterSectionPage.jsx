@@ -1464,6 +1464,7 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                     </button>
                   )}
                 </div>
+                <SubmitterBookingDetails query={detailsQuery} />
               </article>
             )}
             {linkedBookingId && !linkedBooking && !detailsQuery.isPending && detailsQuery.error && (

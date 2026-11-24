@@ -345,6 +345,7 @@ function AuthenticatedApp({
           <Route path="/cnc/safety" element={cncSafety(CncSafetyCoursePage)} />
           <Route path="/cnc/stock" element={cncEquipment(CncStockListPage)} />
           <Route path="/cnc/stock/movements" element={cncEquipment(CncStockMovementPage)} />
+          <Route path="/cnc/stock" element={cnc(CncStockListPage)} />
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />
           <Route path="/textile/board" element={textile(OrderBoardPage)} />

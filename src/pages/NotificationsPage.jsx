@@ -201,6 +201,7 @@ export function NotificationsPage({ token, roles = [] }) {
 
           {notificationsQuery.isLoading ? (
             <LoadingSkeleton label="Gathering your updates…" variant="compact" />
+            <div className="inbox-loading" role="status"><span />Gathering your updates…</div>
           ) : !notificationsQuery.isError && groups.length ? (
             <div className="inbox-groups">
               {groups.map(({ label, items }) => (
