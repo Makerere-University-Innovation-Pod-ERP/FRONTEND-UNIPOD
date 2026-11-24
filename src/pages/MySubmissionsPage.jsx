@@ -13,6 +13,7 @@ import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { useSubmitterCapabilities } from '@/hooks/useSubmitter';
 
 function isSubmitterCapabilities(value) {
   return value !== null
@@ -34,31 +35,39 @@ export function MySubmissionsPage({
   onUnauthorized,
 }) {
   const [result, setResult] = useState(null);
-  const [capabilities, setCapabilities] = useState(null);
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // GET /me/capabilities, shared with BackendWorkspace's nav via the same query cache.
+  const capabilitiesQuery = useSubmitterCapabilities(token);
+  const capabilities = capabilitiesQuery.isSuccess && isSubmitterCapabilities(capabilitiesQuery.data)
+    ? capabilitiesQuery.data
+    : null;
+
+  useEffect(() => {
+    if (capabilitiesQuery.error instanceof ApiError && capabilitiesQuery.error.status === 401) onUnauthorized();
+  }, [capabilitiesQuery.error, onUnauthorized]);
+
+  useEffect(() => {
+    if (capabilitiesQuery.isSuccess && !isSubmitterCapabilities(capabilitiesQuery.data)) {
+      setError('The account capabilities response is invalid. Refresh the page or contact support.');
+    }
+  }, [capabilitiesQuery.isSuccess, capabilitiesQuery.data]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    void Promise.all([
-      backendApi.submitterSubmissions(token, { page, size: 25 }, controller.signal),
-      backendApi.submitterCapabilities(token, controller.signal),
-    ]).then(([submissions, currentCapabilities]) => {
-      if (!isSubmitterCapabilities(currentCapabilities)) {
-        throw new Error('The account capabilities response is invalid. Refresh the page or contact support.');
-      }
-      setResult(submissions);
-      setCapabilities(currentCapabilities);
-    }).catch((reason) => {
-      if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
-      else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
-        setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
-      }
-    }).finally(() => setLoading(false));
+    backendApi.submitterSubmissions(token, { page, size: 25 }, controller.signal)
+      .then(setResult)
+      .catch((reason) => {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
+        }
+      }).finally(() => setLoading(false));
     return () => controller.abort();
   }, [token, page, onUnauthorized]);
 
