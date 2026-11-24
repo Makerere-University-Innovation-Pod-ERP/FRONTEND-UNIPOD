@@ -3797,6 +3797,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   padding:48px 42px 62px;
   border-radius:14px;
   background:var(--surface);
+}
 
 .skeleton-loader--table .skeleton-loader__row {
   display: grid;
@@ -3829,6 +3830,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   border:1px solid rgba(148,7,10,.12);
   border-radius:9px;
   background:var(--surface);
+}
 
 .skeleton-loader--cards .skeleton-loader__pill {
   width: 48%;
@@ -3853,6 +3855,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   background:var(--surface);
   color:#202321;
   font-size:11px;
+}
 
 .skeleton-loader--form .skeleton-loader__avatar,
 .skeleton-loader--form .skeleton-loader__pill {
@@ -3953,6 +3956,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   border:0;
   background:var(--surface);
   box-shadow:none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ui-skeleton::after,
@@ -4040,6 +4044,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   border-radius:9px;
   background:var(--surface);
   object-fit:contain;
+}
 
 .telecoms-equipment-hero__stamp {
   position: absolute;
@@ -4547,6 +4552,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   border-radius: 10px;
   background: #edf6ef;
   color: #176b52;
+}
 .login-screen--framed{
   min-height:100vh;
   display:grid;
@@ -4602,6 +4608,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   margin-top: 8px;
   color: #829187 !important;
   font-size: 9px !important;
+}
 .login-screen--framed .login-brand .brand-logo{
   width:min(100%,260px);
   height:104px;
@@ -4648,6 +4655,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 .telecoms-equipment-inventory__heading .eyebrow {
   color: #61806b !important;
   font-size: 8px !important;
+}
 .login-screen--framed .api-form{gap:8px}
 .login-screen--framed .api-form label{color:#252825;font-size:10px}
 .login-screen--framed .login-form #login-email,
@@ -4772,6 +4780,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   background: linear-gradient(110deg, #fff 0%, #fcfdfc 100%);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   scroll-margin-top: 88px;
+}
 .login-screen .login-card .api-form input:not([type='radio']):not([type='checkbox']){
   border-color:#298C42;
 }
@@ -8405,6 +8414,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
 }
 @media(max-width:720px){
   .case-hero{grid-template-columns:minmax(0,1fr);gap:20px;padding:22px;border-radius:18px}
@@ -9150,6 +9160,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   border-radius:13px;
   background:var(--surface);
   box-shadow:none;
+}
 .cnc-machine-booking__select-content{
   z-index:1001!important;
   max-height:var(--radix-select-content-available-height);
@@ -9246,6 +9257,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   box-shadow:none;
   font-size:7px;
   font-weight:700;
+}
 .cnc-machine-list>.live-page-heading .eyebrow{
   color:#dce9bd;
 }

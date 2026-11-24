@@ -239,7 +239,6 @@ export function TrainingMentorshipPage({ token, roles = [], variant = 'training'
         )}
         {overviewQuery.isPending ? (
           <Loading label="Loading training sessions…" variant="table" />
-          <Loading label="Loading training sessions…" />
         ) : safety ? (
           <div className="cnc-safety-session-list">
             {sessions.map((session) => (

@@ -673,8 +673,6 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           : 'Your invoice list'}
       </p>
       {query.isPending && <LoadingSkeleton label="Loading your invoices…" variant="table" />}
-      {query.data && filteredInvoices.length === 0 && (
-      {query.isPending && <div className="submitter-invoice-state" role="status"><LoaderCircle className="spin" size={20} />Loading your invoices…</div>}
       {query.data && displayedInvoices.length === 0 && (
         <div className="submitter-invoice-state">
           <span className="submitter-invoice-state__icon"><Receipt size={21} /></span>
@@ -1054,6 +1052,19 @@ function SubmitterBookingDetails({ query }) {
     return <p className="submitter-booking-alert" role="alert">{query.error.message || 'Could not load booking details.'}</p>;
   }
   const booking = query.data;
+  return (
+    <dl className="submitter-booking-details">
+      <div><dt>Facility</dt><dd>{booking.facilityName}{booking.facilityLocation ? ` · ${booking.facilityLocation}` : ''}</dd></div>
+      <div><dt>Purpose</dt><dd>{booking.purpose}</dd></div>
+      <div><dt>Start</dt><dd>{formatBookingDate(booking.startsAt)} · {formatBookingTime(booking.startsAt)}</dd></div>
+      <div><dt>End</dt><dd>{formatBookingDate(booking.endsAt)} · {formatBookingTime(booking.endsAt)}</dd></div>
+      <div><dt>Attendees</dt><dd>{booking.attendees}</dd></div>
+      {booking.operator && <div><dt>Contact / operator</dt><dd>{booking.operator}</dd></div>}
+      {booking.rejectionReason && <div className="submitter-booking-details__wide"><dt>Decision note</dt><dd>{booking.rejectionReason}</dd></div>}
+    </dl>
+  );
+}
+
 function SubmitterBookingDetailsDialog({ open, onOpenChange, booking, query }) {
   const details = query.data ?? booking;
   const statusLabel = bookingStatusLabels[details?.status] ?? details?.status;
@@ -1438,8 +1449,6 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
         )}
         {bookingsQuery.isPending ? (
           <LoadingSkeleton label="Loading your bookings…" variant="list" />
-        ) : list.length === 0 ? (
-          <div className="submitter-booking-state"><LoaderCircle className="spin" size={19} /><span>Loading your bookings…</span></div>
         ) : list.length === 0 && !linkedBookingId ? (
           <div className="submitter-booking-state">
             <span className="submitter-hub__empty-icon"><CalendarDays size={22} aria-hidden="true" /></span>
@@ -1461,7 +1470,12 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                   </span>
                 </div>
                 <div className="submitter-booking-card__actions">
-                  <button type="button" className="submitter-booking-button" aria-expanded="true">
+                  <button
+                    type="button"
+                    className="submitter-booking-button"
+                    aria-haspopup="dialog"
+                    onClick={() => setDetailsId(linkedBooking.id)}
+                  >
                     Booking details
                   </button>
                   {['PENDING', 'APPROVED'].includes(linkedBooking.status) && (
@@ -1477,7 +1491,6 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                     </button>
                   )}
                 </div>
-                <SubmitterBookingDetails query={detailsQuery} />
               </article>
             )}
             {linkedBookingId && !linkedBooking && !detailsQuery.isPending && detailsQuery.error && (

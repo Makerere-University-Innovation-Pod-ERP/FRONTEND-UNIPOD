@@ -13,7 +13,7 @@ import {
 } from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
-import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
+import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment } from './fixtures/equipment';
 import {
@@ -271,6 +271,8 @@ const departments = [
   { id: 'dept-1', name: 'Innovation & Research', notificationEmail: 'innovation@example.test', active: true, version: 1 },
   { id: 'dept-2', name: 'Finance & Administration', notificationEmail: 'finance@example.test', active: true, version: 1 },
   { id: 'dept-3', name: 'Textile Operations', notificationEmail: 'textile@example.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000001', name: 'Multimedia', notificationEmail: 'multimedia@unipod.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000002', name: 'CNC & Carpentry', notificationEmail: 'cnc@unipod.test', active: true, version: 1 },
 ];
 let adminUsers = [
   { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
@@ -291,25 +293,6 @@ const adminPermissions = [
   { id: 'PRICE_LIST_MANAGE', name: 'Manage finance', description: 'Manage price lists and finance operations.' },
   { id: 'PRICE_LIST_PROPOSE', name: 'Propose price list updates', description: 'Propose price-list updates within the assigned scope.' },
   { id: 'REPORT_VIEW', name: 'View reports', description: 'View system reports.' },
-];
-let adminRoles = [
-  { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
-  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['CASE_VIEW', 'CASE_EDIT', 'CASE_FORWARD'], version: 1, editable: true },
-  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['PRICE_LIST_MANAGE'], version: 1, editable: true },
-  { id: 'REVIEWER', name: 'Reviewer', permissions: ['CASE_VIEW', 'CASE_REVIEW'], version: 1, editable: true },
-  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['CASE_VIEW', 'PRICE_LIST_PROPOSE'], version: 1, editable: true },
-  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['CASE_VIEW', 'CASE_EDIT', 'CASE_ASSIGN_REVIEWER', 'CASE_DECIDE', 'AUDIT_VIEW', 'REPORT_VIEW'], version: 1, editable: true },
-  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['CASE_VIEW', 'CASE_EDIT'], version: 1, editable: true },
-  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['CASE_VIEW'], version: 1, editable: true },
-  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: [], version: 1, editable: true },
-  { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
-  { id: 'OBSERVER', name: 'Observer', permissions: ['CASE_VIEW', 'AUDIT_VIEW', 'REPORT_VIEW'], version: 1, editable: true },
-  { id: 'TELECOMS_DOMAIN_OWNER', name: 'Telecoms Domain Owner', permissions: [], version: 1, editable: true },
-  { id: 'staff-admin', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentIds: [], profile: { fullName: 'Demo Administrator' }, active: true, createdAt: '2026-08-20' },
-  { id: 'staff-1', email: 'martha.akello@unipod.test', role: 'RECEPTIONIST', departmentIds: ['dept-1'], profile: { fullName: 'Martha Akello' }, active: true, createdAt: '2026-09-01' },
-  { id: 'staff-2', email: 'miriam.nsubuga@unipod.test', role: 'REVIEWER', departmentIds: ['dept-1'], profile: { fullName: 'Dr. Miriam Nsubuga' }, active: true, createdAt: '2026-09-04' },
-  { id: 'staff-3', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentIds: ['dept-2'], profile: { fullName: 'Daniel Kato' }, active: true, createdAt: '2026-09-10' },
-  { id: 'staff-4', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentIds: ['dept-1'], profile: { fullName: 'Grace Namuli' }, active: true, createdAt: '2026-09-12' },
 ];
 const adminRoles = [
   { role: 'ADMINISTRATOR', staff: true },
@@ -563,9 +546,9 @@ export const handlers = [
     return HttpResponse.json(user);
   }),
 
-  http.get(`${API_BASE_URL}/admin/departments`, () => HttpResponse.json(departments)),
+  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(departments)),
 
-  http.post(`${API_BASE_URL}/admin/departments`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/departments`, async ({ request }) => {
     const body = await request.json();
     const name = String(body.name ?? '').trim();
     if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
@@ -582,7 +565,7 @@ export const handlers = [
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.put(`${API_BASE_URL}/admin/departments/:id`, async ({ params, request }) => {
+  http.put(`${API_BASE_URL}/departments/:id`, async ({ params, request }) => {
     const department = departments.find((candidate) => candidate.id === params.id);
     if (!department) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -596,16 +579,14 @@ export const handlers = [
       version: department.version + 1,
     });
     return HttpResponse.json(department);
+  }),
+
   http.post(`${API_BASE_URL}/users/:id/reactivate`, ({ params }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
     user.active = true;
     return HttpResponse.json(user);
   }),
-
-  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(
-    departments.filter((department) => department.active).map(({ id, name }) => ({ id, name })),
-  )),
 
   http.get(`${API_BASE_URL}/roles`, () => HttpResponse.json(adminRoles)),
 
@@ -901,8 +882,6 @@ export const handlers = [
   ...receptionHandlers,
   ...coordinatorHandlers,
   // Operations / Multimedia - Training & Mentorship
-  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(trainingDepartments)),
-
   http.get(`${API_BASE_URL}/operations/training/overview`, () => {
     const live = trainingSessions.filter((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS');
     return HttpResponse.json({

@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Route,
   Save,
-  ShieldCheck,
   Trash2,
   UserPlus,
   Users,
@@ -71,6 +70,7 @@ export function AdminManagementPage({
   const [notice, setNotice] = useState('');
 
   const selectedSector = sectors.find((sector) => sector.id === selectedId) ?? null;
+  const selectedDepartment = departments.find((item) => item.id === departmentId) ?? null;
   const roleOptions = roles.length > 0
     ? roles.map((item) => ({ ...item, name: roleName(item.id) }))
     : FALLBACK_ROLES;
@@ -139,7 +139,6 @@ export function AdminManagementPage({
         email: email.trim(),
         password,
         role,
-        departmentId: accountDepartmentId || null,
       });
       setUsers((current) => [created, ...current]);
       setUserDrafts((current) => ({
@@ -163,11 +162,6 @@ export function AdminManagementPage({
     setError('');
     setNotice('');
     try {
-      const updated = await backendApi.updateAdminUser(token, user.id, {
-        ...draft,
-        departmentId: draft.departmentId || null,
-        version: user.version,
-      });
       const updated = await backendApi.updateAdminUser(token, user.id, draft);
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setUserDrafts((current) => ({
@@ -227,25 +221,6 @@ export function AdminManagementPage({
       setNotice(selectedDepartment ? 'Department settings saved.' : 'Department created.');
     } catch (reason) {
       reportFailure(reason, 'Could not save the department.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function saveRolePermissions(item) {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const updated = await backendApi.updateRolePermissions(token, item.id, {
-        permissions: roleDrafts[item.id] ?? item.permissions,
-        version: item.version,
-      });
-      setRoles((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
-      setRoleDrafts((current) => ({ ...current, [updated.id]: [...updated.permissions] }));
-      setNotice(`${updated.name} permissions saved.`);
-    } catch (reason) {
-      reportFailure(reason, 'Could not save role permissions.');
     } finally {
       setBusy(false);
     }
@@ -370,15 +345,9 @@ export function AdminManagementPage({
 
       <section className="live-panel management-panel">
         <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><UserPlus size={19} /></span><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div></div>
-        <p className="management-help">Create an active staff account and assign its initial role and department. Passwords are never returned by the API.</p>
-        <form className="management-form" onSubmit={createUser}>
-          <label className="form-field">Full name<input required maxLength={160} autoComplete="name" placeholder="e.g. Amina Nakato" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
-          <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" placeholder="name@unipod.mak.ac.ug" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-          <label className="form-field">Initial password<input type="password" required minLength={12} maxLength={72} autoComplete="new-password" placeholder="Minimum 12 characters" value={password} onChange={(event) => setPassword(event.target.value)} /><small className="field-note">Use at least 12 characters. Do not reuse your own password.</small></label>
-        <div className="live-panel-heading"><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div>
         <p className="management-help">Create an active staff account, then assign its role and department access in the staff directory. Passwords are never returned by the API.</p>
         <form className="management-form" onSubmit={createUser}>
-          <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+          <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" placeholder="name@unipod.mak.ac.ug" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
           <label className="form-field">Initial password<input type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><small className="field-note">Use at least 12 characters. Do not reuse your own password.</small></label>
           <label className="form-field">Role<select required value={role} onChange={(event) => setRole(event.target.value)}>{roleOptions.filter((item) => item.id !== 'ADMINISTRATOR').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy || loadingAdmin || !role}>{busy ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />}Create account</button></div>
@@ -434,16 +403,6 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><ShieldCheck size={19} /></span><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div></div></div>
-        <p className="management-help">Configure permissions for each role. Administrator access is protected. The backend must enforce every permission on each request.</p>
-        {loadingAdmin
-          ? <LoadingSkeleton label="Loading roles…" variant="table" />
-          : roles.map((item) => {
-            const selected = roleDrafts[item.id] ?? item.permissions;
-            const changed = selected.length !== item.permissions.length || selected.some((permission) => !item.permissions.includes(permission));
-            return <div className="management-role" key={item.id}>
-              <div className="management-role-heading"><div><h3>{item.name}</h3><small>{item.id === 'ADMINISTRATOR' ? 'Protected system role' : 'Role permissions'}</small></div>
-                <button className="btn btn-outline" type="button" disabled={busy || !item.editable || !changed} onClick={() => void saveRolePermissions(item)}>{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />}Save permissions</button>
         <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Staff assignment areas</h2></div></div>
         <p className="management-help">Assign one or more active sectors to staff in the directory. Create or update assignment areas in Sector Routing below.</p>
         {loadingAdmin

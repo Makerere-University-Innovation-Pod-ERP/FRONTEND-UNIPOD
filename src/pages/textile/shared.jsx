@@ -1,12 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { CircleAlert, ImageUp, LoaderCircle, X } from 'lucide-react';
-import { API_BASE_URL, ApiError } from '@/services/api-client';
 import { CircleAlert, ImageUp, X } from 'lucide-react';
-import { ApiError } from '@/services/api-client';
-import { LoadingSkeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL, ApiError } from '@/services/api-client';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
 import { MACHINE_STATE_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/textile';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /** Error banner that stays quiet for 401s (the session redirect handles those). */
 export function ErrorBanner({ error, fallback }) {
@@ -16,8 +13,6 @@ export function ErrorBanner({ error, fallback }) {
 
 export function Loading({ label, variant = 'list', columns }) {
   return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
-export function Loading({ label }) {
-  return <LoadingSkeleton label={label} />;
 }
 
 export function PageHeading({ eyebrow, title, intro, children }) {

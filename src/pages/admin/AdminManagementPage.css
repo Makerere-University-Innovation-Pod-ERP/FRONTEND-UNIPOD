@@ -220,6 +220,7 @@
 .management-page .management-panel .management-form .form-actions .btn-primary:active:not(:disabled){
   transform:translateY(0);
   box-shadow:0 4px 12px color-mix(in srgb,var(--mak-red-600) 26%,transparent);
+}
 .management-search{max-width:420px}
 .management-panel .live-panel-heading h2,
 .management-panel .management-role-heading h3,

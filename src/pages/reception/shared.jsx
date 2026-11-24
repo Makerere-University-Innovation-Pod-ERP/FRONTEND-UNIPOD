@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CircleAlert } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
-import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/presentation';
 import { categoryLabel } from './helpers';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
@@ -20,8 +19,6 @@ export function ErrorBanner({ error, fallback, onRetry }) {
 
 export function Loading({ label, variant = 'list', columns }) {
   return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
-export function Loading({ label }) {
-  return <LoadingSkeleton label={label} />;
 }
 
 export function Counter({ label, value }) {
