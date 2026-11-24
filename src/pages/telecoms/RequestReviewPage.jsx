@@ -344,7 +344,7 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
           {/* Timeline & Schedule Alignment Card */}
           <div className="tx-schedule-card">
             <div className="tx-schedule-header">
-              <Calendar className="tx-schedule-icon" size={20} color="#0b3426" />
+              <Calendar className="tx-schedule-icon" size={20} color="var(--forest-deep)" />
               <div>
                 <h4>Schedule & Delivery Alignment</h4>
                 <p>Compare customer requested target against lab diagnostic lead time</p>
@@ -399,10 +399,10 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
               {assessedParts.map((line, index) => {
                 const stockStatusClass = !line.sufficient ? 'short' : line.lowAfter ? 'low' : 'sufficient';
                 const statusLabel = !line.sufficient
-                  ? `Insufficient stock: need ${line.quantity}, only ${line.balance} available`
+                  ? `Insufficient stock: need ${line.quantity}, only ${line.available} available`
                   : line.lowAfter
-                    ? `Low stock alert: only ${line.balance - line.quantity} left after use`
-                    : `${line.balance} available in stock`;
+                    ? `Low stock alert: only ${line.remaining} left after use`
+                    : `${line.available} available in stock`;
 
                 return (
                   <li key={line.itemId}>
