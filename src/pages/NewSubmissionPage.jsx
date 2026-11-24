@@ -22,7 +22,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRules } from '@/hooks/useRules';
-import { allMustAcceptAccepted, RulesAcceptance } from '@/components/RulesAcceptance';
+import { allMustAcceptAccepted, computeAcceptedRulesVersion, RulesAcceptance } from '@/components/RulesAcceptance';
 import { SubmissionDatePicker } from '@/components/SubmissionDatePicker';
 
 const STEPS = ['Type', 'Details', 'Documents', 'Department rules', 'Check & submit'];
@@ -212,9 +212,9 @@ export function NewSubmissionPage({
       title: title.trim(),
       purpose: purpose.trim(),
       problemAddressed: problemAddressed.trim(),
-      acceptedRules: generalRules
-        .filter((rule) => acceptedRuleIds.includes(rule.id))
-        .map((rule) => ({ id: rule.id, version: rule.version })),
+      acceptedRulesVersion: computeAcceptedRulesVersion(
+        generalRules.filter((rule) => acceptedRuleIds.includes(rule.id)),
+      ),
       ...(!isSubmitter && submitterId.trim() ? { submitterId: submitterId.trim() } : {}),
       ...(category === 'student'
         ? {
