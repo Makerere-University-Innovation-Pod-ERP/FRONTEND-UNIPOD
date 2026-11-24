@@ -14,20 +14,23 @@ import './AdminManagementPage.css';
 const FALLBACK_ROLES = [
   { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator' },
   { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator' },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head' },
   { id: 'FINANCE_OFFICER', name: 'Finance Officer' },
   { id: 'RECEPTIONIST', name: 'Receptionist' },
   { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer' },
   { id: 'REVIEWER', name: 'Reviewer' },
   { id: 'SECTOR_OFFICER', name: 'Sector Officer' },
   { id: 'IP_LIAISON', name: 'IP Liaison' },
-  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner' },
   { id: 'SUBMITTER', name: 'Submitter' },
   { id: 'OBSERVER', name: 'Observer' },
 ];
 
 function formatRole(role) {
-  return role.replace(/^ROLE_/, '').replaceAll('_', ' ');
+  return role.replace(/^ROLE_/, '').replaceAll('_', ' ').toLowerCase();
+}
+
+function roleName(role) {
+  if (role === 'ADMINISTRATOR') return 'Administrator';
+  return FALLBACK_ROLES.find((item) => item.id === role)?.name ?? formatRole(role);
 }
 
 export function AdminManagementPage({
@@ -38,19 +41,12 @@ export function AdminManagementPage({
   const [userDrafts, setUserDrafts] = useState({});
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
-  const [roleDrafts, setRoleDrafts] = useState({});
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [userFilter, setUserFilter] = useState('');
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('REVIEWER');
-  const [accountDepartmentId, setAccountDepartmentId] = useState('');
   const [createdUser, setCreatedUser] = useState(null);
-  const [departmentId, setDepartmentId] = useState('');
-  const [departmentName, setDepartmentName] = useState('');
-  const [departmentActive, setDepartmentActive] = useState(true);
   const [sectors, setSectors] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [members, setMembers] = useState([]);
@@ -65,8 +61,9 @@ export function AdminManagementPage({
   const [notice, setNotice] = useState('');
 
   const selectedSector = sectors.find((sector) => sector.id === selectedId) ?? null;
-  const selectedDepartment = departments.find((department) => department.id === departmentId) ?? null;
-  const roleOptions = roles.length > 0 ? roles : FALLBACK_ROLES;
+  const roleOptions = roles.length > 0
+    ? roles.map((item) => ({ ...item, name: roleName(item.id) }))
+    : FALLBACK_ROLES;
   const filteredUsers = useMemo(() => {
     const query = userFilter.trim().toLowerCase();
     if (!query) return users;
@@ -76,21 +73,18 @@ export function AdminManagementPage({
 
   const loadAdminData = useCallback(async () => {
     try {
-      const [currentUsers, currentDepartments, currentRoles, currentPermissions] = await Promise.all([
+      const [currentUsers, currentDepartments, currentRoles] = await Promise.all([
         backendApi.adminUsers(token),
         backendApi.adminDepartments(token),
         backendApi.adminRoles(token),
-        backendApi.adminPermissions(token),
       ]);
       setUsers(currentUsers);
       setDepartments(currentDepartments);
       setRoles(currentRoles);
-      setPermissions(currentPermissions);
       setUserDrafts(Object.fromEntries(currentUsers.map((user) => [user.id, {
         role: user.role,
-        departmentId: user.departmentId ?? '',
+        departmentIds: [...user.departmentIds],
       }])));
-      setRoleDrafts(Object.fromEntries(currentRoles.map((item) => [item.id, [...item.permissions]])));
       setRole((current) => current || currentRoles.find((item) => item.id !== 'ADMINISTRATOR')?.id || '');
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
@@ -132,22 +126,18 @@ export function AdminManagementPage({
     setCreatedUser(null);
     try {
       const created = await backendApi.createUser(token, {
-        fullName: fullName.trim(),
         email: email.trim(),
         password,
         role,
-        departmentId: accountDepartmentId,
       });
       setUsers((current) => [created, ...current]);
       setUserDrafts((current) => ({
         ...current,
-        [created.id]: { role: created.role, departmentId: created.departmentId ?? '' },
+        [created.id]: { role: created.role, departmentIds: [] },
       }));
       setCreatedUser(created);
-      setFullName('');
       setEmail('');
       setPassword('');
-      setAccountDepartmentId('');
       setNotice('The account was created. Share its initial password securely with the account holder.');
     } catch (reason) {
       reportFailure(reason, 'Could not create the account.');
@@ -157,19 +147,16 @@ export function AdminManagementPage({
   }
 
   async function saveUser(user) {
-    const draft = userDrafts[user.id] ?? { role: user.role, departmentId: user.departmentId ?? '' };
+    const draft = userDrafts[user.id] ?? { role: user.role, departmentIds: [...user.departmentIds] };
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const updated = await backendApi.updateAdminUser(token, user.id, {
-        ...draft,
-        version: user.version,
-      });
+      const updated = await backendApi.updateAdminUser(token, user.id, draft);
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setUserDrafts((current) => ({
         ...current,
-        [updated.id]: { role: updated.role, departmentId: updated.departmentId ?? '' },
+        [updated.id]: { role: updated.role, departmentIds: [...updated.departmentIds] },
       }));
       setNotice(`Access settings updated for ${updated.email}.`);
     } catch (reason) {
@@ -184,63 +171,11 @@ export function AdminManagementPage({
     setError('');
     setNotice('');
     try {
-      const updated = await backendApi.setAdminUserActive(token, user.id, !user.active, user.version);
+      const updated = await backendApi.setAdminUserActive(token, user.id, !user.active);
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setNotice(`${updated.email} is now ${updated.active ? 'active' : 'deactivated'}.`);
     } catch (reason) {
       reportFailure(reason, 'Could not update account status.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function selectDepartment(id) {
-    setDepartmentId(id);
-    const department = departments.find((item) => item.id === id);
-    setDepartmentName(department?.name ?? '');
-    setDepartmentActive(department?.active ?? true);
-  }
-
-  async function saveDepartment(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const body = {
-        name: departmentName.trim(),
-        active: departmentActive,
-        ...(selectedDepartment ? { version: selectedDepartment.version } : {}),
-      };
-      const updated = selectedDepartment
-        ? await backendApi.updateDepartment(token, selectedDepartment.id, body)
-        : await backendApi.createDepartment(token, body);
-      setDepartments((current) => selectedDepartment
-        ? current.map((item) => item.id === updated.id ? updated : item)
-        : [...current, updated].sort((a, b) => a.name.localeCompare(b.name)));
-      setDepartmentId(updated.id);
-      setNotice(selectedDepartment ? 'Department settings saved.' : 'Department created.');
-    } catch (reason) {
-      reportFailure(reason, 'Could not save the department.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function saveRolePermissions(item) {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const updated = await backendApi.updateRolePermissions(token, item.id, {
-        permissions: roleDrafts[item.id] ?? item.permissions,
-        version: item.version,
-      });
-      setRoles((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
-      setRoleDrafts((current) => ({ ...current, [updated.id]: [...updated.permissions] }));
-      setNotice(`${updated.name} permissions saved.`);
-    } catch (reason) {
-      reportFailure(reason, 'Could not save role permissions.');
     } finally {
       setBusy(false);
     }
@@ -289,6 +224,11 @@ export function AdminManagementPage({
       setSectors((current) => selectedSector
         ? current.map((sector) => sector.id === updated.id ? updated : sector)
         : [...current, updated].sort((a, b) => a.name.localeCompare(b.name)));
+      setDepartments((current) => {
+        const remaining = current.filter((department) => department.id !== updated.id);
+        if (updated.active) remaining.push({ id: updated.id, name: updated.name, active: true });
+        return remaining.sort((a, b) => a.name.localeCompare(b.name));
+      });
       setSelectedId(updated.id);
       setNotice(selectedSector ? 'Sector settings saved.' : 'Sector created.');
     } catch (reason) {
@@ -360,16 +300,14 @@ export function AdminManagementPage({
 
       <section className="live-panel management-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div>
-        <p className="management-help">Create an active staff account and assign its initial role and department. Passwords are never returned by the API.</p>
+        <p className="management-help">Create an active staff account, then assign its role and department access in the staff directory. Passwords are never returned by the API.</p>
         <form className="management-form" onSubmit={createUser}>
-          <label className="form-field">Full name<input required maxLength={160} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
           <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
           <label className="form-field">Initial password<input type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><small className="field-note">Use at least 12 characters. Do not reuse your own password.</small></label>
           <label className="form-field">Role<select required value={role} onChange={(event) => setRole(event.target.value)}>{roleOptions.filter((item) => item.id !== 'ADMINISTRATOR').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label className="form-field">Department<select value={accountDepartmentId} onChange={(event) => setAccountDepartmentId(event.target.value)}><option value="">No department</option>{departments.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy || loadingAdmin || !role}>{busy ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />}Create account</button></div>
         </form>
-        {createdUser && <p className="management-success">Created {createdUser.email} as {formatRole(createdUser.role)}.</p>}
+        {createdUser && <p className="management-success">Created {createdUser.email} as {roleName(createdUser.role)}.</p>}
       </section>
 
       <section className="live-panel management-panel">
@@ -383,13 +321,16 @@ export function AdminManagementPage({
               <thead><tr><th>Staff member</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {filteredUsers.map((user) => {
-                  const draft = userDrafts[user.id] ?? { role: user.role, departmentId: user.departmentId ?? '' };
-                  const changed = draft.role !== user.role || draft.departmentId !== (user.departmentId ?? '');
+                  const departmentIds = user.departmentIds ?? [];
+                  const draft = userDrafts[user.id] ?? { role: user.role, departmentIds: [...departmentIds] };
+                  const departmentsChanged = draft.departmentIds.length !== departmentIds.length
+                    || draft.departmentIds.some((id) => !departmentIds.includes(id));
+                  const changed = draft.role !== user.role || departmentsChanged;
                   const protectedUser = user.role === 'ADMINISTRATOR';
                   return <tr key={user.id}>
                     <td><span className="management-staff-name">{user.fullName}</span><small>{user.email}</small></td>
                     <td><select aria-label={`Role for ${user.email}`} disabled={busy || protectedUser} value={draft.role} onChange={(event) => setUserDrafts((current) => ({ ...current, [user.id]: { ...draft, role: event.target.value } }))}>{roleOptions.filter((item) => item.id !== 'ADMINISTRATOR').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></td>
-                    <td><select aria-label={`Department for ${user.email}`} disabled={busy || protectedUser} value={draft.departmentId} onChange={(event) => setUserDrafts((current) => ({ ...current, [user.id]: { ...draft, departmentId: event.target.value } }))}><option value="">No department</option>{departments.filter((item) => item.active || item.id === draft.departmentId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (inactive)'}</option>)}</select></td>
+                    <td><select multiple aria-label={`Department for ${user.email}`} disabled={busy || protectedUser} value={draft.departmentIds} onChange={(event) => setUserDrafts((current) => ({ ...current, [user.id]: { ...draft, departmentIds: Array.from(event.target.selectedOptions, (option) => option.value) } }))}>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></td>
                     <td><span className={`stage-pill ${user.active ? 'stage-completed' : 'stage-draft'}`}>{user.active ? 'Active' : 'Deactivated'}</span></td>
                     <td><div className="management-row-actions">
                       <button className="btn btn-outline" type="button" disabled={busy || protectedUser || !changed} onClick={() => void saveUser(user)}>{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />}Save</button>
@@ -405,39 +346,27 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Manage departments</h2></div></div>
-        <p className="management-help">Departments can be deactivated without deleting staff or historical records.</p>
-        <label className="form-field">Existing department<select value={departmentId} onChange={(event) => selectDepartment(event.target.value)}><option value="">Create a new department…</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (inactive)'}</option>)}</select></label>
-        <form className="management-form" onSubmit={saveDepartment}>
-          <label className="form-field">Department name<input required maxLength={120} value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} /></label>
-          <label className="management-checkbox"><input type="checkbox" checked={departmentActive} onChange={(event) => setDepartmentActive(event.target.checked)} />Active and available for staff assignments</label>
-          <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : <Save size={15} />}{selectedDepartment ? 'Save department' : 'Create department'}</button></div>
-        </form>
+        <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Staff assignment areas</h2></div></div>
+        <p className="management-help">Assign one or more active sectors to staff in the directory. Create or update assignment areas in Sector Routing below.</p>
+        {loadingAdmin
+          ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading assignment areas…</div>
+          : departments.length
+            ? <div className="management-assignment-areas">{departments.map((item) => <span key={item.id}>{item.name}</span>)}</div>
+            : <p className="live-empty">No active assignment areas are available.</p>}
       </section>
 
       <section className="live-panel management-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div></div>
-        <p className="management-help">Configure permissions for each role. Administrator access is protected. The backend must enforce every permission on each request.</p>
+        <p className="management-help">Roles are defined by the backend and enforced on every request. Assign a role to staff in the directory; permission rules are not editable here.</p>
         {loadingAdmin
           ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading roles…</div>
-          : roles.map((item) => {
-            const selected = roleDrafts[item.id] ?? item.permissions;
-            const changed = selected.length !== item.permissions.length || selected.some((permission) => !item.permissions.includes(permission));
-            return <div className="management-role" key={item.id}>
-              <div className="management-role-heading"><div><h3>{item.name}</h3><small>{item.id === 'ADMINISTRATOR' ? 'Protected system role' : 'Role permissions'}</small></div>
-                <button className="btn btn-outline" type="button" disabled={busy || !item.editable || !changed} onClick={() => void saveRolePermissions(item)}>{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />}Save permissions</button>
+          : roles.map((item) => (
+            <div className="management-role" key={item.id}>
+              <div className="management-role-heading">
+                <div><h3>{roleName(item.id)}</h3><small>{item.staff ? 'Staff account role' : 'Submitter account role'}</small></div>
               </div>
-              {item.editable
-                ? <div className="management-permissions">{permissions.map((permission) => <label key={permission.id} title={permission.description}><input type="checkbox" checked={selected.includes(permission.id)} disabled={busy} onChange={(event) => setRoleDrafts((current) => {
-                    const currentPermissions = current[item.id] ?? item.permissions;
-                    const next = event.target.checked
-                      ? [...currentPermissions, permission.id]
-                      : currentPermissions.filter((id) => id !== permission.id);
-                    return { ...current, [item.id]: next };
-                  })} />{permission.name}</label>)}</div>
-                : <div className="management-permissions">{permissions.filter((permission) => selected.includes(permission.id)).map((permission) => <span key={permission.id}>{permission.name}</span>)}</div>}
-            </div>;
-          })}
+            </div>
+          ))}
       </section>
 
       <section className="live-panel management-panel">

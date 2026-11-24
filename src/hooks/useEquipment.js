@@ -20,3 +20,13 @@ export function useReportEquipmentFault(token) {
     },
   });
 }
+
+export function useMarkEquipmentWorking(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => equipmentApi.markWorking(id, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: EQUIPMENT_KEY });
+    },
+  });
+}

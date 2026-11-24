@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { LoaderCircle, TriangleAlert, Wrench } from 'lucide-react';
 import { MACHINE_UNAVAILABLE_REASON, isMachineBookable } from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
@@ -8,12 +8,18 @@ import { ErrorBanner, Loading, MachineState, PageHeading } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
 
 export function MachineListPage({ token, onUnauthorized }) {
+  const [searchParams] = useSearchParams();
+  const linkedMachineId = searchParams.get('machine');
   const machines = useMachines(token);
   const markWorking = useMarkWorking(token);
   const [confirming, setConfirming] = useState(null);
   const [note, setNote] = useState('');
   useUnauthorizedRedirect(onUnauthorized, machines.error, markWorking.error);
   const items = machines.data ?? [];
+  useEffect(() => {
+    const linkedMachine = items.find((machine) => machine.id === linkedMachineId);
+    if (linkedMachine && !isMachineBookable(linkedMachine)) setConfirming(linkedMachine.id);
+  }, [items, linkedMachineId]);
   const unavailable = items.filter((machine) => !isMachineBookable(machine)).length;
 
   return (
@@ -30,7 +36,11 @@ export function MachineListPage({ token, onUnauthorized }) {
               <thead><tr><th>Machine</th><th>State</th><th>Note</th><th>Updated</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {items.map((machine) => (
-                  <tr key={machine.id}>
+                  <tr
+                    key={machine.id}
+                    data-notification-target={machine.id === linkedMachineId ? 'true' : undefined}
+                    style={machine.id === linkedMachineId ? { background: '#fff8e6', outline: '2px solid #d59b3d', outlineOffset: '-2px' } : undefined}
+                  >
                     <td><b className="tx-strong">{machine.name}</b></td>
                     <td><MachineState state={machine.state} /></td>
                     <td className="tx-wrap">{machine.note || '—'}</td>
