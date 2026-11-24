@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { backendApi } from '@/services/backend-api';
 import { MySubmissionsPage } from './MySubmissionsPage';
 
@@ -18,11 +19,14 @@ function renderPage(capabilities, result = {
   }) {
   vi.spyOn(backendApi, 'submitterSubmissions').mockResolvedValue(result);
   vi.spyOn(backendApi, 'submitterCapabilities').mockResolvedValue(capabilities);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return render(
-    <MemoryRouter>
-      <MySubmissionsPage token="test-token" onUnauthorized={vi.fn()} />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <MySubmissionsPage token="test-token" onUnauthorized={vi.fn()} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

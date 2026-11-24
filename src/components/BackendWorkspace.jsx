@@ -27,6 +27,7 @@ import {
   notificationKeys,
   useUnreadNotificationCount,
 } from '@/hooks/useNotifications';
+import { useSubmitterCapabilities } from '@/hooks/useSubmitter';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
@@ -164,6 +165,16 @@ export function BackendWorkspace({
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
   const isSubmitter = session.roles.includes('ROLE_SUBMITTER');
   const mayCreateSubmission = canCreateSubmission(session.roles);
+  // GET /me/capabilities (Assignment 4) — which self-service modules are actually
+  // available, so "MY WORKSPACE" doesn't always show all four tabs regardless of
+  // what the backend reports.
+  const submitterCapabilitiesQuery = useSubmitterCapabilities(session.accessToken, isSubmitter);
+  const submitterModuleAvailability = Object.fromEntries(
+    (submitterCapabilitiesQuery.data?.modules ?? []).map((module) => [module.key, module.availability]),
+  );
+  const isSubmitterModuleAvailable = (key) => (
+    !submitterCapabilitiesQuery.isSuccess || submitterModuleAvailability[key] !== 'NOT_CONFIGURED'
+  );
 
   // Dynamic logic badges derived from live dashboard / pipeline stage counts
   const { data: dashboard } = useQuery({
@@ -218,11 +229,11 @@ export function BackendWorkspace({
     ...(isSubmitter ? [{
       heading: 'MY WORKSPACE',
       items: [
-        { label: 'My Submissions', href: '/my-submissions', icon: Boxes },
-        { label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
-        { label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
-        { label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
-      ],
+        { key: 'BRIEFS', label: 'My Submissions', href: '/my-submissions', icon: Boxes },
+        { key: 'SERVICE_REQUESTS', label: 'Service Requests', href: '/my-submissions/service-requests', icon: ClipboardList },
+        { key: 'INVOICES', label: 'Invoices and Payments', href: '/my-submissions/invoices', icon: Receipt },
+        { key: 'BOOKINGS', label: 'Bookings', href: '/my-submissions/bookings', icon: CalendarDays },
+      ].filter((item) => isSubmitterModuleAvailable(item.key)),
     }] : []),
     ...(isAdministrator ? [{
       heading: 'MANAGEMENT',

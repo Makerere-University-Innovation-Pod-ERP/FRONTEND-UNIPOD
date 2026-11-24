@@ -418,7 +418,7 @@ export const handlers = [
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
-      acceptedRules: Array.isArray(body.acceptedRules) ? body.acceptedRules : [],
+      acceptedRulesVersion: body.acceptedRulesVersion ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
@@ -731,7 +731,7 @@ export const handlers = [
     return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/submissions/:id/respond`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/submissions/:id/reply`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
