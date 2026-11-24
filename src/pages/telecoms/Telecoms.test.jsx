@@ -157,7 +157,8 @@ describe('Telecoms Role Scoping (Assignment 11)', () => {
 
     // Verify Telecoms links exist
     const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
-    expect(screen.getByText('TELECOMS ERP')).toBeInTheDocument();
+    expect(screen.getByText('MUTIC ERP')).toBeInTheDocument();
+    expect(screen.getByText('RF & IoT Operations')).toBeInTheDocument();
     expect(within(navigation).getByText('All Requests')).toBeInTheDocument();
     expect(within(navigation).getByText('New Request')).toBeInTheDocument();
     expect(within(navigation).getByText('Review & Quote')).toBeInTheDocument();
