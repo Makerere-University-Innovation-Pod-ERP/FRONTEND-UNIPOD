@@ -435,7 +435,7 @@ export function BackendWorkspace({
           >
             {isTelecoms ? (
               <>
-                <div className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></div>
+                <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
                 <span><b>MUTIC ERP</b><small>RF & IoT Operations</small></span>
               </>
             ) : textileOnly ? (
