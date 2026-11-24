@@ -83,8 +83,8 @@ export function LoginPage({ onLogin, onCreateAccount }) {
         <section className="login-panel">
           <div className="login-card">
             <div className="login-brand">
-              <img className="brand-logo" src="/makerere-logo.png" alt="Makerere University crest" />
-              <div><b>MUTIC ERP</b><small>Makerere Innovation Center</small></div>
+              <img className="brand-logo" src="/unipod-logo.png" alt="Makerere University and UniPod logo" />
+              <div><b>MUTIC ERP</b></div>
             </div>
             {showForgotPassword ? (
               <>
@@ -123,7 +123,6 @@ export function LoginPage({ onLogin, onCreateAccount }) {
               </>
             ) : (
               <>
-                <p className="eyebrow">PROJECT & IDEAS MANAGEMENT</p>
                 <h1>Welcome back.</h1>
                 <p className="login-intro">Sign in with your account to manage submissions and case workflows.</p>
                 <form className="api-form login-form" onSubmit={submit}>
