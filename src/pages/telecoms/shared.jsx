@@ -2,6 +2,7 @@ import { CircleAlert } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
 import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { errorMessage } from './helpers';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import {
   EQUIPMENT_STATE_LABELS,
   LOAN_STATUS_LABELS,
@@ -19,6 +20,8 @@ export function ErrorBanner({ error, fallback }) {
   );
 }
 
+export function Loading({ label, variant = 'list', columns }) {
+  return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
 export function Loading({ label }) {
   return <LoadingSkeleton label={label} />;
 }

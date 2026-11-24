@@ -50,6 +50,10 @@ export function MachineListPage({ token }) {
         <article className="live-metric cnc-machine-list__metric"><p>FAULT REPORTED</p><strong>{faulty}</strong></article>
       </section>
 
+      <section className="live-panel tx-table-panel">
+        {facilitiesQuery.isPending ? <Loading label="Loading machines…" variant="table" /> : (
+          <div className="live-table-wrap">
+            <table className="live-table">
       <section className="live-panel tx-table-panel cnc-machine-list__panel">
         {facilitiesQuery.isPending ? <Loading label="Loading machines…" /> : (
           <div className="live-table-wrap cnc-machine-list__table-wrap">

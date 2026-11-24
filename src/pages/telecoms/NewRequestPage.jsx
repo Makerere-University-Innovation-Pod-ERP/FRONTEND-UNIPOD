@@ -40,7 +40,7 @@ export function NewRequestPage({ token, onUnauthorized }) {
   const requestQuery = useTelecomsRequest(token, draftId);
   useUnauthorizedRedirect(onUnauthorized, requestQuery.error);
 
-  if (draftId && requestQuery.isLoading) return <Loading label="Loading draft…" />;
+  if (draftId && requestQuery.isLoading) return <Loading label="Loading draft…" variant="form" />;
   if (draftId && requestQuery.data && requestQuery.data.status !== 'DRAFT') {
     return (
       <div className="live-page page-enter">

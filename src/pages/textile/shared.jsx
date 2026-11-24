@@ -6,6 +6,7 @@ import { ApiError } from '@/services/api-client';
 import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { errorMessage, PHOTO_ACCEPT, validatePhoto } from './helpers';
 import { MACHINE_STATE_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/textile';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /** Error banner that stays quiet for 401s (the session redirect handles those). */
 export function ErrorBanner({ error, fallback }) {
@@ -13,6 +14,8 @@ export function ErrorBanner({ error, fallback }) {
   return <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{errorMessage(error, fallback)}</div>;
 }
 
+export function Loading({ label, variant = 'list', columns }) {
+  return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
 export function Loading({ label }) {
   return <LoadingSkeleton label={label} />;
 }

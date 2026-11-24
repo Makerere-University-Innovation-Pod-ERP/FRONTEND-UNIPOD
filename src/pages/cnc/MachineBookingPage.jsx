@@ -137,6 +137,9 @@ export function MachineBookingPage({ token }) {
       <div className="detail-grid cnc-machine-booking__grid">
         <section className="live-panel tx-table-panel cnc-machine-booking__panel cnc-machine-booking__bookings">
           <h3 className="tx-panel-title">Upcoming machine bookings</h3>
+          {allBookings.isPending ? <Loading label="Loading bookings…" variant="table" /> : (
+            <div className="live-table-wrap">
+              <table className="live-table">
           {allBookings.isPending ? <Loading label="Loading bookings…" /> : (
             <div className="live-table-wrap cnc-machine-booking__table-wrap">
               <table className="live-table cnc-machine-booking__table">

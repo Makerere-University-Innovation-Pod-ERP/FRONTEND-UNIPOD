@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
+import { CircleAlert, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function ReceptionQueuePage({
   token,
@@ -49,7 +50,7 @@ export function ReceptionQueuePage({
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       <section className="live-panel">
         {loading && !queue
-          ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading reception queue…</div>
+          ? <LoadingSkeleton label="Loading reception queue…" variant="table" />
           : queue?.items.length
             ? <div className="live-table-wrap"><table className="live-table">
               <thead><tr><th>Draft</th><th>Type</th><th>Stage</th><th>Submitted</th><th /></tr></thead>

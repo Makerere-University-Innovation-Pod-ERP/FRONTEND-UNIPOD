@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Building2,
   CircleAlert,
   LoaderCircle,
   Plus,
   RefreshCw,
+  Route,
   Save,
+  ShieldCheck,
   Trash2,
   UserPlus,
+  Users,
 } from 'lucide-react';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './AdminManagementPage.css';
 
 const FALLBACK_ROLES = [
@@ -20,6 +25,7 @@ const FALLBACK_ROLES = [
   { id: 'REVIEWER', name: 'Reviewer' },
   { id: 'SECTOR_OFFICER', name: 'Sector Officer' },
   { id: 'IP_LIAISON', name: 'IP Liaison' },
+  { id: 'TELECOMS_DOMAIN_OWNER', name: 'Telecoms Domain Owner' },
   { id: 'SUBMITTER', name: 'Submitter' },
   { id: 'OBSERVER', name: 'Observer' },
 ];
@@ -47,6 +53,10 @@ export function AdminManagementPage({
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('REVIEWER');
   const [createdUser, setCreatedUser] = useState(null);
+  const [departmentId, setDepartmentId] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
+  const [departmentNotificationEmail, setDepartmentNotificationEmail] = useState('');
+  const [departmentActive, setDepartmentActive] = useState(true);
   const [sectors, setSectors] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [members, setMembers] = useState([]);
@@ -129,6 +139,7 @@ export function AdminManagementPage({
         email: email.trim(),
         password,
         role,
+        departmentId: accountDepartmentId || null,
       });
       setUsers((current) => [created, ...current]);
       setUserDrafts((current) => ({
@@ -152,6 +163,11 @@ export function AdminManagementPage({
     setError('');
     setNotice('');
     try {
+      const updated = await backendApi.updateAdminUser(token, user.id, {
+        ...draft,
+        departmentId: draft.departmentId || null,
+        version: user.version,
+      });
       const updated = await backendApi.updateAdminUser(token, user.id, draft);
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
       setUserDrafts((current) => ({
@@ -176,6 +192,60 @@ export function AdminManagementPage({
       setNotice(`${updated.email} is now ${updated.active ? 'active' : 'deactivated'}.`);
     } catch (reason) {
       reportFailure(reason, 'Could not update account status.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function selectDepartment(id) {
+    setDepartmentId(id);
+    const department = departments.find((item) => item.id === id);
+    setDepartmentName(department?.name ?? '');
+    setDepartmentNotificationEmail(department?.notificationEmail ?? '');
+    setDepartmentActive(department?.active ?? true);
+  }
+
+  async function saveDepartment(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const body = {
+        name: departmentName.trim(),
+        notificationEmail: departmentNotificationEmail.trim(),
+        active: departmentActive,
+        ...(selectedDepartment ? { version: selectedDepartment.version } : {}),
+      };
+      const updated = selectedDepartment
+        ? await backendApi.updateDepartment(token, selectedDepartment.id, body)
+        : await backendApi.createDepartment(token, body);
+      setDepartments((current) => selectedDepartment
+        ? current.map((item) => item.id === updated.id ? updated : item)
+        : [...current, updated].sort((a, b) => a.name.localeCompare(b.name)));
+      setDepartmentId(updated.id);
+      setNotice(selectedDepartment ? 'Department settings saved.' : 'Department created.');
+    } catch (reason) {
+      reportFailure(reason, 'Could not save the department.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRolePermissions(item) {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const updated = await backendApi.updateRolePermissions(token, item.id, {
+        permissions: roleDrafts[item.id] ?? item.permissions,
+        version: item.version,
+      });
+      setRoles((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
+      setRoleDrafts((current) => ({ ...current, [updated.id]: [...updated.permissions] }));
+      setNotice(`${updated.name} permissions saved.`);
+    } catch (reason) {
+      reportFailure(reason, 'Could not save role permissions.');
     } finally {
       setBusy(false);
     }
@@ -283,7 +353,7 @@ export function AdminManagementPage({
   }
 
   return (
-    <div className="live-page page-enter">
+    <div className="live-page page-enter management-page">
       <div className="live-page-heading">
         <div><p className="eyebrow">ADMINISTRATION · ACCESS & ROUTING</p><h1>Workspace management</h1><p>Manage staff access, departments, system roles, and submission sectors.</p></div>
         <button className="btn btn-outline" disabled={loadingAdmin || loadingSectors} onClick={() => {
@@ -299,6 +369,12 @@ export function AdminManagementPage({
       {notice && <p className="management-notice" role="status">{notice}</p>}
 
       <section className="live-panel management-panel">
+        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><UserPlus size={19} /></span><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div></div>
+        <p className="management-help">Create an active staff account and assign its initial role and department. Passwords are never returned by the API.</p>
+        <form className="management-form" onSubmit={createUser}>
+          <label className="form-field">Full name<input required maxLength={160} autoComplete="name" placeholder="e.g. Amina Nakato" value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
+          <label className="form-field">Email address<input type="email" required maxLength={254} autoComplete="off" placeholder="name@unipod.mak.ac.ug" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+          <label className="form-field">Initial password<input type="password" required minLength={12} maxLength={72} autoComplete="new-password" placeholder="Minimum 12 characters" value={password} onChange={(event) => setPassword(event.target.value)} /><small className="field-note">Use at least 12 characters. Do not reuse your own password.</small></label>
         <div className="live-panel-heading"><div><p className="eyebrow">IDENTITY</p><h2>Create staff account</h2></div></div>
         <p className="management-help">Create an active staff account, then assign its role and department access in the staff directory. Passwords are never returned by the API.</p>
         <form className="management-form" onSubmit={createUser}>
@@ -311,11 +387,11 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">STAFF DIRECTORY</p><h2>Users and account lifecycle</h2></div></div>
+        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><Users size={19} /></span><div><p className="eyebrow">STAFF DIRECTORY</p><h2>Users and account lifecycle</h2></div></div></div>
         <p className="management-help">Change a staff member’s role or department, or deactivate/reactivate their account. Deactivation preserves account history.</p>
         <label className="form-field management-search">Search staff<input type="search" value={userFilter} onChange={(event) => setUserFilter(event.target.value)} placeholder="Name, email, or role" /></label>
         {loadingAdmin
-          ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading staff and access settings…</div>
+          ? <LoadingSkeleton label="Loading staff and access settings…" variant="table" />
           : <div className="live-table-wrap">
             <table className="live-table management-table">
               <thead><tr><th>Staff member</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
@@ -346,6 +422,28 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
+        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><Building2 size={19} /></span><div><p className="eyebrow">ORGANIZATION</p><h2>Manage departments</h2></div></div></div>
+        <p className="management-help">Departments can be deactivated without deleting staff or historical records.</p>
+        <label className="form-field">Existing department<select value={departmentId} onChange={(event) => selectDepartment(event.target.value)}><option value="">Create a new department…</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? '' : ' (inactive)'}</option>)}</select></label>
+        <form className="management-form" onSubmit={saveDepartment}>
+          <label className="form-field">Department name<input required maxLength={120} placeholder="e.g. Community Health" value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} /></label>
+          <label className="form-field">Department notification email<input required type="email" maxLength={320} placeholder="department@unipod.mak.ac.ug" value={departmentNotificationEmail} onChange={(event) => setDepartmentNotificationEmail(event.target.value)} /></label>
+          <label className="management-checkbox"><input type="checkbox" checked={departmentActive} onChange={(event) => setDepartmentActive(event.target.checked)} />Active and available for staff assignments</label>
+          <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : <Save size={15} />}{selectedDepartment ? 'Save department' : 'Create department'}</button></div>
+        </form>
+      </section>
+
+      <section className="live-panel management-panel">
+        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><ShieldCheck size={19} /></span><div><p className="eyebrow">ACCESS CONTROL</p><h2>System roles and permissions</h2></div></div></div>
+        <p className="management-help">Configure permissions for each role. Administrator access is protected. The backend must enforce every permission on each request.</p>
+        {loadingAdmin
+          ? <LoadingSkeleton label="Loading roles…" variant="table" />
+          : roles.map((item) => {
+            const selected = roleDrafts[item.id] ?? item.permissions;
+            const changed = selected.length !== item.permissions.length || selected.some((permission) => !item.permissions.includes(permission));
+            return <div className="management-role" key={item.id}>
+              <div className="management-role-heading"><div><h3>{item.name}</h3><small>{item.id === 'ADMINISTRATOR' ? 'Protected system role' : 'Role permissions'}</small></div>
+                <button className="btn btn-outline" type="button" disabled={busy || !item.editable || !changed} onClick={() => void saveRolePermissions(item)}>{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />}Save permissions</button>
         <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Staff assignment areas</h2></div></div>
         <p className="management-help">Assign one or more active sectors to staff in the directory. Create or update assignment areas in Sector Routing below.</p>
         {loadingAdmin
@@ -370,13 +468,13 @@ export function AdminManagementPage({
       </section>
 
       <section className="live-panel management-panel">
-        <div className="live-panel-heading"><div><p className="eyebrow">SECTOR ROUTING</p><h2>Manage sectors</h2></div><button className="btn btn-outline" onClick={startNewSector}><Plus size={14} />New sector</button></div>
-        {loadingSectors && <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading sectors…</div>}
+        <div className="live-panel-heading"><div className="management-panel-title"><span className="management-panel-icon"><Route size={19} /></span><div><p className="eyebrow">SECTOR ROUTING</p><h2>Manage sectors</h2></div></div><button className="btn btn-outline" onClick={startNewSector}><Plus size={14} />New sector</button></div>
+        {loadingSectors && <LoadingSkeleton label="Loading sectors…" variant="list" />}
         {!loadingSectors && sectorCatalogLoaded && sectors.length === 0 && <p className="management-help">No sectors are configured yet. Create one to enable forwarding submissions to a sector.</p>}
         {sectors.length > 0 && <label className="form-field">Existing sector<select value={selectedId} onChange={(event) => void selectSector(event.target.value)}><option value="">Create a new sector…</option>{sectors.map((sector) => <option key={sector.id} value={sector.id}>{sector.name}{sector.active ? '' : ' (inactive)'}</option>)}</select></label>}
         <form className="management-form" onSubmit={saveSector}>
-          <label className="form-field">Sector name<input required maxLength={120} value={sectorName} onChange={(event) => setSectorName(event.target.value)} /></label>
-          <label className="form-field">Notification email<input required type="email" maxLength={320} value={notificationEmail} onChange={(event) => setNotificationEmail(event.target.value)} /></label>
+          <label className="form-field">Sector name<input required maxLength={120} placeholder="e.g. Health Sciences" value={sectorName} onChange={(event) => setSectorName(event.target.value)} /></label>
+          <label className="form-field">Notification email<input required type="email" maxLength={320} placeholder="sector@unipod.mak.ac.ug" value={notificationEmail} onChange={(event) => setNotificationEmail(event.target.value)} /></label>
           <label className="management-checkbox"><input type="checkbox" checked={sectorActive} onChange={(event) => setSectorActive(event.target.checked)} />Active and available for case routing</label>
           <div className="form-actions"><button className="btn btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15} className="spin" /> : <Save size={15} />}{selectedSector ? 'Save sector' : 'Create sector'}</button></div>
         </form>

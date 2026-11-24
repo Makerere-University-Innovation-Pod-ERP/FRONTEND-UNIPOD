@@ -28,7 +28,7 @@ export function EquipmentListPage({ token }) {
       <ErrorBanner error={equipmentQuery.error || markWorking.error} fallback="Could not load or update equipment." />
 
       {equipmentQuery.isLoading ? (
-        <Loading label="Loading equipment…" />
+        <Loading label="Loading equipment…" variant="table" />
       ) : (
         <section className="live-panel tx-table-panel">
           <div className="live-table-wrap">

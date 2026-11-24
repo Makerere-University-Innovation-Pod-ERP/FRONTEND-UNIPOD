@@ -94,6 +94,34 @@ export function EquipmentListPage({ token, onUnauthorized }) {
       )}
 
       {equipmentQuery.isLoading ? (
+        <Loading label="Loading equipment list…" variant="table" />
+      ) : (
+        <div className="live-table-wrap">
+          <table className="live-table">
+            <thead>
+              <tr>
+                <th>Asset Tag</th>
+                <th>Equipment Name</th>
+                <th>Available / Total</th>
+                <th>State</th>
+                <th>Location</th>
+                <th>Notes / Service Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((eq) => (
+                <tr key={eq.id}>
+                  <td className="tx-mono"><b style={{ fontSize: '13px', color: 'var(--ink)' }}>{eq.assetTag}</b></td>
+                  <td><b style={{ fontSize: '14.5px', color: 'var(--ink)' }}>{eq.name}</b></td>
+                  <td>
+                    <b style={{ fontSize: '14px', color: 'var(--ink)' }}>{eq.availableQuantity}</b> <span style={{ color: 'var(--ink-soft)', fontSize: '13px' }}>of {eq.totalQuantity} units</span>
+                  </td>
+                  <td><EquipmentStateBadge state={eq.state} /></td>
+                  <td style={{ fontSize: '13.5px', color: 'var(--ink-soft)' }}>{eq.location}</td>
+                  <td style={{ fontSize: '13px', color: 'var(--ink-soft)', maxWidth: '280px', whiteSpace: 'normal' }}>{eq.note || '—'}</td>
+                  <td>
+                    {eq.state !== 'FAULTY' ? (
         <EquipmentListSkeleton />
       ) : (
         <>
@@ -181,6 +209,12 @@ export function EquipmentListPage({ token, onUnauthorized }) {
                         disabled={markWorking.isPending}
                         onClick={() => markWorking.mutate(eq.id)}
                       >
+                        <TriangleAlert size={14} style={{ color: 'var(--rose)' }} />Report Fault
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--rose)', background: 'var(--rose-bg)', padding: '3px 8px', borderRadius: '4px' }}>
+                        Fault Flagged
+                      </span>
                         {markWorking.isPending ? <LoaderCircle className="spin" size={14} /> : <CheckCircle2 size={15} />}
                         Mark working
                       </button>

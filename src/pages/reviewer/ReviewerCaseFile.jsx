@@ -9,6 +9,7 @@ import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 import { useRules } from '@/hooks/useRules';
 import { RulesAcceptance } from '@/components/RulesAcceptance';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const decisionLabel = {
   pending: 'Decision pending',
@@ -38,7 +39,7 @@ export function ReviewerCaseFile({ token, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  if (isLoading) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
+  if (isLoading) return <div className="live-page"><LoadingSkeleton label="Loading case file…" variant="detail" /></div>;
   if (!summary) {
     return (
       <div className="live-page">

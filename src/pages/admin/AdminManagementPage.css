@@ -1,3 +1,225 @@
+.management-page .live-page-heading{margin-bottom:30px}
+.management-page .live-page-heading .eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  color:var(--mak-red-600);
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:.18em;
+}
+.management-page .live-page-heading .eyebrow::before{
+  content:"";
+  width:26px;
+  height:3px;
+  border-radius:3px;
+  background:linear-gradient(90deg,var(--mak-red-600),var(--mak-gold-500));
+}
+.management-page .live-page-heading h1{
+  letter-spacing:-.04em;
+  text-wrap:balance;
+}
+.management-page .live-page-heading p:not(.eyebrow){font-size:13px}
+.management-page .live-page-heading>.btn{
+  min-height:44px;
+  padding:0 20px;
+  border-radius:12px;
+  border-color:color-mix(in srgb,var(--ink) 22%,var(--border));
+  font-size:11px;
+  box-shadow:0 4px 14px rgba(25,27,24,.06);
+  transition:border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.management-page .live-page-heading>.btn:hover:not(:disabled){
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px color-mix(in srgb,var(--mak-red-600) 14%,transparent);
+}
+
+.management-page .management-panel{
+  position:relative;
+  margin-bottom:20px;
+  padding:26px 28px;
+  border:1px solid color-mix(in srgb,var(--ink) 12%,var(--border));
+  border-radius:18px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 97%,var(--mak-red-600)) 0%,var(--surface) 46%);
+  box-shadow:0 1px 2px rgba(25,27,24,.04),0 14px 38px rgba(25,27,24,.06);
+  overflow:hidden;
+  transition:box-shadow .2s ease;
+}
+.management-page .management-panel:hover{
+  box-shadow:0 2px 4px rgba(25,27,24,.05),0 20px 48px rgba(25,27,24,.09);
+}
+.management-page .management-panel::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:4px;
+  background:linear-gradient(180deg,var(--mak-red-600),var(--mak-gold-500));
+}
+.management-page .management-panel::after{
+  content:"";
+  position:absolute;
+  top:-70px;
+  right:-70px;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--mak-gold-500) 9%,transparent) 0%,transparent 68%);
+  pointer-events:none;
+}
+.management-page .management-panel .live-panel-heading{
+  position:relative;
+  align-items:flex-start;
+  margin-bottom:18px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--border-soft);
+}
+.management-page .management-panel-title{display:flex;align-items:center;gap:14px;min-width:0}
+.management-page .management-panel-icon{
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:42px;
+  height:42px;
+  border:1px solid color-mix(in srgb,var(--mak-red-600) 22%,var(--border));
+  border-radius:13px;
+  background:linear-gradient(140deg,var(--mak-red-tint),color-mix(in srgb,var(--mak-gold-tint) 55%,var(--surface)));
+  color:var(--mak-red-600);
+  box-shadow:0 4px 12px color-mix(in srgb,var(--mak-red-600) 10%,transparent);
+}
+.management-page .management-panel .live-panel-heading h2,
+.management-page .management-panel .management-role-heading h3,
+.management-page .management-panel .management-members h3{
+  color:var(--ink);
+  font-family:var(--font-serif);
+  letter-spacing:-.025em;
+}
+.management-page .management-panel .live-panel-heading h2{margin-top:3px;font-size:22px}
+.management-page .management-panel .live-panel-heading .eyebrow{
+  color:var(--mak-red-600);
+  font-family:var(--font-mono);
+  font-size:9px;
+  letter-spacing:.18em;
+}
+.management-page .management-panel .live-panel-heading>.btn{
+  min-height:40px;
+  border-radius:11px;
+  border-color:color-mix(in srgb,var(--ink) 22%,var(--border));
+  font-size:11px;
+}
+.management-page .management-panel .live-panel-heading>.btn:hover:not(:disabled){
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+}
+.management-page .management-help{
+  max-width:780px;
+  margin:-2px 0 22px;
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.65;
+}
+
+.management-page .management-panel .form-field{
+  gap:8px;
+  margin-bottom:18px;
+  color:var(--ink);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.01em;
+}
+.management-page .management-panel .form-field input,
+.management-page .management-panel .form-field select,
+.management-page .management-panel .management-table select{
+  min-height:52px;
+  padding:13px 15px;
+  border:1.5px solid color-mix(in srgb,var(--ink) 30%,var(--surface));
+  border-radius:13px;
+  background:var(--surface);
+  color:var(--ink);
+  font:500 13px/1.45 var(--font-sans);
+  box-shadow:0 2px 6px rgba(25,27,24,.04);
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.management-page .management-panel .form-field input::placeholder{
+  color:var(--muted);
+  opacity:.75;
+  font-weight:400;
+}
+.management-page .management-panel .form-field select,
+.management-page .management-panel .management-table select{
+  appearance:none;
+  padding-right:40px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2367686b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  cursor:pointer;
+}
+.management-page .management-panel .form-field input:hover,
+.management-page .management-panel .form-field select:hover,
+.management-page .management-panel .management-table select:hover{
+  border-color:color-mix(in srgb,var(--mak-red-600) 48%,var(--surface));
+  background-color:var(--surface);
+}
+.management-page .management-panel .form-field input:focus,
+.management-page .management-panel .form-field select:focus,
+.management-page .management-panel .management-table select:focus{
+  outline:none;
+  border-color:var(--mak-red-600);
+  background-color:var(--surface);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--mak-red-600) 14%,transparent),0 4px 12px rgba(25,27,24,.06);
+}
+.management-page .management-panel .form-field input:disabled,
+.management-page .management-panel .form-field select:disabled,
+.management-page .management-panel .management-table select:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  background-color:var(--surface-raised);
+}
+.management-page .management-panel .field-note{
+  color:var(--muted);
+  font-size:10.5px;
+  font-weight:500;
+  line-height:1.5;
+}
+.management-page .management-search{max-width:460px;margin-bottom:18px}
+.management-page .management-panel .management-search input{
+  padding-left:42px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2367686b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:15px center;
+}
+.management-page .management-form{
+  max-width:1000px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:20px;
+}
+.management-page .management-form>.form-field{align-content:start}
+.management-page .management-panel .management-form .form-actions{
+  justify-content:flex-end;
+  padding:6px 0 0;
+}
+.management-page .management-panel .management-form .form-actions .btn-primary{
+  min-width:170px;
+  min-height:48px;
+  padding:0 24px;
+  border:0;
+  border-radius:13px;
+  background:linear-gradient(135deg,var(--mak-red-600),var(--mak-red-700));
+  color:#fff;
+  font-size:12px;
+  letter-spacing:.02em;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--mak-red-600) 28%,transparent);
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+.management-page .management-panel .management-form .form-actions .btn-primary:hover:not(:disabled){
+  background:linear-gradient(135deg,var(--mak-red-600),var(--mak-red-800));
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px color-mix(in srgb,var(--mak-red-600) 36%,transparent);
+}
+.management-page .management-panel .management-form .form-actions .btn-primary:active:not(:disabled){
+  transform:translateY(0);
+  box-shadow:0 4px 12px color-mix(in srgb,var(--mak-red-600) 26%,transparent);
 .management-search{max-width:420px}
 .management-panel .live-panel-heading h2,
 .management-panel .management-role-heading h3,
@@ -35,4 +257,246 @@
   .management-row-actions{align-items:flex-start;flex-direction:column}
   .management-permissions{grid-template-columns:1fr}
   .management-role-heading{align-items:flex-start;flex-direction:column}
+}
+.management-page .management-panel .management-checkbox{
+  align-items:center;
+  gap:11px;
+  min-height:52px;
+  margin:0 0 18px;
+  padding:12px 15px;
+  border:1.5px solid color-mix(in srgb,var(--ink) 18%,var(--border));
+  border-radius:13px;
+  background:var(--surface);
+  color:var(--ink-soft);
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.management-page .management-panel .management-checkbox:hover{
+  border-color:color-mix(in srgb,var(--mak-red-600) 42%,var(--border));
+}
+.management-page .management-panel .management-checkbox:has(input:checked){
+  border-color:color-mix(in srgb,var(--mak-red-600) 55%,var(--border));
+  background:color-mix(in srgb,var(--mak-red-tint) 42%,var(--surface));
+  color:var(--ink);
+}
+.management-page .management-panel .management-checkbox input{
+  width:17px;
+  height:17px;
+  flex:none;
+  accent-color:var(--mak-red-600);
+  cursor:pointer;
+}
+.management-page .management-notice,
+.management-page .management-success{
+  padding:13px 16px;
+  border:1px solid color-mix(in srgb,var(--mak-green-600) 30%,var(--border));
+  border-left:4px solid var(--mak-green-600);
+  border-radius:12px;
+  background:var(--mak-green-tint);
+  color:var(--mak-green-600);
+  font-size:12.5px;
+  font-weight:600;
+  line-height:1.55;
+  box-shadow:none;
+}
+.management-page .management-notice{margin:0 0 18px}
+.management-page .management-success{margin:16px 0 0}
+
+.management-page .management-panel .management-table{border-collapse:separate;border-spacing:0}
+.management-page .management-panel .management-table thead th{
+  height:44px;
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  color:var(--muted);
+  background:var(--surface-raised);
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+.management-page .management-panel .management-table thead th:first-child{border-radius:10px 0 0 10px}
+.management-page .management-panel .management-table thead th:last-child{border-radius:0 10px 10px 0}
+.management-page .management-panel .management-table tbody tr{transition:background .14s ease}
+.management-page .management-panel .management-table tbody tr:hover{
+  background:color-mix(in srgb,var(--mak-red-600) 4%,var(--surface));
+}
+.management-page .management-panel .management-table td{
+  height:70px;
+  padding:12px;
+  border-bottom:1px solid var(--border-soft);
+  vertical-align:middle;
+  color:var(--ink-soft);
+  font-size:12px;
+}
+.management-page .management-panel .management-table tbody tr:last-child td{border-bottom:0}
+.management-page .management-staff-name{display:block;color:var(--ink);font-size:13px;font-weight:800}
+.management-page .management-panel .management-table td small{display:block;margin-top:4px;color:var(--muted);font-size:10.5px}
+.management-page .management-panel .management-table select{
+  max-width:220px;
+  min-height:42px;
+  padding:9px 36px 9px 12px;
+  border-radius:10px;
+  font-size:12px;
+  background-position:right 11px center;
+}
+.management-page .management-panel .management-table .stage-pill{
+  gap:7px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.02em;
+}
+.management-page .management-panel .management-table .stage-pill::before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:currentColor;
+}
+.management-page .management-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.management-page .management-row-actions .btn{
+  min-height:38px;
+  border-radius:10px;
+  padding:0 14px;
+  border-color:color-mix(in srgb,var(--ink) 22%,var(--border));
+  font-size:10.5px;
+  transition:border-color .15s ease,color .15s ease,background .15s ease,transform .15s ease;
+}
+.management-page .management-row-actions .btn:not(:disabled):hover{
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+  background:color-mix(in srgb,var(--mak-red-tint) 35%,var(--surface));
+  transform:translateY(-1px);
+}
+.management-page .management-panel .management-empty{text-align:center;color:var(--muted);padding:32px 12px;font-size:12px}
+
+.management-page .management-role{border-top:1px solid var(--border-soft);padding:20px 0}
+.management-page .management-role:first-of-type{border-top:0;padding-top:4px}
+.management-page .management-role:last-of-type{padding-bottom:4px}
+.management-page .management-role-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.management-page .management-role-heading h3{margin:0 0 4px;color:var(--ink);font-size:17px}
+.management-page .management-role-heading small{color:var(--muted);font-size:10.5px}
+.management-page .management-role-heading .btn{
+  min-height:38px;
+  border-radius:10px;
+  border-color:color-mix(in srgb,var(--ink) 22%,var(--border));
+  font-size:10.5px;
+}
+.management-page .management-role-heading .btn:not(:disabled):hover{
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+}
+.management-page .management-permissions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.management-page .management-permissions label{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  min-height:50px;
+  padding:12px 14px;
+  border:1.5px solid color-mix(in srgb,var(--ink) 16%,var(--border));
+  border-radius:12px;
+  background:var(--surface);
+  color:var(--ink-soft);
+  font-size:11.5px;
+  font-weight:600;
+  line-height:1.45;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+.management-page .management-permissions label:hover{
+  border-color:color-mix(in srgb,var(--mak-red-600) 42%,var(--border));
+  transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(25,27,24,.07);
+}
+.management-page .management-permissions label:has(input:checked){
+  border-color:color-mix(in srgb,var(--mak-red-600) 55%,var(--border));
+  background:color-mix(in srgb,var(--mak-red-tint) 42%,var(--surface));
+  color:var(--ink);
+}
+.management-page .management-permissions input{width:16px;height:16px;flex:none;accent-color:var(--mak-red-600);margin:1px 0 0;cursor:pointer}
+.management-page .management-permissions span{
+  padding:10px 14px;
+  border:1px solid color-mix(in srgb,var(--mak-red-600) 26%,var(--border));
+  border-radius:999px;
+  background:color-mix(in srgb,var(--mak-red-tint) 40%,var(--surface));
+  color:var(--ink);
+  font-size:11px;
+  font-weight:650;
+}
+
+.management-page .management-panel .management-members{border-top:1px solid var(--border-soft);margin-top:20px;padding-top:22px}
+.management-page .management-panel .management-members h3{margin:0 0 14px;color:var(--ink);font-size:18px}
+.management-page .management-member-form{align-items:flex-end;gap:12px}
+.management-page .management-member-form .form-field{flex:1}
+.management-page .management-member-form .btn{
+  min-height:52px;
+  border-radius:13px;
+  margin-bottom:18px;
+  padding:0 20px;
+  border-color:color-mix(in srgb,var(--ink) 26%,var(--border));
+  font-size:11.5px;
+}
+.management-page .management-member-form .btn:not(:disabled):hover{
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+}
+.management-page .management-panel .management-member-list{
+  margin:8px 0 0;
+  border:1px solid var(--border-soft);
+  border-radius:13px;
+  overflow:hidden;
+}
+.management-page .management-panel .management-member-list li{
+  min-height:52px;
+  padding:10px 14px;
+  border-top:1px solid var(--border-soft);
+  color:var(--ink-soft);
+  font-size:12px;
+  font-weight:600;
+  transition:background .14s ease;
+}
+.management-page .management-panel .management-member-list li:hover{
+  background:color-mix(in srgb,var(--mak-red-600) 3%,var(--surface));
+}
+.management-page .management-panel .management-member-list li:first-child{border-top:0}
+.management-page .management-panel .management-member-list li .icon-button{border-radius:10px}
+.management-page .management-panel .management-member-list li .icon-button:not(:disabled):hover{
+  border-color:var(--mak-red-600);
+  color:var(--mak-red-600);
+  background:color-mix(in srgb,var(--mak-red-tint) 40%,var(--surface));
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .management-page .management-panel .form-field select,
+  :root:not([data-theme="light"]) .management-page .management-panel .management-table select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8adac' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+  :root:not([data-theme="light"]) .management-page .management-panel .management-search input{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8adac' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="dark"] .management-page .management-panel .form-field select,
+:root[data-theme="dark"] .management-page .management-panel .management-table select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8adac' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] .management-page .management-panel .management-search input{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8adac' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+}
+
+@media(max-width:900px){
+  .management-page .management-form{grid-template-columns:1fr}
+  .management-page .management-permissions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .management-page .management-panel{padding:20px 16px;border-radius:14px}
+  .management-page .management-panel::before{width:3px}
+  .management-page .management-panel .management-table{min-width:880px}
+  .management-page .management-row-actions{align-items:flex-start;flex-direction:column}
+  .management-page .management-permissions{grid-template-columns:1fr}
+  .management-page .management-role-heading{align-items:flex-start;flex-direction:column}
+  .management-page .management-member-form{align-items:stretch;flex-direction:column}
+  .management-page .management-member-form .btn{align-self:flex-start;margin-bottom:0}
+  .management-page .live-page-heading>.btn{width:100%}
 }

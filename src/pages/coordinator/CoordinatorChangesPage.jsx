@@ -23,6 +23,7 @@ import { useChangesView, useSaveChangeRequest } from '@/hooks/useCoordinator';
 import { ApiError } from '@/services/api-client';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { deadlineLabel } from '@/lib/case-status';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './coordinator.css';
 
 /**
@@ -96,10 +97,7 @@ export function CoordinatorChangesPage({ token, onUnauthorized }) {
       </div>
 
       {isLoading && (
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={22} />
-          Loading the improvement request…
-        </div>
+        <LoadingSkeleton label="Loading the improvement request…" variant="detail" />
       )}
 
       {notFound && (

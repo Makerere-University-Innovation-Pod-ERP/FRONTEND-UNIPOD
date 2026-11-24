@@ -28,6 +28,9 @@ import {
   notificationKeys,
   useUnreadNotificationCount,
 } from '@/hooks/useNotifications';
+import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
+import { formatDate } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /** Textile Operations section (Assignment: customer orders, stock and machines — instance 1 of 4). */
 function buildTextileNavigation(roles) {
@@ -530,6 +533,7 @@ export function BackendWorkspace({
           </nav>
         )}
 
+        {!collapsed && isTelecoms && (
         <nav className="bottom-nav" aria-label="Quick navigation">
           {quickNavItems.map(({ label, href, icon: Icon, badge, count }) => (
             <Link
@@ -560,8 +564,8 @@ export function BackendWorkspace({
 
         {!collapsed && (
           <div className="live-sidebar-notice">
-            <div><span className="dot" /><span>{isTelecoms ? 'Telecoms Lab Workspace' : 'Demonstration workspace'}</span></div>
-            <small>{isTelecoms ? 'Domain 6 · RF & IoT Systems' : 'Role-based prototype · sample data'}</small>
+            <div><span className="dot" /><span>Telecoms Lab Workspace</span></div>
+            <small>Domain 6 · RF & IoT Systems</small>
           </div>
         )}
 
@@ -597,6 +601,8 @@ export function BackendWorkspace({
         <header className="live-topbar">
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
+            <i style={{ fontStyle: 'normal', margin: '0 8px', color: 'var(--muted)' }}>›</i>
+            <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
             <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
             <b>{allNavItems.find((item) => isActiveLink(item.href, location))?.label ?? (location === '/notifications' ? 'Notifications' : location.includes('/telecoms/requests/new') ? 'New request' : location.includes('/telecoms/requests') ? 'Requests' : location.includes('/telecoms/review') ? 'Review & Quote' : location.includes('/telecoms/board') ? 'Request Board' : location.includes('/telecoms/lab-booking') ? 'Lab Booking' : location.includes('/telecoms/equipment/lending') ? 'Equipment Lending' : location.includes('/telecoms/equipment') ? 'Equipment Register' : location.includes('/telecoms/bootcamps') ? 'Bootcamp Sessions' : location.includes('/telecoms/stock/movements') ? 'Add / Use Stock' : location.includes('/telecoms/stock') ? 'Stock Inventory' : location.includes('/overview') || location === '/' ? 'Overview' : location.includes('/training') ? 'Training & Mentorship' : location.includes('/media') ? 'Media Services' : location.includes('/partners') ? 'Partners & MOUs' : location.includes('/new') ? (isSubmitter ? 'Submit an idea' : 'Register submission') : location.includes('/fact-finding/cases/') ? 'Fact-finding case file' : location.includes('/submissions/') ? 'Case file' : 'Innovation Hub')}</b>
           </div>
@@ -622,6 +628,112 @@ export function BackendWorkspace({
                 <span>New request</span> <Plus size={15} />
               </Link>
             ) : null}
+            <span className="live-secure"><ShieldCheck size={15} /> Secure session</span>
+            <div className="top-pop-wrap">
+              <button
+                className="top-circle-btn notification-btn"
+                onClick={() => togglePopover('notifications')}
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              >
+                <Bell size={15} />
+                {hasUnread && (
+                  <span className="notification-count" aria-hidden="true">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {openPopover === 'notifications' && (
+                <div className="notification-popover">
+                  <div className="notification-head">
+                    <b>Notifications</b>
+                    <button className="notification-read-all" onClick={() => markAllRead.mutate()} disabled={!hasUnread || markAllRead.isPending}>
+                      <CheckCheck size={12} /> Mark all read
+                    </button>
+                  </div>
+                  <div className="notification-push">
+                    <div className="notification-push-copy">
+                      <b>Browser push</b>
+                      <small>
+                        {browserPush.loading
+                          ? 'Checking push availability…'
+                          : !browserPush.supported
+                            ? 'Background push is not supported in this browser.'
+                            : !browserPush.enabled
+                              ? 'Push alerts are not configured on the server.'
+                              : browserPush.permission === 'denied'
+                                ? 'Blocked in browser site settings.'
+                                : browserPush.subscribed
+                                  ? 'Enabled on this browser.'
+                                  : 'Opt in to alerts when the app is closed.'}
+                      </small>
+                    </div>
+                    {browserPush.enabled && browserPush.supported && browserPush.permission !== 'denied' && (
+                      <button
+                        type="button"
+                        className="notification-push-toggle"
+                        disabled={browserPush.working || browserPush.loading}
+                        onClick={async () => {
+                          const wasSubscribed = browserPush.subscribed;
+                          const succeeded = wasSubscribed
+                            ? await browserPush.disable()
+                            : await browserPush.enable();
+                          if (succeeded) {
+                            toast.success(wasSubscribed
+                              ? 'Browser push disabled'
+                              : 'Browser push enabled');
+                          }
+                        }}
+                      >
+                        {browserPush.working
+                          ? 'Updating…'
+                          : browserPush.subscribed
+                            ? 'Turn off'
+                            : 'Enable'}
+                      </button>
+                    )}
+                    {browserPush.error && <p role="alert">{browserPush.error}</p>}
+                    <small className="notification-push-privacy">
+                      Push alerts may appear when you are signed out.
+                    </small>
+                  </div>
+                  <div className="notification-list">
+                    {notificationsQuery.isLoading ? (
+                      <LoadingSkeleton label="Loading notifications…" variant="compact" />
+                    ) : notificationsQuery.isError || unreadCountQuery.isError ? (
+                      <p role="alert">
+                        Notifications could not be loaded.
+                        <button
+                          type="button"
+                          onClick={() => {
+                            notificationsQuery.refetch();
+                            unreadCountQuery.refetch();
+                          }}
+                        >
+                          Retry
+                        </button>
+                      </p>
+                    ) : notificationItems.length ? (
+                      notificationItems.map((item) => (
+                        <Link
+                          key={item.id}
+                          to={item.link}
+                          className={`notification-item ${item.read ? '' : 'unread'}`}
+                          onClick={() => {
+                            if (!item.read) markRead.mutate(item.id);
+                            setOpenPopover(null);
+                          }}
+                        >
+                          <span><b>{item.title}</b><small>{item.body}</small><em>{formatDate(item.createdAt)}</em></span>
+                        </Link>
+                      ))
+                    ) : (
+                      <p>No notifications yet.</p>
+                    )}
+                    {(markRead.isError || markAllRead.isError || unreadCountQuery.isError) && (
+                      <p role="alert">The notification status could not be updated or loaded.</p>
+                    )}
+                  </div>
+                </div>
             <span
               className="live-secure"
               {...tooltipEvents((event) => showActionTooltip(event, 'Secure session', 'Your account is authenticated to this workspace.'))}
@@ -709,7 +821,7 @@ export function BackendWorkspace({
             <button className="icon-button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} aria-label="Close search"><X size={15} /></button>
           </div>
           <div className="case-search-results" aria-live="polite">
-            {searchLoading && <p className="global-search-message">Searching cases…</p>}
+            {searchLoading && <LoadingSkeleton label="Searching cases…" variant="compact" />}
             {searchQuery.trim().length >= 2 && searchError && <p className="global-search-message api-error-text" role="alert">{searchError}</p>}
             {searchQuery.trim().length >= 2 && !searchLoading && !searchError && searchResults.length === 0 && <p className="global-search-message">No matching cases.</p>}
             {searchResults.map((item) => (

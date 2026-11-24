@@ -19,6 +19,7 @@ describe('AdminManagementPage', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('Access settings updated for martha.akello@unipod.test.');
     expect(within(row).getByLabelText('Role for martha.akello@unipod.test')).toHaveValue('DEPARTMENT_COORDINATOR');
+    expect(within(row).getByLabelText('Department for martha.akello@unipod.test')).toHaveValue('dept-2');
     expect(within(row).getByLabelText('Department for martha.akello@unipod.test')).toHaveValue(['dept-1', 'dept-2']);
   });
 
@@ -46,6 +47,13 @@ describe('AdminManagementPage', () => {
   it('shows active assignment areas managed by sector routing', async () => {
     renderPage();
 
+    await screen.findByRole('heading', { name: 'Manage departments' });
+    await user.type(screen.getByLabelText('Department name'), 'Community Health');
+    await user.type(screen.getByLabelText('Department notification email'), 'community-health@example.test');
+    await user.click(screen.getByRole('button', { name: 'Create department' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Department created.');
+    expect(screen.getAllByRole('option', { name: 'Community Health' }).length).toBeGreaterThan(0);
     expect(await screen.findByRole('heading', { name: 'Staff assignment areas' })).toBeInTheDocument();
     expect(screen.getByText('Assign one or more active sectors to staff in the directory. Create or update assignment areas in Sector Routing below.')).toBeInTheDocument();
     expect(screen.getAllByText('Innovation & Research').length).toBeGreaterThan(0);
