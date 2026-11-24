@@ -2603,8 +2603,8 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
 }
 
 .seat-badge.full {
-  background: #fdf0f0;
-  color: #c53030;
+  background: var(--rose-bg);
+  color: var(--rose);
 }
 
 .bootcamp-row-schedule {
@@ -2617,7 +2617,7 @@ button.tx-slot:hover,.tx-slot.active{border-color:var(--forest)}
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #f4f6f1;
+  background: var(--surface-raised);
   padding: 4px 9px;
   border-radius: 8px;
   font-size: 11.5px;
