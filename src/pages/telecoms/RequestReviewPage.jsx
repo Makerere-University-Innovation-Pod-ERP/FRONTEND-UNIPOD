@@ -193,7 +193,8 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
     request.quote?.priceQuantity ?? request.estimate?.priceQuantity ?? 1,
   );
   const [expectedCompletion, setExpectedCompletion] = useState(
-    request.quote?.expectedCompletion ?? (initialPrice ? addDays(todayIso(), initialPrice.leadDays) : ''),
+    request.quote?.expectedCompletion
+      ?? (initialPrice?.leadDays != null ? addDays(todayIso(), initialPrice.leadDays) : ''),
   );
   const [panel, setPanel] = useState(null);
   const [message, setMessage] = useState('');
@@ -223,7 +224,7 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
     setPriceListItemId(nextId);
     const item = priceList.find((candidate) => candidate.id === nextId);
     if (item && !request.quote) {
-      setExpectedCompletion(addDays(todayIso(), item.leadDays));
+      setExpectedCompletion(item.leadDays != null ? addDays(todayIso(), item.leadDays) : '');
     }
   };
 
@@ -278,8 +279,8 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
         type: 'info',
         diffDays: null,
         message: request.preferredDate
-          ? `Client requested completion by ${formatDate(request.preferredDate)}. Select a service rate to view estimated lab delivery.`
-          : 'No specific completion date requested by the client. Standard diagnostic lead times apply.',
+          ? `Client requested completion by ${formatDate(request.preferredDate)}. Select an estimated completion date to compare the schedule.`
+          : 'No specific completion date requested by the client. Select an estimated lab delivery date.',
       };
     }
     const prefTime = new Date(request.preferredDate).getTime();
@@ -371,7 +372,9 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
                   {expectedCompletion ? formatDate(expectedCompletion) : 'Pending selection'}
                 </b>
                 <span className="milestone-desc">
-                  {selectedPriceItem ? `${selectedPriceItem.leadDays} day(s) lead time` : 'Set rate below'}
+                  {selectedPriceItem?.leadDays != null
+                    ? `${selectedPriceItem.leadDays} day(s) lead time`
+                    : selectedPriceItem ? 'Set estimated date below' : 'Set rate below'}
                 </span>
               </div>
             </div>
