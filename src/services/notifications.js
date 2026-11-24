@@ -15,7 +15,7 @@ export const notificationSchema = z.object({
 }).transform((item) => ({
   ...item,
   body: item.body ?? '',
-  link: item.link ?? notificationLink(item.entityType),
+  link: item.link ?? notificationLink(item.entityType, item.entityId),
 }));
 
 const notificationPageSchema = z.object({
@@ -41,8 +41,9 @@ const pushSubscriptionSchema = z.object({
 });
 
 export const notificationsApi = {
-  list: async (token, { page = 0, size = 25 } = {}, signal) => {
+  list: async (token, { page = 0, size = 25, unread = false } = {}, signal) => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (unread) params.set('unread', 'true');
     const payload = await request(`/notifications?${params}`, { token, signal });
     return notificationPageSchema.parse(payload);
   },
@@ -79,15 +80,40 @@ export const notificationsApi = {
   },
 };
 
-function notificationLink(entityType) {
+export function notificationLink(entityType, entityId) {
+  const id = entityId ? encodeURIComponent(entityId) : '';
   switch (entityType?.toLowerCase()) {
     case 'booking':
-      return '/my-submissions/bookings';
+      return id ? `/my-submissions/bookings?booking=${id}` : '/my-submissions/bookings';
     case 'invoice':
-      return '/my-submissions/invoices';
+      return id ? `/my-submissions/invoices?invoice=${id}` : '/my-submissions/invoices';
     case 'submission':
-      return '/my-submissions';
+      return id ? `/submissions/${id}` : '/my-submissions';
+    case 'equipment_loan':
+      return id ? `/telecoms/equipment/lending?loan=${id}` : '/telecoms/equipment/lending';
+    case 'equipment_item':
+    case 'stock_item':
+    case 'machine':
+      return id ? `/notifications/open/${entityType.toLowerCase()}/${id}` : '/';
+    case 'partner':
+      return id ? `/partners?partner=${id}` : '/partners';
+    case 'media_request':
+      return id ? `/my-submissions/media/${id}` : '/my-submissions/service-requests';
     default:
-      return '/overview';
+      return '/';
   }
+}
+
+export function notificationTarget(item, roles = []) {
+  if (item.entityType?.toLowerCase() === 'invoice'
+    && !roles.includes('ROLE_SUBMITTER')
+    && item.entityId) {
+    return `/finance/invoices?invoice=${encodeURIComponent(item.entityId)}`;
+  }
+  if (item.entityType?.toLowerCase() === 'media_request'
+    && !roles.includes('ROLE_SUBMITTER')
+    && item.entityId) {
+    return `/multimedia/media?request=${encodeURIComponent(item.entityId)}`;
+  }
+  return item.link ?? notificationLink(item.entityType, item.entityId);
 }

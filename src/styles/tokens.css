@@ -39,6 +39,7 @@
   --mak-green-500: #00a651; /* decorative/large only, 3.2:1 on white */
   --mak-green-600: #006e34; /* AA-safe success text/icon — 6.4:1 on white */
   --mak-green-tint: #e3f3e8; /* success surface tint */
+  --mak-card-green: #E5ECE5; /* pale green card surface */
 
   /* ---- Mak Gold --------------------------------------------------- */
   --mak-gold-500: #fdb515; /* backgrounds only — pair with dark text */

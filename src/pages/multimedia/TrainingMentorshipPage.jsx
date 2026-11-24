@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { GraduationCap, Plus, User, Activity, X, Calendar, MapPin, Users, Wallet } from 'lucide-react';
+import { Activity, Calendar, CheckCircle2, ChevronRight, GraduationCap, MapPin, Plus, ShieldCheck, User, Users, Wallet, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   useConfirmPayment,
   useCreateSession,
@@ -15,6 +16,7 @@ const NEW_SESSION_DEFAULTS = {
   title: '', facilitator: '', date: '', endsAt: '', venue: '', capacity: '', departmentId: '', fee: '', safetyCourse: false,
 };
 const NEW_PARTICIPANT_DEFAULTS = { name: '', regNumber: '', department: '', contactEmail: '' };
+const TRAINING_MANAGER_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_DEPARTMENT_COORDINATOR'];
 
 const ATTENDANCE_OPTIONS = [
   { value: 'UNMARKED', label: 'Unmarked' },
@@ -35,7 +37,7 @@ function errorMessage(reason, fallback) {
   return reason instanceof Error ? reason.message : fallback;
 }
 
-export function TrainingMentorshipPage({ token, variant = 'training' }) {
+export function TrainingMentorshipPage({ token, roles = [], variant = 'training', bookingReturn = null }) {
   const overviewQuery = useTrainingOverview(token);
   const departmentsQuery = useTrainingDepartments(token);
   const createSessionMutation = useCreateSession(token);
@@ -52,6 +54,7 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
   const [rosterError, setRosterError] = useState('');
 
   const safety = variant === 'safety';
+  const canManage = roles.some((role) => TRAINING_MANAGER_ROLES.includes(role));
   const overview = overviewQuery.data;
   const departments = departmentsQuery.data ?? [];
   const cncDepartmentId = departments.find((department) => /cnc|carpentry/i.test(department.name))?.id ?? '';
@@ -145,39 +148,132 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
   const sessionFull = selectedSession ? activeParticipants.length >= selectedSession.capacity : false;
 
   return (
-    <div className="live-page page-enter">
-      <div className="live-page-heading">
+    <div className={`live-page page-enter${safety ? ' cnc-safety-page' : ''}`}>
+      {safety && bookingReturn && (
+        <div className="cnc-safety-booking-return" role="status">
+          <p>
+            This machine booking needs a recorded CNC safety pass. Contact your department coordinator or an administrator to arrange a safety session or verify a pass you already earned. Your booking details are saved.
+          </p>
+          <Link
+            className="btn btn-outline"
+            to="/cnc/machines/book"
+            state={{ bookingDraft: bookingReturn, returnedFromSafetyCourse: true }}
+          >
+            Return to machine booking
+          </Link>
+        </div>
+      )}
+      <div className={`live-page-heading${safety ? ' cnc-safety-hero' : ''}`}>
         <div>
-          <p className="eyebrow">{safety ? 'OPERATIONS · CNC & CARPENTRY' : 'OPERATIONS'}</p>
+          <p className="eyebrow">{safety ? 'CNC & CARPENTRY · SAFETY STANDARD' : 'OPERATIONS'}</p>
           <h1>{safety ? 'Safety Course' : 'Training & Mentorship'}</h1>
           <p>{safety
-            ? 'Safety sessions, sign-up, attendance and passes. A pass unlocks machine booking.'
+            ? 'View CNC safety sessions and pass status. Authorized staff manage registration and record verified passes.'
             : 'Published sessions, registration capacity and mentorship follow-ups.'}</p>
+          {safety && (
+            <div className="cnc-safety-hero__assurance">
+              <ShieldCheck size={16} aria-hidden="true" />
+              A verified pass unlocks eligible machine bookings.
+            </div>
+          )}
         </div>
-        <div className="heading-actions">
-          <button type="button" className="btn btn-primary" onClick={() => {
-            setNewSession(safety ? { ...NEW_SESSION_DEFAULTS, safetyCourse: true, departmentId: cncDepartmentId } : NEW_SESSION_DEFAULTS);
-            setCreateError('');
-            setShowCreateForm(true);
-          }}>
-            <Plus size={15} />New session
-          </button>
+        <div className={`heading-actions${safety ? ' cnc-safety-hero__actions' : ''}`}>
+          {safety && (
+            <Link to="/cnc/machines/book" className="btn cnc-safety-hero__book">
+              Book a machine <ChevronRight size={15} aria-hidden="true" />
+            </Link>
+          )}
+          {canManage && (
+            <button type="button" className="btn btn-primary" onClick={() => {
+              setNewSession(safety ? { ...NEW_SESSION_DEFAULTS, safetyCourse: true, departmentId: cncDepartmentId } : NEW_SESSION_DEFAULTS);
+              setCreateError('');
+              setShowCreateForm(true);
+            }}>
+              <Plus size={15} />New session
+            </button>
+          )}
         </div>
+        {safety && (
+          <div className="cnc-safety-hero__seal" aria-hidden="true">
+            <div className="cnc-safety-hero__seal-icon"><ShieldCheck size={32} /></div>
+            <span>ACCESS CLEARANCE</span>
+            <strong>CN5</strong>
+            <small>Safety pass required</small>
+          </div>
+        )}
       </div>
 
       <ErrorBanner error={overviewQuery.error} fallback="Could not load training sessions." />
+      {safety && !canManage && !bookingReturn && (
+        <div className="cnc-safety-booking-return" role="note">
+          Safety-session registration and pass recording are handled by an administrator or department coordinator. Select a session to view its details.
+        </div>
+      )}
 
-      <section className="live-metrics tx-metrics" aria-label="Training KPI metrics">
-        <article className="live-metric"><p>UPCOMING SESSIONS <GraduationCap size={14} /></p><strong>{upcomingCount}</strong></article>
-        <article className="live-metric"><p>SEATS FILLED <User size={14} /></p><strong>{seatsFilled}/{totalSeats}</strong></article>
+      <section className={`live-metrics tx-metrics${safety ? ' cnc-safety-metrics' : ''}`} aria-label={safety ? 'Safety course metrics' : 'Training KPI metrics'}>
+        <article className="live-metric">
+          <p>UPCOMING SESSIONS <GraduationCap size={14} /></p>
+          <strong>{upcomingCount}</strong>
+          {safety && <small>Published safety training</small>}
+        </article>
+        <article className="live-metric">
+          <p>SEATS FILLED <User size={14} /></p>
+          <strong>{seatsFilled}/{totalSeats}</strong>
+          {safety && <small>Enrolled across all sessions</small>}
+        </article>
         {safety
-          ? <article className="live-metric"><p>PASSED <Activity size={14} /></p><strong>{passedCount}</strong></article>
+          ? <article className="live-metric"><p>PASSED <Activity size={14} /></p><strong>{passedCount}</strong><small>Verified course completions</small></article>
           : <article className="live-metric"><p>MENTORSHIP FOLLOW-UPS <Activity size={14} /></p><strong>{overview?.mentorshipFollowUps ?? 0}</strong></article>}
       </section>
 
-      <section className="live-panel tx-table-panel">
+      <section className={`live-panel tx-table-panel${safety ? ' cnc-safety-sessions-panel' : ''}`}>
+        {safety && (
+          <div className="cnc-safety-sessions-heading">
+            <div>
+              <p className="eyebrow">LEARN · PRACTISE · GET CLEARED</p>
+              <h2>Available safety sessions</h2>
+              <p>Select a session to view details and sign up.</p>
+            </div>
+            <span className="cnc-safety-session-count">{sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}</span>
+          </div>
+        )}
         {overviewQuery.isPending ? (
           <Loading label="Loading training sessions…" variant="table" />
+          <Loading label="Loading training sessions…" />
+        ) : safety ? (
+          <div className="cnc-safety-session-list">
+            {sessions.map((session) => (
+              <button
+                type="button"
+                key={session.id}
+                className="cnc-safety-session"
+                data-testid={`session-row-${session.id}`}
+                onClick={() => openSession(session)}
+              >
+                <span className="cnc-safety-session__icon"><GraduationCap size={20} aria-hidden="true" /></span>
+                <span className="cnc-safety-session__main">
+                  <span className="cnc-safety-session__tag">CN5 SAFETY SESSION</span>
+                  <strong>{session.title}</strong>
+                  <span className="cnc-safety-session__facilitator">{session.facilitator}</span>
+                </span>
+                <span className="cnc-safety-session__details">
+                  <span className={`cnc-safety-session__fee${session.fee > 0 ? ' is-paid' : ''}`}>
+                    {session.fee > 0 ? `UGX ${session.fee.toLocaleString()}` : 'FREE'}
+                  </span>
+                  <span><Calendar size={13} aria-hidden="true" />{formatDateTime(session.date)}</span>
+                  <span><Users size={13} aria-hidden="true" />{session.enrolledCount}/{session.capacity} enrolled</span>
+                </span>
+                <ChevronRight className="cnc-safety-session__arrow" size={18} aria-hidden="true" />
+              </button>
+            ))}
+            {sessions.length === 0 && !overviewQuery.error && (
+              <div className="cnc-safety-empty">
+                <span><ShieldCheck size={24} aria-hidden="true" /></span>
+                <h3>No safety sessions published yet</h3>
+                <p>Check back soon, or contact the CNC team if you need your existing pass verified.</p>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="live-table-wrap">
             <table className="live-table">
@@ -251,7 +347,7 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
                         <span className={`partner-status ${confirmed ? 'active' : 'renewal-due'}`} style={{ whiteSpace: 'nowrap' }}>
                           {REGISTRATION_LABEL[participant.status]}
                         </span>
-                        {participant.status === 'PENDING_PAYMENT' && (
+                        {canManage && participant.status === 'PENDING_PAYMENT' && (
                           <button
                             type="button"
                             className="btn btn-sm btn-outline"
@@ -263,22 +359,34 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
                             Confirm payment
                           </button>
                         )}
-                        <select
-                          aria-label={`Attendance for ${participant.name}`}
-                          value={participant.attendance}
-                          disabled={!confirmed || participant.passed || markAttendanceMutation.isPending}
-                          title={confirmed ? undefined : 'Attendance can only be recorded once payment is confirmed.'}
-                          onChange={(event) => runRosterAction(() => markAttendanceMutation.mutateAsync({
-                            sessionId: selectedSession.id, participantId: participant.id, attendance: event.target.value,
-                          }))}
-                        >
-                          {ATTENDANCE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value} disabled={option.value === 'UNMARKED'}>{option.label}</option>
-                          ))}
-                        </select>
+                        {canManage && participant.passed ? (
+                          <span
+                            className="partner-status active"
+                            aria-label={`Attendance for ${participant.name}: Present, locked after pass`}
+                            title="Attendance stays Present after a participant passes."
+                          >
+                            <CheckCircle2 size={13} aria-hidden="true" />Present · locked
+                          </span>
+                        ) : canManage ? (
+                          <select
+                            aria-label={`Attendance for ${participant.name}`}
+                            value={participant.attendance}
+                            disabled={!confirmed || markAttendanceMutation.isPending}
+                            title={confirmed ? undefined : 'Attendance can only be recorded once payment is confirmed.'}
+                            onChange={(event) => runRosterAction(() => markAttendanceMutation.mutateAsync({
+                              sessionId: selectedSession.id, participantId: participant.id, attendance: event.target.value,
+                            }))}
+                          >
+                            {ATTENDANCE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value} disabled={option.value === 'UNMARKED'}>{option.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="partner-status">{ATTENDANCE_OPTIONS.find((option) => option.value === participant.attendance)?.label ?? 'Unmarked'}</span>
+                        )}
                         {selectedSession.safetyCourse && (participant.passed ? (
                           <span className="partner-status active">Passed</span>
-                        ) : (
+                        ) : canManage ? (
                           <button
                             type="button"
                             className="btn btn-sm btn-outline"
@@ -290,6 +398,8 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
                           >
                             Mark passed
                           </button>
+                        ) : (
+                          <span className="partner-status renewal-due">Not passed</span>
                         ))}
                       </div>
                     );
@@ -298,7 +408,7 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
               )}
             </div>
 
-            <form className="tx-form" onSubmit={submitParticipant} aria-label="Sign up a participant">
+            {canManage ? <form className={`tx-form${safety ? ' cnc-safety-roster-form' : ''}`} onSubmit={submitParticipant} aria-label="Sign up a participant">
               <div className="ops-roster-head"><b>Sign up a participant</b><span>{sessionFull ? 'Session full' : `${selectedSession.capacity - activeParticipants.length} seats left`}</span></div>
               <div className="tx-field form-field">
                 <label className="tx-label" htmlFor="participant-name">Full name</label>
@@ -322,7 +432,12 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
                   {registerMutation.isPending ? 'Signing up…' : 'Sign up'}
                 </button>
               </div>
-            </form>
+            </form> : (
+              <div className="ops-notice amber">
+                <div className="ops-notice-head">Registration managed by staff</div>
+                <p>Contact your department coordinator or an administrator to register for this session and have your pass recorded after completion.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -340,7 +455,7 @@ export function TrainingMentorshipPage({ token, variant = 'training' }) {
               </button>
             </div>
 
-            <form className="tx-form" onSubmit={submitNewSession}>
+            <form className={`tx-form${safety ? ' cnc-safety-create-form' : ''}`} onSubmit={submitNewSession}>
               <div className="tx-field form-field">
                 <label className="tx-label" htmlFor="new-session-title">Title</label>
                 <input id="new-session-title" value={newSession.title} onChange={setSessionField('title')} />

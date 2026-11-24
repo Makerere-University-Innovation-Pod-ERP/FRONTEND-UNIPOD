@@ -4,7 +4,13 @@ import { makeMockToken } from './jwt';
 import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
 import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
-import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
+import {
+  documentsBySubmission,
+  sectors,
+  submissions,
+  submitterServiceRequests,
+  toCaseFile,
+} from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
 import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
@@ -29,6 +35,7 @@ import {
 } from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
+import { cncStockHandlers } from './cnc-handlers';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -298,6 +305,24 @@ let adminRoles = [
   { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
   { id: 'OBSERVER', name: 'Observer', permissions: ['CASE_VIEW', 'AUDIT_VIEW', 'REPORT_VIEW'], version: 1, editable: true },
   { id: 'TELECOMS_DOMAIN_OWNER', name: 'Telecoms Domain Owner', permissions: [], version: 1, editable: true },
+  { id: 'staff-admin', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentIds: [], profile: { fullName: 'Demo Administrator' }, active: true, createdAt: '2026-08-20' },
+  { id: 'staff-1', email: 'martha.akello@unipod.test', role: 'RECEPTIONIST', departmentIds: ['dept-1'], profile: { fullName: 'Martha Akello' }, active: true, createdAt: '2026-09-01' },
+  { id: 'staff-2', email: 'miriam.nsubuga@unipod.test', role: 'REVIEWER', departmentIds: ['dept-1'], profile: { fullName: 'Dr. Miriam Nsubuga' }, active: true, createdAt: '2026-09-04' },
+  { id: 'staff-3', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentIds: ['dept-2'], profile: { fullName: 'Daniel Kato' }, active: true, createdAt: '2026-09-10' },
+  { id: 'staff-4', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentIds: ['dept-1'], profile: { fullName: 'Grace Namuli' }, active: true, createdAt: '2026-09-12' },
+];
+const adminRoles = [
+  { role: 'ADMINISTRATOR', staff: true },
+  { role: 'INNOVATION_COORDINATOR', staff: true },
+  { role: 'DEPARTMENT_COORDINATOR', staff: true },
+  { role: 'RECEPTIONIST', staff: true },
+  { role: 'FACT_FINDING_OFFICER', staff: true },
+  { role: 'REVIEWER', staff: true },
+  { role: 'SECTOR_OFFICER', staff: true },
+  { role: 'IP_LIAISON', staff: true },
+  { role: 'SUBMITTER', staff: false },
+  { role: 'FINANCE_OFFICER', staff: true },
+  { role: 'OBSERVER', staff: true },
 ];
 
 export const handlers = [
@@ -470,71 +495,71 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
+  http.get(`${API_BASE_URL}/users`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const items = adminUsers.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: adminUsers.length,
+      totalPages: Math.ceil(adminUsers.length / size),
+    });
+  }),
 
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
     const email = String(body.email ?? '').trim().toLowerCase();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
-    }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
-      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
     }
     if (adminUsers.some((user) => user.email.toLowerCase() === email)) {
       return HttpResponse.json({ message: 'A staff account with this email already exists.' }, { status: 409 });
     }
-    const createdAt = new Date().toISOString().slice(0, 10);
     const created = {
       id: `staff-${Date.now()}`,
-      fullName: String(body.fullName ?? email.split('@')[0]),
       email,
       role: body.role,
-      departmentId: body.departmentId ?? '',
+      departmentIds: [],
+      profile: null,
       active: true,
-      version: 1,
-      createdAt,
+      createdAt: new Date().toISOString(),
     };
     adminUsers = [created, ...adminUsers];
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
     if (user.role === 'ADMINISTRATOR') {
       return HttpResponse.json({ message: 'Administrator role assignments are protected.' }, { status: 409 });
     }
     const body = await request.json();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
     }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+    if (!Array.isArray(body.departmentIds)
+      || body.departmentIds.some((id) => !departments.some((department) => department.id === id && department.active))) {
       return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
-    }
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
     }
     Object.assign(user, {
       role: body.role,
-      departmentId: body.departmentId ?? '',
-      version: user.version + 1,
+      departmentIds: body.departmentIds,
     });
     return HttpResponse.json(user);
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id/status`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/users/:id/deactivate`, ({ params }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    if (user.role === 'ADMINISTRATOR' && !body.active
+    if (user.role === 'ADMINISTRATOR'
       && adminUsers.filter((candidate) => candidate.role === 'ADMINISTRATOR' && candidate.active).length <= 1) {
       return HttpResponse.json({ message: 'The last active administrator cannot be deactivated.' }, { status: 409 });
     }
-    Object.assign(user, { active: Boolean(body.active), version: user.version + 1 });
+    user.active = false;
     return HttpResponse.json(user);
   }),
 
@@ -571,28 +596,18 @@ export const handlers = [
       version: department.version + 1,
     });
     return HttpResponse.json(department);
+  http.post(`${API_BASE_URL}/users/:id/reactivate`, ({ params }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    user.active = true;
+    return HttpResponse.json(user);
   }),
 
-  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(adminRoles)),
-  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
+  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(
+    departments.filter((department) => department.active).map(({ id, name }) => ({ id, name })),
+  )),
 
-  http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
-    const role = adminRoles.find((candidate) => candidate.id === params.id);
-    if (!role) return new HttpResponse(null, { status: 404 });
-    if (!role.editable) {
-      return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
-    }
-    const body = await request.json();
-    if (body.version !== role.version) {
-      return HttpResponse.json({ message: 'This role changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    const knownPermissions = new Set(adminPermissions.map(({ id }) => id));
-    if (!Array.isArray(body.permissions) || body.permissions.some((id) => !knownPermissions.has(id))) {
-      return HttpResponse.json({ message: 'One or more permissions are invalid.' }, { status: 400 });
-    }
-    Object.assign(role, { permissions: body.permissions, version: role.version + 1 });
-    return HttpResponse.json(role);
-  }),
+  http.get(`${API_BASE_URL}/roles`, () => HttpResponse.json(adminRoles)),
 
   http.get(`${API_BASE_URL}/queues/reception`, ({ request }) => {
     const url = new URL(request.url);
@@ -607,7 +622,9 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
-    const mine = submissions.filter((item) => item.submitterId);
+    const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
+      ? submitterServiceRequests
+      : submissions.filter((item) => item.submitterId);
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
   }),
@@ -630,7 +647,8 @@ export const handlers = [
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = submissions.find((submission) => submission.id === params.id)
+      ?? submitterServiceRequests.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
@@ -1778,4 +1796,5 @@ export const handlers = [
   }),
   ...textileHandlers,
   ...telecomsHandlers,
+  ...cncStockHandlers,
 ];

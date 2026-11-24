@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -74,6 +74,22 @@ describe('Telecoms Equipment Register (TL6)', () => {
     await user.click(reportButtons[0]);
     expect(screen.getByLabelText(/issue description/i)).toBeInTheDocument();
   });
+
+  it('filters equipment by search term and condition', async () => {
+    const user = userEvent.setup();
+    renderPage(EquipmentListPage, { path: '/telecoms/equipment', route: '/telecoms/equipment' });
+
+    expect(await screen.findByText(/Digital Oscilloscope Set/i)).toBeInTheDocument();
+    const search = screen.getByRole('searchbox', { name: /search equipment/i });
+    await user.type(search, 'spectrum');
+    expect(screen.getByText(/Spectrum Analyzer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Digital Oscilloscope Set/i)).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by equipment state/i }), 'FAULTY');
+    expect(screen.getByText(/Vector Network Analyzer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Spectrum Analyzer/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('Telecoms Equipment Lending (TL7)', () => {
@@ -140,25 +156,26 @@ describe('Telecoms Role Scoping (Assignment 11)', () => {
     );
 
     // Verify Telecoms links exist
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
     expect(screen.getByText('TELECOMS ERP')).toBeInTheDocument();
-    expect(screen.getAllByText('All Requests').length).toBeGreaterThan(0);
-    expect(screen.getByText('New Request')).toBeInTheDocument();
-    expect(screen.getByText('Review & Quote')).toBeInTheDocument();
-    expect(screen.getByText('Request Board')).toBeInTheDocument();
-    expect(screen.getByText('Lab Booking')).toBeInTheDocument();
-    expect(screen.getByText('Bootcamps & Training')).toBeInTheDocument();
-    expect(screen.getByText('Equipment Register')).toBeInTheDocument();
-    expect(screen.getByText('Equipment Lending')).toBeInTheDocument();
-    expect(screen.getByText('Stock Inventory')).toBeInTheDocument();
-    expect(screen.getByText('Add / Use Stock')).toBeInTheDocument();
+    expect(within(navigation).getByText('All Requests')).toBeInTheDocument();
+    expect(within(navigation).getByText('New Request')).toBeInTheDocument();
+    expect(within(navigation).getByText('Review & Quote')).toBeInTheDocument();
+    expect(within(navigation).getByText('Request Board')).toBeInTheDocument();
+    expect(within(navigation).getByText('Lab Booking')).toBeInTheDocument();
+    expect(within(navigation).getByText('Bootcamps & Training')).toBeInTheDocument();
+    expect(within(navigation).getByText('Equipment Register')).toBeInTheDocument();
+    expect(within(navigation).getByText('Equipment Lending')).toBeInTheDocument();
+    expect(within(navigation).getByText('Stock Inventory')).toBeInTheDocument();
+    expect(within(navigation).getByText('Add / Use Stock')).toBeInTheDocument();
 
     // Verify foreign domain screens are NOT in navigation
-    expect(screen.queryByText('All Submissions')).not.toBeInTheDocument();
-    expect(screen.queryByText('Student Projects')).not.toBeInTheDocument();
-    expect(screen.queryByText('INNOVATION PIPELINE')).not.toBeInTheDocument();
-    expect(screen.queryByText('Reception')).not.toBeInTheDocument();
-    expect(screen.queryByText('Fact-Finding')).not.toBeInTheDocument();
-    expect(screen.queryByText('TEXTILE OPERATIONS')).not.toBeInTheDocument();
-    expect(screen.queryByText('FINANCE & PARTNERS')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('All Submissions')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('Student Projects')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('INNOVATION PIPELINE')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('Reception')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('Fact-Finding')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('TEXTILE OPERATIONS')).not.toBeInTheDocument();
+    expect(within(navigation).queryByText('FINANCE & PARTNERS')).not.toBeInTheDocument();
   });
 });

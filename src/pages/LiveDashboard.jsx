@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, Calendar, ChevronRight, CircleAlert, FileText, Folder, RotateCw, Wrench } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, CircleAlert, ClipboardCheck, FileText, Folder, LoaderCircle, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError, backendApi } from '@/services/backend-api';
@@ -152,7 +153,7 @@ export function LiveDashboard({
   const metrics = overview ? [
     { label: 'Total submissions', value: overview.totalSubmissions ?? 0, note: `${overview.studentSubmissions ?? 0} student · ${overview.generalSubmissions ?? 0} public`, variant: 'default', icon: Folder },
     { label: 'Awaiting review', value: overview.awaitingReviewCount ?? overview.awaitingActionCount ?? 0, note: 'Fact-finding + forwarded', variant: 'default', icon: FileText },
-    { label: 'Refinement requested', value: pipelineAtAGlance.REFINEMENT_REQUESTED ?? 2, note: 'Constructive next steps open', variant: 'forest', icon: RotateCw },
+    { label: 'Refinement requested', value: pipelineAtAGlance.REFINEMENT_REQUESTED ?? 2, note: 'Constructive next steps open', variant: 'forest', icon: ClipboardCheck },
     { label: 'Equipment under repair', value: operations?.equipmentUnderRepair ?? 2, note: 'Needs maintenance follow-up', variant: 'burgundy', icon: Wrench },
     { label: 'Bookings today', value: operations?.bookingsToday ?? 2, note: `${operations?.facilitiesFreeNow ?? 3} facilities free now`, variant: 'default', icon: Calendar },
   ] : [];
@@ -184,6 +185,11 @@ export function LiveDashboard({
                   </div>
                   <strong style={{ fontSize: '34px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: special ? '#fff' : 'var(--dashboard-ink)' }}>{metric.value}</strong>
                   <small style={{ fontSize: '12px', color: special ? (metric.variant === 'forest' ? '#d6ebdf' : '#e6c7bf') : 'var(--dashboard-muted)' }}>{metric.note}</small>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: special ? '#ffffff' : 'var(--mak-silver-700)' }}>{metric.label}</span>
+                    <span style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: special ? 'rgba(255,255,255,.12)' : 'var(--mak-green-tint)', color: special ? '#fff' : 'var(--mak-green-600)' }}><Icon size={15} /></span>
+                  </div>
+                  <strong style={{ fontSize: '34px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: special ? '#fff' : 'var(--mak-black-900)' }}>{metric.value}</strong>
+                  <small style={{ fontSize: '12px', color: special ? '#ffffff' : 'var(--mak-silver-700)' }}>{metric.note}</small>
                 </article>
               );
             })}
@@ -199,8 +205,33 @@ export function LiveDashboard({
                   <div className="pipeline-tile overview-subbox" key={key}>
                     <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--dashboard-muted)', textTransform: 'uppercase' }}>{label}</span>
                     <b style={{ fontSize: '24px', color: 'var(--dashboard-ink)', marginTop: '6px', lineHeight: 1 }}>{pipelineAtAGlance[key] ?? 0}</b>
+            <div className="overview-panel-card pipeline-panel-card">
+              <div className="pipeline-panel-heading">
+                <div>
+                  <h2>Pipeline at a glance</h2>
+                  <p>A flexible guide, not a fixed sequence.</p>
+                </div>
+              </div>
+              <div className="overview-pipeline-subgrid pipeline-stage-grid">
+                {pipelineStages.map(([key, label], index) => (
+                  <div className={`pipeline-tile overview-subbox pipeline-stage pipeline-stage-${index + 1}`} key={key}>
+                    <span className="pipeline-stage-index">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="pipeline-stage-label">{label}</span>
+                    <div className="pipeline-stage-value">
+                      <b>{String(pipelineAtAGlance[key] ?? 0).padStart(2, '0')}</b>
+                      <span className="pipeline-stage-track"><i /></span>
+                    </div>
                   </div>
                 ))}
+              </div>
+              <div className="pipeline-panel-footer">
+                <div className="pipeline-legend" aria-label="Project types">
+                  <span><i className="pipeline-legend-blue" />7 student projects</span>
+                  <span><i className="pipeline-legend-gold" />5 general innovations</span>
+                </div>
+                <Link to="/submissions" className="pipeline-configure-link">
+                  Configure pathway <ArrowRight size={13} />
+                </Link>
               </div>
             </div>
             <div className="overview-panel-card">

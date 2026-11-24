@@ -1,10 +1,13 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeftRight, TriangleAlert } from 'lucide-react';
-import { useEquipmentList } from '@/hooks/useEquipment';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeftRight, CheckCircle2, TriangleAlert } from 'lucide-react';
+import { useEquipmentList, useMarkEquipmentWorking } from '@/hooks/useEquipment';
 import { EquipmentStateBadge, ErrorBanner, Loading } from './shared';
 
 export function EquipmentListPage({ token }) {
+  const [searchParams] = useSearchParams();
+  const linkedEquipmentId = searchParams.get('equipment');
   const equipmentQuery = useEquipmentList(token);
+  const markWorking = useMarkEquipmentWorking(token);
   const items = equipmentQuery.data ?? [];
 
   return (
@@ -22,7 +25,7 @@ export function EquipmentListPage({ token }) {
         </div>
       </div>
 
-      <ErrorBanner error={equipmentQuery.error} fallback="Could not load equipment." />
+      <ErrorBanner error={equipmentQuery.error || markWorking.error} fallback="Could not load or update equipment." />
 
       {equipmentQuery.isLoading ? (
         <Loading label="Loading equipment…" variant="table" />
@@ -43,7 +46,11 @@ export function EquipmentListPage({ token }) {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id}>
+                  <tr
+                    key={item.id}
+                    data-notification-target={item.id === linkedEquipmentId ? 'true' : undefined}
+                    style={item.id === linkedEquipmentId ? { background: '#fff8e6', outline: '2px solid #d59b3d', outlineOffset: '-2px' } : undefined}
+                  >
                     <td className="tx-mono">{item.assetTag}</td>
                     <td><b className="tx-strong">{item.name}</b></td>
                     <td>{item.availableQuantity} of {item.totalQuantity}</td>
@@ -52,7 +59,17 @@ export function EquipmentListPage({ token }) {
                     <td className="tx-wrap">{item.note || '—'}</td>
                     <td>
                       {item.state === 'FAULTY' ? (
-                        <span className="tx-status tx-danger"><i aria-hidden="true" />Fault reported</span>
+                        <div>
+                          <span className="tx-status tx-danger"><i aria-hidden="true" />Fault reported</span>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline"
+                            disabled={markWorking.isPending}
+                            onClick={() => markWorking.mutate(item.id)}
+                          >
+                            <CheckCircle2 size={13} />Mark working
+                          </button>
+                        </div>
                       ) : (
                         <Link className="tx-link-button" to={`/multimedia/equipment/report-fault?equipment=${encodeURIComponent(item.id)}`}>
                           <TriangleAlert size={13} />Report fault

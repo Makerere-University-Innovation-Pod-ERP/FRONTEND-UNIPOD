@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Handshake, AlertTriangle, X, Calendar as CalendarIcon, Mail, User, FileText, CheckCircle2, Search, Plus } from 'lucide-react';
 import { Calendar as DateCalendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -105,6 +106,7 @@ function PartnerDatePicker({ id, label, value, onChange, open, onOpenChange, req
 
 export function PartnersMousPage({ token, roles = [] }) {
   const { data: overview, isPending, isError, error, refetch } = usePartnersOverview(token);
+  const [searchParams] = useSearchParams();
   const createPartnerMutation = useCreatePartner(token);
   const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -123,7 +125,14 @@ export function PartnersMousPage({ token, roles = [] }) {
     notes: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const canCreatePartner = roles.includes('ROLE_FINANCE_OFFICER');
+  const canManagePartner = roles.includes('ROLE_ADMINISTRATOR')
+    || roles.includes('ROLE_DEPARTMENT_COORDINATOR');
+  const linkedPartnerId = searchParams.get('partner');
+  useEffect(() => {
+    if (!linkedPartnerId || !overview) return;
+    const partner = overview.partners.find((item) => item.id === linkedPartnerId);
+    if (partner) setSelectedPartner(partner);
+  }, [linkedPartnerId, overview]);
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPartners = overview?.partners.filter((partner) => {
     if (!normalizedSearch) return true;
@@ -238,7 +247,7 @@ export function PartnersMousPage({ token, roles = [] }) {
             Partner organisations, MOU renewal dates and relationship status.
           </p>
         </div>
-        {canCreatePartner && (
+        {canManagePartner && (
           <button
             type="button"
             className="btn btn-primary"
@@ -804,7 +813,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               )}
             </div>
 
-            {normalizePartnerStatus(selectedPartner.status) !== 'Active' ? (
+            {canManagePartner && normalizePartnerStatus(selectedPartner.status) !== 'Active' ? (
               <form
                 className="partners-renewal-form"
                 onSubmit={(event) => submitRenewal(event, selectedPartner.id)}
@@ -884,7 +893,7 @@ export function PartnersMousPage({ token, roles = [] }) {
       )}
         </>
       )}
-      {isCreateOpen && canCreatePartner && (
+      {isCreateOpen && canManagePartner && (
         <div
           role="dialog"
           aria-modal="true"

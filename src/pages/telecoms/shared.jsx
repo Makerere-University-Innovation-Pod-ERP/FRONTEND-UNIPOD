@@ -1,5 +1,6 @@
 import { CircleAlert } from 'lucide-react';
 import { ApiError } from '@/services/api-client';
+import { LoadingSkeleton } from '@/components/ui/skeleton';
 import { errorMessage } from './helpers';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import {
@@ -21,6 +22,8 @@ export function ErrorBanner({ error, fallback }) {
 
 export function Loading({ label, variant = 'list', columns }) {
   return <LoadingSkeleton label={label} variant={variant} columns={columns} />;
+export function Loading({ label }) {
+  return <LoadingSkeleton label={label} />;
 }
 
 export function PageHeading({ eyebrow, title, intro, children }) {

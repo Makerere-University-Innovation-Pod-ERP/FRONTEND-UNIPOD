@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import {
   resetNotificationMocks,
@@ -22,14 +23,18 @@ beforeEach(() => {
   resetNotificationMocks();
 });
 
+afterEach(() => {
+  window.history.replaceState({}, '', '/');
+});
+
 function renderPage(Page, token = makeMockToken(['ROLE_SUBMITTER'], 'brian.s', 'submitter@unipod.test')) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <>
+      <MemoryRouter>
         <Page token={token} onUnauthorized={() => {}} />
         <Toaster position="top-right" />
-      </>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -56,7 +61,32 @@ describe('Submitter section pages', () => {
     expect(screen.queryByRole('heading', { name: 'Make your visit count' })).not.toBeInTheDocument();
   });
 
-  it('loads the submitter bookings and shows server details on demand', async () => {
+  it('omits the Quick Guide from the service requests page', () => {
+    renderPage(SubmitterServiceRequestsPage);
+
+    expect(screen.queryByText('QUICK GUIDE')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Keep requests moving' })).not.toBeInTheDocument();
+  });
+
+  it('loads service requests from the service-request tab and supports searching', async () => {
+    const user = userEvent.setup();
+    renderPage(SubmitterServiceRequestsPage);
+
+    expect(screen.getByRole('link', { name: /new service request/i })).toHaveAttribute(
+      'href',
+      '/submissions/new?category=service_request',
+    );
+    expect(await screen.findByText('SRV-2026-001')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Laser cutting' })).toBeInTheDocument();
+    expect(screen.getByText('Under Review')).toBeInTheDocument();
+    expect(screen.queryByText('Maternal Health Follow-up Platform')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View request' })).toHaveAttribute('href', '/submissions/IH-26032');
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search service requests' }), 'not found');
+    expect(await screen.findByRole('heading', { name: 'No matching service requests' })).toBeInTheDocument();
+  });
+
+  it('loads booking details in a dismissible dialog', async () => {
     const user = userEvent.setup();
     renderPage(SubmitterBookingsPage);
 
@@ -64,8 +94,40 @@ describe('Submitter section pages', () => {
     const booking = screen.getByText('BKG-2026-001201').closest('article');
     await user.click(within(booking).getByRole('button', { name: 'Booking details' }));
 
+    const dialog = await screen.findByRole('dialog', { name: 'Booking details' });
+    expect(await within(dialog).findByText('Contact / operator')).toBeInTheDocument();
+    expect(within(dialog).getByText('Brian S.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Prototype showcase recording')).toBeInTheDocument();
+    expect(within(dialog).getByText('4 people')).toBeInTheDocument();
+    expect(within(booking).queryByText('Brian S.')).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close booking details' }));
+    expect(screen.queryByRole('dialog', { name: 'Booking details' })).not.toBeInTheDocument();
+  });
+
+  it('opens the exact booking linked by a notification', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301');
+    renderPage(SubmitterBookingsPage);
+
+    const reference = (await screen.findAllByText('BKG-2026-001201'))[0];
+    const booking = reference.closest('[data-notification-target="true"]');
+    expect(booking).not.toBeNull();
+    const dialog = await screen.findByRole('dialog', { name: 'Booking details' });
+    expect(within(dialog).getByText('Contact / operator')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Close booking details' }));
+    expect(within(booking).getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
+  });
+
+  it('opens the exact booking linked by a notification', async () => {
+    window.history.replaceState({}, '', '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301');
+    renderPage(SubmitterBookingsPage);
+
+    const reference = await screen.findByText('BKG-2026-001201');
+    const booking = reference.closest('[data-notification-target="true"]');
+    expect(booking).not.toBeNull();
     expect(await within(booking).findByText('Contact / operator')).toBeInTheDocument();
-    expect(within(booking).getByText('Brian S.')).toBeInTheDocument();
+    expect(within(booking).getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
   });
 
   it('filters facilities by typing and only selects a listed facility', async () => {
@@ -119,7 +181,7 @@ describe('Submitter section pages', () => {
     expect(notificationPage.items[0]).toMatchObject({
       type: 'BOOKING_REQUESTED',
       title: 'Booking request received: BKG-2026-001202',
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000001202',
       read: false,
     });
   });
@@ -144,7 +206,7 @@ describe('Submitter section pages', () => {
     expect(notificationPage.items[0]).toMatchObject({
       type: 'BOOKING_CANCELLED',
       title: 'Booking cancelled: BKG-2026-001201',
-      link: '/my-submissions/bookings',
+      link: '/my-submissions/bookings?booking=00000000-0000-4000-8000-000000000301',
       read: false,
     });
   });
@@ -174,7 +236,8 @@ describe('Submitter section pages', () => {
     expect(screen.queryByText('QUICK GUIDE')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Keep payments in order' })).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Filter invoices by status' }), 'WAITING_FOR_CHECK');
+    await user.click(screen.getByRole('combobox', { name: 'Filter invoices by status' }));
+    await user.click(await screen.findByRole('option', { name: 'Payment under review' }));
 
     expect(await screen.findByText('INV-2026-198')).toBeInTheDocument();
     expect(screen.queryByText('INV-2026-201')).not.toBeInTheDocument();

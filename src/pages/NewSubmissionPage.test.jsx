@@ -1,19 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { NewSubmissionPage } from './NewSubmissionPage';
+import { BriefSubmittedPage } from './BriefSubmittedPage';
 import { backendApi } from '@/services/backend-api';
 
-function renderPage({ isSubmitter = false } = {}) {
+function renderPage({ isSubmitter = false, initialEntry = '/submissions/new' } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/submissions/new']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
-          <Route path="/submissions/new/confirmation" element={<div>confirmation screen</div>} />
+          <Route path="/submissions/new/confirmation" element={<BriefSubmittedPage isSubmitter={isSubmitter} />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -136,7 +137,7 @@ describe('NewSubmissionPage wizard', () => {
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.click(screen.getByRole('button', { name: /^submit brief$/i }));
 
-    expect(await screen.findByText('confirmation screen')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /thanks — your brief is in/i })).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
     expect(createSubmission.mock.calls[0][1].acceptedRules).toEqual([
@@ -156,6 +157,82 @@ describe('NewSubmissionPage wizard', () => {
     expect(evidenceData.get('file')).toBe(evidenceFile);
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'brief-1');
   }, 15000);
+
+  it('creates and submits a service request with the backend intake fields', async () => {
+    const user = userEvent.setup();
+    const preferredDate = new Date();
+    preferredDate.setDate(preferredDate.getDate() + 1);
+    const preferredAt = `${preferredDate.getFullYear()}-${String(preferredDate.getMonth() + 1).padStart(2, '0')}-${String(preferredDate.getDate()).padStart(2, '0')}T10:30`;
+    const created = {
+      id: 'service-request-1',
+      title: 'Prototype a solar dryer',
+      category: 'service_request',
+    };
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue(created);
+    const submitSubmission = vi.spyOn(backendApi, 'submitSubmission').mockResolvedValue(created);
+    renderPage({
+      isSubmitter: true,
+      initialEntry: '/submissions/new?category=service_request',
+    });
+
+    expect(screen.getByRole('heading', { name: 'Request a UniPod service.' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /service request/i })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.type(screen.getByLabelText(/request title/i), 'Prototype a solar dryer');
+    await user.type(screen.getByLabelText(/what support do you need/i), 'Help us build a working prototype.');
+    await user.type(screen.getByLabelText(/context or challenge/i), 'Local farmers need a low-cost way to dry crops.');
+    await user.type(screen.getByLabelText(/service needed/i), 'Prototyping and fabrication');
+    await user.click(screen.getByRole('combobox', { name: 'Who is requesting this service?' }));
+    await user.click(await screen.findByRole('option', { name: 'Student' }));
+    await user.type(screen.getByLabelText(/what result are you expecting/i), 'A tested prototype for field trials.');
+    await user.click(screen.getByRole('button', { name: 'Preferred date' }));
+    await user.click(screen.getByRole('button', {
+      name: new RegExp(`${preferredDate.getDate()}.*${preferredDate.getFullYear()}`),
+    }));
+    fireEvent.change(screen.getByLabelText('Preferred time'), { target: { value: '10:30' } });
+    await user.type(screen.getByLabelText(/phone number/i), '+256 700 123456');
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await acceptAllRules(user);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^submit service request$/i }));
+
+    expect(await screen.findByRole('heading', { name: /thanks — your request is in/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /track service requests/i })).toHaveAttribute(
+      'href',
+      '/my-submissions/service-requests',
+    );
+    expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({
+      category: 'service_request',
+      title: 'Prototype a solar dryer',
+      serviceRequested: 'Prototyping and fabrication',
+      serviceRequester: 'student',
+      purpose: 'Help us build a working prototype.',
+      problemAddressed: 'Local farmers need a low-cost way to dry crops.',
+      expectedResult: 'A tested prototype for field trials.',
+      preferredAt: new Date(preferredAt).toISOString(),
+      submitterPhone: '+256 700 123456',
+      acceptedRules: [
+        { id: 'rule-general-1', version: 1 },
+        { id: 'rule-general-2', version: 1 },
+      ],
+    }));
+    expect(submitSubmission).toHaveBeenCalledWith('test-token', 'service-request-1');
+  }, 15000);
+
+  it('requires service-request details before advancing', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      isSubmitter: true,
+      initialEntry: '/submissions/new?category=service_request',
+    });
+
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+
+    expect(await screen.findByText(/fill in every required field/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 02 of 05/i)).toBeInTheDocument();
+  });
 
   it('previews and removes a selected document before continuing', async () => {
     const user = userEvent.setup();

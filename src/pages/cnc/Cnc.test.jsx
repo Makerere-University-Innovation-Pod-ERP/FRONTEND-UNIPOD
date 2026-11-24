@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { http, HttpResponse } from 'msw';
+import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api-client';
+import { server } from '@/mocks/server';
 import { NewJobPage } from './NewJobPage';
 import { DesignCheckPage } from './DesignCheckPage';
 import { JobBoardPage } from './JobBoardPage';
@@ -10,6 +14,18 @@ import { JobPage } from './JobPage';
 import { MachineListPage } from './MachineListPage';
 import { MachineBookingPage } from './MachineBookingPage';
 import { SafetyCoursePage } from './SafetyCoursePage';
+import { StockListPage } from './StockListPage';
+import { StockMovementPage } from './StockMovementPage';
+
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 
 function renderAt(path, routes) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -116,10 +132,70 @@ describe('Machines', () => {
   });
 
   it('only lists CNC & Carpentry machines for booking', async () => {
+    const { container } = renderAt('/cnc/machines/book', [['/cnc/machines/book', MachineBookingPage]]);
+    expect(await screen.findByLabelText(/^machine/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.querySelector('select[aria-hidden="true"]')?.options.length).toBeGreaterThan(1);
+    });
+    const nativeSelect = container.querySelector('select[aria-hidden="true"]');
+    const options = Array.from(nativeSelect.options, (option) => option.textContent);
+    expect(options.some((option) => /laser cutter/i.test(option))).toBe(true);
+    expect(options.some((option) => /podcast/i.test(option))).toBe(false);
+  });
+
+  it('opens the machine booking calendar', async () => {
+    const user = userEvent.setup();
     renderAt('/cnc/machines/book', [['/cnc/machines/book', MachineBookingPage]]);
-    const select = await screen.findByLabelText(/^machine/i);
-    expect(await within(select).findByRole('option', { name: /laser cutter/i })).toBeInTheDocument();
-    expect(within(select).queryByRole('option', { name: /podcast/i })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Date*' }));
+    expect(await screen.findByRole('dialog', { name: 'Choose booking date' })).toBeInTheDocument();
+  });
+
+  it('redirects to safety courses on a missing pass and restores the booking draft on return', async () => {
+    const user = userEvent.setup();
+    const toastError = vi.spyOn(toast, 'error').mockImplementation(() => {});
+    server.use(
+      http.get(`${API_BASE_URL}/facilities`, () => HttpResponse.json([{
+        id: 'cnc-safety-required',
+        name: 'CNC router',
+        location: 'Workshop',
+        capacity: 4,
+        status: 'AVAILABLE',
+        department: 'CNC',
+        requiresSafetyPass: true,
+      }])),
+      http.get(`${API_BASE_URL}/bookings`, () => HttpResponse.json({
+        items: [],
+        page: 0,
+        size: 100,
+        totalElements: 0,
+        totalPages: 0,
+      })),
+      http.get(`${API_BASE_URL}/timetable/blocks`, () => HttpResponse.json([])),
+      http.post(`${API_BASE_URL}/bookings`, () => HttpResponse.json({
+        status: 409,
+        detail: 'Safety training pass (CN5) required before booking this machine.',
+      }, { status: 409 })),
+    );
+
+    renderAt('/cnc/machines/book', [
+      ['/cnc/machines/book', MachineBookingPage],
+      ['/cnc/safety', SafetyCoursePage],
+    ]);
+    await user.type(await screen.findByLabelText('Purpose*'), 'Test CNC booking');
+    await user.type(screen.getByLabelText('Operator*'), 'Test operator');
+    await user.click(screen.getByRole('button', { name: /request booking/i }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: /safety course/i })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent(/booking details are saved/i);
+    expect(toastError).toHaveBeenCalledWith(
+      'CNC safety pass required',
+      expect.objectContaining({ description: expect.stringMatching(/complete the course/i) }),
+    );
+
+    await user.click(screen.getByRole('link', { name: /return to machine booking/i }));
+    expect(await screen.findByLabelText('Purpose*')).toHaveValue('Test CNC booking');
+    expect(screen.getByLabelText('Operator*')).toHaveValue('Test operator');
+    expect(screen.getByRole('status')).toHaveTextContent(/booking details have been restored/i);
   });
 });
 
@@ -129,5 +205,66 @@ describe('Safety course', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /safety course/i })).toBeInTheDocument();
     expect(await screen.findByText('Intro to CNC Safety')).toBeInTheDocument();
     expect(screen.queryByText('Media Production Fundamentals')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /new session/i })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByTestId('session-row-ts-1'));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/registration managed by staff/i)).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /^sign up$/i })).not.toBeInTheDocument();
+  });
+
+  it('gives CNC-only users staff guidance and keeps their booking return available', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[{
+          pathname: '/cnc/safety',
+          state: { returnToMachineBooking: true, bookingDraft: { purpose: 'Saved booking' } },
+        }]}>
+          <Routes>
+            <Route
+              path="/cnc/safety"
+              element={<SafetyCoursePage token="test-token" roles={['ROLE_CNC_DOMAIN_OWNER']} canReadTraining={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(/your current role cannot view training records/i);
+    expect(screen.getByRole('link', { name: /return to machine booking/i })).toHaveAttribute('href', '/cnc/machines/book');
+    expect(screen.queryByText(/loading training sessions/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('CNC stock', () => {
+  it('lists stock with low-stock flags and the job linked to a movement', async () => {
+    renderAt('/cnc/stock', [['/cnc/stock', StockListPage]]);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stock List' })).toBeInTheDocument();
+    expect((await screen.findAllByText('18 mm plywood sheets')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Low stock').length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'ORD-CNC-2026-000002' })).toHaveAttribute('href', '/cnc/jobs/cnc-2');
+    });
+  });
+
+  it('records use of stock against an active job', async () => {
+    const user = userEvent.setup();
+    renderAt('/cnc/stock/movements?type=USED_ON_ORDER&job=cnc-2', [['/cnc/stock/movements', StockMovementPage]]);
+    await user.selectOptions(await screen.findByLabelText('Item*'), 'cnc-stk-mdf');
+    await user.type(screen.getByLabelText('Quantity*'), '4');
+    expect(screen.getByLabelText('Job*')).toHaveValue('cnc-2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/Saved: Used on job 4 sheets of MDF sheets/);
+  });
+
+  it('registers a new stock item with its opening movement', async () => {
+    const user = userEvent.setup();
+    renderAt('/cnc/stock/movements', [['/cnc/stock/movements', StockMovementPage]]);
+    await user.type(await screen.findByLabelText('Item name*'), 'Acrylic offcuts');
+    await user.type(screen.getByLabelText('Unit*'), 'kg');
+    await user.type(screen.getByLabelText('Opening quantity'), '7');
+    await user.click(screen.getByRole('button', { name: 'Register item' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/Added Acrylic offcuts to the stock list/);
+    expect((await screen.findAllByText('Acrylic offcuts')).length).toBeGreaterThan(1);
   });
 });
