@@ -1,8 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
 import { makeMockToken } from './jwt';
-import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
-import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
 import {
   documentsBySubmission,
@@ -158,6 +156,17 @@ let submitterInvoices = createSubmitterInvoiceMocks();
 const createSubmitterBookingMocks = () => initialSubmitterBookings.map((booking) => ({ ...booking }));
 let submitterBookings = createSubmitterBookingMocks();
 let nextSubmitterBookingNumber = 1202;
+
+// Reviewer decisions, keyed by submission id — GET /cases/:id/my-review
+// reads these back; a submitted decision is immutable, matching the real
+// POST /cases/{id}/reviews contract ("cannot be edited afterward").
+const myReviewBySubmission = {
+  'IH-26029': {
+    decision: 'CHANGES_NEEDED',
+    comment: 'The follow-up workflow needs a clearer description of how missed appointments are detected before this can move forward.',
+    decidedAt: '2026-10-02',
+  },
+};
 
 export function resetSubmitterInvoiceMocks() {
   submitterInvoices = createSubmitterInvoiceMocks();
@@ -765,60 +774,56 @@ export const handlers = [
     return HttpResponse.json(item);
   }),
 
-  http.get(`${API_BASE_URL}/fact-finding/queue`, () => HttpResponse.json({ items: factFindingQueue })),
-
-  http.get(`${API_BASE_URL}/fact-finding/cases/:id`, ({ params }) => {
-    const item = factFindingCases[params.id];
+  // POST /cases/:id/fact-finding/complete — advances a case specifically out
+  // of fact-finding into review. The real backend's target stage is
+  // READY_FOR_REVIEW; this mock instead reuses the local fixture's existing
+  // UNDER_REVIEW value so the case lands exactly where GET /queues/reviews
+  // (below) already looks for it, without rewriting the shared stage
+  // vocabulary used across the rest of the app (that migration belongs to
+  // Assignment 2's case-file stepper rebuild, not this one).
+  http.post(`${API_BASE_URL}/cases/:id/fact-finding/complete`, async ({ params, request }) => {
+    const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
+    const body = await request.json().catch(() => ({}));
+    if (typeof body.version === 'number' && body.version !== item.version) {
+      return HttpResponse.json({ code: 'STALE_VERSION', detail: 'This case was updated elsewhere. Reload and try again.' }, { status: 409 });
+    }
+    item.stage = 'UNDER_REVIEW';
+    item.updatedAt = new Date().toISOString().slice(0, 10);
+    item.version += 1;
+    return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/fact-finding/cases/:id/assessment`, async ({ params, request }) => {
+  http.get(`${API_BASE_URL}/queues/reviews`, () => HttpResponse.json({
+    items: submissions
+      .filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage))
+      .map((item) => ({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        category: item.category,
+        stage: item.stage,
+        assignedAt: item.forwardedAt ?? item.updatedAt,
+      })),
+  })),
+
+  http.post(`${API_BASE_URL}/cases/:id/reviews`, async ({ params, request }) => {
     const id = params.id;
-    const existing = factFindingCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    const updated = {
-      ...existing,
-      checklist: body.checklist,
-      assessment: body.assessment,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      nextAction: { ...existing.nextAction, recommendation: body.nextAction || existing.nextAction.recommendation },
-    };
-    factFindingCases[id] = updated;
-    return HttpResponse.json(updated);
-  }),
-
-  http.get(`${API_BASE_URL}/reviewer/assigned`, () => HttpResponse.json({ items: reviewerAssigned })),
-
-  http.get(`${API_BASE_URL}/reviewer/cases/:id`, ({ params }) => {
-    const item = reviewerCases[params.id];
+    const item = submissions.find((submission) => submission.id === id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
-  }),
-
-  http.post(`${API_BASE_URL}/reviewer/cases/:id/decision`, async ({ params, request }) => {
-    const id = params.id;
-    const existing = reviewerCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    if (existing.decisionStatus !== 'pending') {
-      return HttpResponse.json({ message: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 400 });
+    if (myReviewBySubmission[id]) {
+      return HttpResponse.json({ code: 'ALREADY_REVIEWED', detail: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 409 });
     }
     const body = await request.json();
-    const updated = {
-      ...existing,
-      decisionStatus: body.decision,
-      comment: body.comment,
-      decidedAt: new Date().toISOString().slice(0, 10),
-      pendingAction: body.decision === 'recommended' ? 'Decision recorded — no further action needed' : 'Decision recorded — awaiting coordinator follow-up',
-    };
-    reviewerCases[id] = updated;
-    const assignedEntry = reviewerAssigned.find((entry) => entry.id === id);
-    if (assignedEntry) {
-      assignedEntry.decisionStatus = updated.decisionStatus;
-      assignedEntry.pendingAction = updated.pendingAction;
-    }
-    return HttpResponse.json(updated);
+    const review = { decision: body.decision, comment: body.comment, decidedAt: new Date().toISOString().slice(0, 10) };
+    myReviewBySubmission[id] = review;
+    return HttpResponse.json(review);
+  }),
+
+  http.get(`${API_BASE_URL}/cases/:id/my-review`, ({ params }) => {
+    const review = myReviewBySubmission[params.id];
+    if (!review) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(review);
   }),
 
   http.get(`${API_BASE_URL}/notifications`, ({ request }) => {
