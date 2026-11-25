@@ -13,7 +13,7 @@ export function FactFindingOverview({ token, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  const received = queue?.filter((item) => item.stage === 'RECEIVED').length ?? 0;
+  const forwarded = queue?.filter((item) => item.stage === 'FORWARDED').length ?? 0;
   const inFactFinding = queue?.filter((item) => item.stage === 'FACT_FINDING').length ?? 0;
 
   return (
@@ -31,8 +31,8 @@ export function FactFindingOverview({ token, onUnauthorized }) {
         <>
           <section className="live-metrics" aria-label="Fact-finding summary">
             <Metric label="In queue" value={queue?.length ?? 0} note="Cases awaiting assessment" />
-            <Metric label="Newly received" value={received} note="Fact-finding not yet started" />
-            <Metric label="In fact-finding" value={inFactFinding} note="Checklist in progress" />
+            <Metric label="Newly forwarded" value={forwarded} note="Fact-finding not yet started" />
+            <Metric label="In fact-finding" value={inFactFinding} note="Assessment in progress" />
           </section>
           <section className="live-panel live-recent">
             <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/fact-finding/queue">Open workspace <ArrowUpRight size={14} /></Link></div>
