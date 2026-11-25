@@ -105,6 +105,13 @@ export const backendApi = {
       `/cases/${encodeURIComponent(id)}/transitions/allowed`,
       { token, signal },
     ),
+  completeFactFinding: (
+    token,
+    id,
+    body,
+  ) => request(`/cases/${encodeURIComponent(id)}/fact-finding/complete`, { token, body }),
+  reviewQueue: (token, signal) =>
+    request('/queues/reviews', { token, signal }),
   sectors: (token, signal) =>
     request('/sectors', { token, signal }),
   sectorCatalog: (token) =>
