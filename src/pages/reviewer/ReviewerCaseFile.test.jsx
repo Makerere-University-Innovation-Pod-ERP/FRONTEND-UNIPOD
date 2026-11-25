@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReviewerCaseFile } from './ReviewerCaseFile';
-import { reviewerCases } from '@/mocks/fixtures/reviewer';
+import { submissions } from '@/mocks/fixtures/submissions';
+
+const reviewerCases = Object.fromEntries(submissions.map((item) => [item.id, item]));
+const decidedComment = 'The follow-up workflow needs a clearer description of how missed appointments are detected before this can move forward.';
 
 function renderCaseFile(id) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -66,7 +69,7 @@ describe('ReviewerCaseFile', () => {
     renderCaseFile(decidedCase.id);
 
     await screen.findByRole('heading', { name: decidedCase.title });
-    expect(screen.getByText(decidedCase.comment)).toBeInTheDocument();
+    expect(await screen.findByText(decidedComment)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /submit decision/i })).not.toBeInTheDocument();
   });
 });

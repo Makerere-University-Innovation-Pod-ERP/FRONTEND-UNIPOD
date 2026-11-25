@@ -1,21 +1,18 @@
 import { z } from 'zod';
-import { request } from './api-client';
+import { backendApi } from './backend-api';
 
 /**
- * These endpoints (/fact-finding/*) are not yet part of the deployed
- * backend contract. They follow the existing backend's path/response
- * conventions (see services/backend-api.ts) and the candidate fact-finding
- * workflow in the SRS (§8, FR-008/FR-009/FR-012). Confirm with the backend
- * team before treating this as final — see MSW handlers in src/mocks for
- * the mock implementation used until then.
+ * A FACT_FINDING_OFFICER works the real case-file aggregate (GET /cases/{id},
+ * the same one Assignment 2's coordinator pipeline uses) rather than a
+ * bespoke fact-finding resource — the backend has no separate checklist or
+ * assessment concept. "Completeness and relevance" is assessed against the
+ * case's real documents, and the officer's next action is one of exactly two
+ * real transitions: POST /cases/{id}/fact-finding/complete (advances the
+ * case into review) or POST /cases/{id}/transitions with
+ * to_stage: 'IMPROVEMENT_REQUESTED' (sent back for changes).
  */
 
-export const checklistItemSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  checked: z.boolean(),
-  note: z.string(),
-});
+const FACT_FINDING_QUEUE_STAGES = ['FORWARDED', 'FACT_FINDING'];
 
 export const factFindingQueueItemSchema = z.object({
   id: z.string(),
@@ -28,62 +25,35 @@ export const factFindingQueueItemSchema = z.object({
   reason: z.string(),
 });
 
-export const factFindingQueueSchema = z.object({
-  items: z.array(factFindingQueueItemSchema),
-});
-
-export const factFindingCaseSchema = z.object({
-  id: z.string(),
-  code: z.string().nullable(),
-  title: z.string(),
-  category: z.enum(['student', 'general']),
-  purpose: z.string(),
-  problemAddressed: z.string(),
-  stage: z.string(),
-  receivedAt: z.string().nullable(),
-  updatedAt: z.string(),
-  documents: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    status: z.string(),
-    createdAt: z.string().nullable(),
-  })),
-  stageHistory: z.array(z.object({
-    toStage: z.string(),
-    changedBy: z.string(),
-    changedAt: z.string(),
-    note: z.string().nullable(),
-  })),
-  checklist: z.array(checklistItemSchema),
-  assessment: z.string().default(''),
-  nextAction: z.object({
-    recommendation: z.string(),
-    options: z.array(z.string()),
-  }),
-});
-
-export const defaultChecklist = () => [
-  { id: 'title', label: 'Title is clear', checked: false, note: '' },
-  { id: 'purpose', label: 'Purpose is defined', checked: false, note: '' },
-  { id: 'evidence', label: 'Evidence is adequate', checked: false, note: '' },
-  { id: 'category', label: 'Category is correct', checked: false, note: '' },
-  { id: 'documents', label: 'Required documents present', checked: false, note: '' },
-];
+function reasonFor(stage) {
+  return stage === 'FORWARDED'
+    ? 'Newly forwarded, fact-finding not started'
+    : 'Fact-finding in progress';
+}
 
 export const factFindingApi = {
   queue: async (token, signal) => {
-    const payload = await request('/fact-finding/queue', { token, signal });
-    return factFindingQueueSchema.parse(payload).items;
+    const pages = await Promise.all(
+      FACT_FINDING_QUEUE_STAGES.map((stage) => backendApi.submissions(token, { stage, size: 100 }, signal)),
+    );
+    const items = pages
+      .flatMap((page) => page.items)
+      .map((item) => factFindingQueueItemSchema.parse({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        category: item.category,
+        stage: item.stage,
+        receivedAt: item.receivedAt,
+        updatedAt: item.updatedAt,
+        reason: reasonFor(item.stage),
+      }));
+    return items.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   },
-  caseFile: async (token, id, signal) => {
-    const payload = await request(`/fact-finding/cases/${encodeURIComponent(id)}`, { token, signal });
-    return factFindingCaseSchema.parse(payload);
-  },
-  saveAssessment: async (token, id, body) => {
-    const payload = await request(`/fact-finding/cases/${encodeURIComponent(id)}/assessment`, {
-      token,
-      body,
-    });
-    return factFindingCaseSchema.parse(payload);
-  },
+  caseFile: (token, id, signal) =>
+    backendApi.caseFile(token, id, signal),
+  completeFactFinding: (token, id, body) =>
+    backendApi.completeFactFinding(token, id, body),
+  requestImprovement: (token, id, body) =>
+    backendApi.transition(token, id, { ...body, to_stage: 'IMPROVEMENT_REQUESTED' }),
 };

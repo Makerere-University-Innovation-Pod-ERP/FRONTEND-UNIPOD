@@ -1,15 +1,17 @@
 import { z } from 'zod';
-import { request } from './api-client';
+import { ApiError } from './api-client';
+import { backendApi } from './backend-api';
 
 /**
- * These endpoints (/reviewer/*) are not yet part of the deployed backend
- * contract — see the note in services/fact-finding.js. This module reads
- * assigned-case summaries for the Reviewer Overview and Review Workspace
- * screens, and exposes the Reviewer Case File's independent decision
- * (Recommended / Changes needed / Not recommended, exactly one required
- * comment, immutable once submitted). It never exposes a
- * reviewer-assignment action — that stays an Innovation Coordinator /
- * Sector Officer action (Assignment 2 / 5's department-intake side).
+ * A REVIEWER works the real case-file aggregate (GET /cases/{id}, the same
+ * one Assignment 2/5's other roles use) plus three small, reviewer-specific
+ * endpoints: GET /queues/reviews (the reviewer's own queue, row-level
+ * enforced by the backend — no client-side filtering needed), POST
+ * /cases/{id}/reviews (submitReview, immutable once submitted), and GET
+ * /cases/{id}/my-review (reads back this reviewer's own decision, if any).
+ * It never exposes a reviewer-assignment action — that stays an Innovation
+ * Coordinator / Sector Officer action (Assignment 2 / 5's department-intake
+ * side).
  */
 
 export const reviewerDecisionStatusSchema = z.enum(['pending', 'recommended', 'changes_needed', 'not_recommended']);
@@ -25,47 +27,89 @@ export const reviewerAssignedCaseSchema = z.object({
   decisionStatus: reviewerDecisionStatusSchema,
 });
 
-export const reviewerAssignedSchema = z.object({
-  items: z.array(reviewerAssignedCaseSchema),
-});
-
-export const reviewerCaseSummarySchema = z.object({
-  id: z.string(),
-  code: z.string().nullable(),
-  title: z.string(),
-  purpose: z.string(),
-  problemAddressed: z.string(),
-  stage: z.string(),
-  documents: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    status: z.string(),
-  })),
-  pendingAction: z.string(),
-  decisionStatus: reviewerDecisionStatusSchema,
-  comment: z.string().nullable(),
-  decidedAt: z.string().nullable(),
-});
-
 export const reviewDecisionSchema = z.object({
   decision: z.enum(['recommended', 'changes_needed', 'not_recommended']),
   comment: z.string().min(1, 'A comment is required for every decision.'),
 });
 
+// The rest of the API uses UPPER_SNAKE_CASE enums throughout (stages,
+// statuses) — the review decision sent over the wire is assumed to follow
+// the same convention until the backend team confirms otherwise.
+const DECISION_WIRE_VALUE = {
+  recommended: 'RECOMMENDED',
+  changes_needed: 'CHANGES_NEEDED',
+  not_recommended: 'NOT_RECOMMENDED',
+};
+const DECISION_FROM_WIRE = Object.fromEntries(
+  Object.entries(DECISION_WIRE_VALUE).map(([key, value]) => [value, key]),
+);
+
+// Case-stage fallback used only when this reviewer has not opened the case
+// yet (so no GET .../my-review round trip has happened for it): a case
+// already sent back for changes reads as "changes needed" at the queue
+// level; everything else reads as still awaiting this reviewer's decision.
+function decisionStatusForStage(stage) {
+  return stage === 'IMPROVEMENT_REQUESTED' || stage === 'REFINEMENT_REQUESTED' ? 'changes_needed' : 'pending';
+}
+
+function pendingActionFor(decisionStatus) {
+  return decisionStatus === 'changes_needed'
+    ? 'Changes requested — waiting on resubmission'
+    : 'Submit your independent decision';
+}
+
+async function myReviewOrNull(token, id, signal) {
+  try {
+    return await backendApi.myReview(token, id, signal);
+  } catch (reason) {
+    if (reason instanceof ApiError && reason.status === 404) return null;
+    throw reason;
+  }
+}
+
 export const reviewerApi = {
   assigned: async (token, signal) => {
-    const payload = await request('/reviewer/assigned', { token, signal });
-    return reviewerAssignedSchema.parse(payload).items;
+    const payload = await backendApi.reviewQueue(token, signal);
+    return payload.items.map((item) => {
+      const decisionStatus = decisionStatusForStage(item.stage);
+      return reviewerAssignedCaseSchema.parse({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        category: item.category,
+        stage: item.stage,
+        assignedAt: item.assignedAt,
+        pendingAction: pendingActionFor(decisionStatus),
+        decisionStatus,
+      });
+    });
   },
   caseSummary: async (token, id, signal) => {
-    const payload = await request(`/reviewer/cases/${encodeURIComponent(id)}`, { token, signal });
-    return reviewerCaseSummarySchema.parse(payload);
+    const [caseFile, myReview] = await Promise.all([
+      backendApi.caseFile(token, id, signal),
+      myReviewOrNull(token, id, signal),
+    ]);
+    const { submission, documents } = caseFile;
+    const decisionStatus = myReview
+      ? DECISION_FROM_WIRE[myReview.decision] ?? 'pending'
+      : decisionStatusForStage(submission.stage);
+    return {
+      id: submission.id,
+      code: submission.code,
+      title: submission.title,
+      purpose: submission.purpose,
+      problemAddressed: submission.problemAddressed,
+      stage: submission.stage,
+      documents,
+      pendingAction: pendingActionFor(decisionStatus),
+      decisionStatus,
+      comment: myReview?.comment ?? null,
+      decidedAt: myReview?.decidedAt ?? null,
+    };
   },
   submitDecision: async (token, id, body) => {
-    const payload = await request(`/reviewer/cases/${encodeURIComponent(id)}/decision`, {
-      token,
-      body: reviewDecisionSchema.parse(body),
-    });
-    return reviewerCaseSummarySchema.parse(payload);
+    const { decision, comment } = reviewDecisionSchema.parse(body);
+    await backendApi.submitReview(token, id, { decision: DECISION_WIRE_VALUE[decision], comment });
+    return reviewerApi.caseSummary(token, id);
   },
 };
