@@ -37,4 +37,27 @@ describe('FactFindingWorkspace', () => {
     expect(screen.getByText(target.purpose)).toBeInTheDocument();
     expect(screen.getByText('Project brief')).toBeInTheDocument();
   });
+
+  it('sends a case to review', async () => {
+    const user = userEvent.setup();
+    const target = queueItems[1];
+    renderWorkspace();
+    await selectCase(user, target);
+
+    await user.click(screen.getByRole('button', { name: /send to review/i }));
+
+    expect(await screen.findByText(/recorded/i)).toBeInTheDocument();
+  });
+
+  it('requests improvement with a note', async () => {
+    const user = userEvent.setup();
+    const target = queueItems[2];
+    renderWorkspace();
+    await selectCase(user, target);
+
+    await user.type(screen.getByPlaceholderText(/optional note/i), 'Missing supporting evidence.');
+    await user.click(screen.getByRole('button', { name: /request improvement/i }));
+
+    expect(await screen.findByText(/recorded/i)).toBeInTheDocument();
+  });
 });
