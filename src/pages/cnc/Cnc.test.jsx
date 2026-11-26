@@ -66,6 +66,36 @@ describe('New job', () => {
     await user.click(screen.getByRole('button', { name: /send job/i }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Bookshelf' })).toBeInTheDocument();
   });
+
+  it('sends a rules-version string, not nothing, once the rules are accepted', async () => {
+    let sentBody = null;
+    server.use(
+      http.post(`${API_BASE_URL}/departments/cnc/orders`, async ({ request }) => {
+        sentBody = await request.json();
+        return HttpResponse.json({
+          id: 'cnc-job-rules-check',
+          code: 'CNC-2026-999',
+          department: 'cnc',
+          title: sentBody.title,
+          stage: 'NEW',
+          quantity: sentBody.quantity,
+          specs: sentBody.specs,
+          createdAt: new Date().toISOString(),
+        }, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/cnc/jobs/new', [['/cnc/jobs/new', NewJobPage]]);
+    await user.type(screen.getByLabelText(/what is to be made/i), 'Shelf');
+    await user.type(screen.getByLabelText(/customer name/i), 'Arthur Kanyike');
+    await user.selectOptions(screen.getByLabelText(/^material/i), 'MDF');
+    await user.type(screen.getByLabelText(/^size/i), '900 × 300 mm');
+    await user.click(screen.getByLabelText(/accept the unipod general rules/i));
+    await user.click(screen.getByRole('button', { name: /send job/i }));
+
+    await waitFor(() => expect(sentBody).not.toBeNull());
+    expect(sentBody.accepted_rules_version).toBe('general-v1');
+  });
 });
 
 describe('Design check & quote', () => {

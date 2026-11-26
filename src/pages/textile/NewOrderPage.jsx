@@ -88,11 +88,6 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
       sizeDesign: values.sizeDesign.trim(),
       dateNeeded: values.dateNeeded || null,
       rulesAccepted,
-      ...(usePublished ? {
-        acceptedRules: publishedRules.rules
-          .filter((rule) => acceptedRuleIds.includes(rule.id))
-          .map((rule) => ({ id: rule.id, version: rule.version })),
-      } : {}),
       submit,
     };
     try {

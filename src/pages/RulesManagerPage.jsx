@@ -17,6 +17,12 @@ const EMPTY_FORM = { title: '', body: '', scope: 'GENERAL', scopeId: '', mustAcc
  * is gated Administrator-only (a safe superset of every future department
  * head) until that role is actually modeled — a project-owner decision,
  * per the doc's own Section 9 pattern, not something to guess at here.
+ *
+ * This page's "Publish"/"Retire" actions persist to the browser, not a
+ * backend database (see src/services/rules.js) — the real backend has no
+ * rule-content storage at all (Assignment 12, §5.12). Rules created here
+ * are real for this browser, but won't appear on another device or survive
+ * clearing site data, until the backend team builds real rule-content CRUD.
  */
 export function RulesManagerPage({ token }) {
   const rulesQuery = useRules(token);
@@ -25,9 +31,9 @@ export function RulesManagerPage({ token }) {
     queryFn: ({ signal }) => backendApi.sectors(token, signal),
     enabled: Boolean(token),
   });
-  const createRule = useCreateRule(token);
-  const updateRule = useUpdateRule(token);
-  const retireRule = useRetireRule(token);
+  const createRule = useCreateRule();
+  const updateRule = useUpdateRule();
+  const retireRule = useRetireRule();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);

@@ -22,7 +22,6 @@ import {
 } from './fixtures/bookings';
 import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
-import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import {
@@ -141,7 +140,6 @@ function notificationsForRequest(request) {
   return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
 }
 let eventContracts = [...initialContracts];
-let rules = [...initialRules];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 let notificationRecords = notifications.map((item) => ({ ...item }));
@@ -1397,46 +1395,9 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
-  // Department Rules Manager (Assignment 12)
-  http.get(`${API_BASE_URL}/rules`, () => {
-    return HttpResponse.json(rules);
-  }),
-
-  http.post(`${API_BASE_URL}/rules`, async ({ request }) => {
-    const body = await request.json();
-    const newRule = {
-      id: `rule-${Date.now()}`,
-      scope: 'GENERAL',
-      scopeId: null,
-      mustAccept: false,
-      published: false,
-      version: 1,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      ...body,
-    };
-    rules = [...rules, newRule];
-    return HttpResponse.json(newRule, { status: 201 });
-  }),
-
-  http.patch(`${API_BASE_URL}/rules/:id`, async ({ params, request }) => {
-    const index = rules.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    rules[index] = {
-      ...rules[index],
-      ...body,
-      version: rules[index].version + 1,
-      updatedAt: new Date().toISOString().slice(0, 10),
-    };
-    return HttpResponse.json(rules[index]);
-  }),
-
-  http.post(`${API_BASE_URL}/rules/:id/retire`, ({ params }) => {
-    const index = rules.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
-    rules[index] = { ...rules[index], published: false, updatedAt: new Date().toISOString().slice(0, 10) };
-    return HttpResponse.json(rules[index]);
-  }),
+  // Department Rules Manager (Assignment 12) has no real /rules* endpoint
+  // family on the backend — see src/services/rules.js for why this is now a
+  // browser-persisted, backend-free module instead of MSW handlers.
 
   // Operations / Multimedia - Partners & MOUs
   http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
