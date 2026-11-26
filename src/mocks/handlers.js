@@ -141,7 +141,6 @@ function notificationsForRequest(request) {
   return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
 }
 let eventContracts = [...initialContracts];
-let rules = [...initialRules];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 let notificationRecords = notifications.map((item) => ({ ...item }));
