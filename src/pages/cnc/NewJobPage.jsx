@@ -67,6 +67,7 @@ export function NewJobPage({ token }) {
         title: form.title.trim(),
         quantity,
         dateNeeded: form.dateNeeded || undefined,
+        acceptedRulesVersion: CNC_RULES_VERSION,
         specs: {
           whatIsMade: form.title.trim(),
           customerName: form.customerName.trim(),
