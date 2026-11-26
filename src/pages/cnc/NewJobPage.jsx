@@ -2,16 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoaderCircle, Send } from 'lucide-react';
 import { useCreateCncJob } from '@/hooks/useCnc';
+import { useRules } from '@/hooks/useRules';
+import { computeAcceptedRulesVersion } from '@/components/RulesAcceptance';
 import { PageHeading } from './shared';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-
-// The generic department-orders kit's DepartmentOrderRequest.accepted_rules_version
-// is a single opaque version string (Assignment 12, §5.12 Path 1) — there is no
-// per-rule {id, version} record on the real backend. CNC has no dynamic Rules
-// Manager content wired to this screen yet, so this is a plain static label,
-// matching the same convention src/pages/reception/SignUpPage.jsx uses.
-const CNC_RULES_VERSION = 'cnc-v1';
 
 const EMPTY_JOB = {
   title: '',
@@ -32,6 +27,11 @@ const MATERIALS = ['Plywood', 'MDF', 'Hardwood', 'Softwood', 'Acrylic', 'Alumini
 export function NewJobPage({ token }) {
   const navigate = useNavigate();
   const createJob = useCreateCncJob(token);
+  // GENERAL rules from the shared Rules Manager (Assignment 12) — no
+  // CNC-sector-scoped rules are wired to this screen yet, so only the
+  // UniPod-wide ones contribute to the accepted version label.
+  const rulesQuery = useRules(token);
+  const generalRules = (rulesQuery.data ?? []).filter((rule) => rule.scope === 'GENERAL' && rule.published);
   const [form, setForm] = useState(EMPTY_JOB);
   const [formError, setFormError] = useState('');
 
@@ -67,7 +67,7 @@ export function NewJobPage({ token }) {
         title: form.title.trim(),
         quantity,
         dateNeeded: form.dateNeeded || undefined,
-        acceptedRulesVersion: CNC_RULES_VERSION,
+        acceptedRulesVersion: computeAcceptedRulesVersion(generalRules),
         specs: {
           whatIsMade: form.title.trim(),
           customerName: form.customerName.trim(),

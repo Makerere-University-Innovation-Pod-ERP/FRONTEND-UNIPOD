@@ -94,7 +94,7 @@ describe('New job', () => {
     await user.click(screen.getByRole('button', { name: /send job/i }));
 
     await waitFor(() => expect(sentBody).not.toBeNull());
-    expect(sentBody.accepted_rules_version).toBe('cnc-v1');
+    expect(sentBody.accepted_rules_version).toBe('general-v1');
   });
 });
 
