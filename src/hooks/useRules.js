@@ -34,10 +34,10 @@ export function useUpdateRule() {
   });
 }
 
-export function useRetireRule(token) {
+export function useRetireRule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => rulesApi.retire(id, token),
+    mutationFn: (id) => rulesApi.retire(id),
     onSuccess: (updated) => {
       queryClient.setQueryData(RULES_KEY, (old) => (old ?? []).map((item) => (item.id === updated.id ? updated : item)));
     },
