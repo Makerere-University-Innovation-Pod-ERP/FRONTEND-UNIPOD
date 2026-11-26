@@ -14,10 +14,10 @@ export function useRules(token) {
   });
 }
 
-export function useCreateRule(token) {
+export function useCreateRule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body) => rulesApi.create(body, token),
+    mutationFn: (body) => rulesApi.create(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RULES_KEY });
     },
