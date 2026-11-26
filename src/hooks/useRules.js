@@ -24,10 +24,10 @@ export function useCreateRule() {
   });
 }
 
-export function useUpdateRule(token) {
+export function useUpdateRule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }) => rulesApi.update(id, body, token),
+    mutationFn: ({ id, ...body }) => rulesApi.update(id, body),
     onSuccess: (updated) => {
       queryClient.setQueryData(RULES_KEY, (old) => (old ?? []).map((item) => (item.id === updated.id ? updated : item)));
     },
