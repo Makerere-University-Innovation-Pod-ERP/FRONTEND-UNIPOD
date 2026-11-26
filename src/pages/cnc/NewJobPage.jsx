@@ -6,6 +6,13 @@ import { PageHeading } from './shared';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+// The generic department-orders kit's DepartmentOrderRequest.accepted_rules_version
+// is a single opaque version string (Assignment 12, §5.12 Path 1) — there is no
+// per-rule {id, version} record on the real backend. CNC has no dynamic Rules
+// Manager content wired to this screen yet, so this is a plain static label,
+// matching the same convention src/pages/reception/SignUpPage.jsx uses.
+const CNC_RULES_VERSION = 'cnc-v1';
+
 const EMPTY_JOB = {
   title: '',
   customerName: '',
