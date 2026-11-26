@@ -25,9 +25,9 @@ export function RulesManagerPage({ token }) {
     queryFn: ({ signal }) => backendApi.sectors(token, signal),
     enabled: Boolean(token),
   });
-  const createRule = useCreateRule(token);
-  const updateRule = useUpdateRule(token);
-  const retireRule = useRetireRule(token);
+  const createRule = useCreateRule();
+  const updateRule = useUpdateRule();
+  const retireRule = useRetireRule();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
