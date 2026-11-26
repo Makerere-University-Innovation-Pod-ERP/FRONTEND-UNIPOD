@@ -22,7 +22,6 @@ import {
 } from './fixtures/bookings';
 import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
-import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import {
