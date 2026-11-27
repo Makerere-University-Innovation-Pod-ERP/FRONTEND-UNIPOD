@@ -78,7 +78,7 @@ describe('Submitter section pages', () => {
     );
     expect(await screen.findByText('SRV-2026-001')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Laser cutting' })).toBeInTheDocument();
-    expect(screen.getByText('Under Review')).toBeInTheDocument();
+    expect(screen.getByText('Further Handling')).toBeInTheDocument();
     expect(screen.queryByText('Maternal Health Follow-up Platform')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View request' })).toHaveAttribute('href', '/submissions/IH-26032');
 
