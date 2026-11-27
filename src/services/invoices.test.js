@@ -147,6 +147,32 @@ describe('submitter invoice API', () => {
     expect((await invoicesApi.downloadMyReceiptPdf(receiptedInvoice.id, token)).size).toBeGreaterThan(0);
     expect((await invoicesApi.downloadMyReceipt(receiptedInvoice.id, token)).size).toBeGreaterThan(0);
   });
+
+  it('lets finance verify a submitter proof and issue a receipt visible to that submitter', async () => {
+    const submitterToken = makeMockToken(['ROLE_SUBMITTER'], 'brian.s', 'submitter@unipod.test');
+    const financeToken = makeMockToken(['ROLE_FINANCE_OFFICER'], 'Daniel Kato', 'finance@unipod.test');
+    const waiting = await invoicesApi.listMyInvoices(submitterToken, { status: 'WAITING_FOR_PROOF' });
+    const invoice = waiting.items[0];
+
+    const uploaded = await invoicesApi.uploadMyPaymentProof(invoice.id, {
+      reference: 'BANK-REF-SHARED-TEST',
+      amount: invoice.amount,
+      paidOn: '2026-11-18',
+      file: new File(['proof'], 'proof.pdf', { type: 'application/pdf' }),
+    }, submitterToken);
+    const financeOverview = await invoicesApi.getOverview(financeToken);
+    expect(financeOverview.invoices.find((item) => item.id === invoice.id)).toMatchObject({
+      status: 'Awaiting verification',
+      paymentProof: { reference: 'BANK-REF-SHARED-TEST' },
+    });
+
+    await invoicesApi.verifyPayment(invoice.id, uploaded.paymentProof.id, financeToken);
+    await invoicesApi.releaseReceipt(invoice.id, financeToken);
+
+    const submitterInvoice = await invoicesApi.myInvoice(invoice.id, submitterToken);
+    expect(submitterInvoice.status).toBe('RECEIPTED');
+    expect(submitterInvoice.receipt.receiptNumber).toMatch(/^REC-2026-/);
+  });
 });
 
 function jsonResponse(data) {

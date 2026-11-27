@@ -57,10 +57,25 @@ if (isJsdom) {
     originalFormData = Request.prototype.formData;
     Request.prototype.formData = async function formData() {
       const saved = [globalThis.File, globalThis.Blob];
+      const JsdomFile = globalThis.File;
       globalThis.File = NodeFile;
       globalThis.Blob = NodeBlob;
       try {
-        return await originalFormData.call(this);
+        const parsed = await originalFormData.call(this);
+        [globalThis.File, globalThis.Blob] = saved;
+        const copy = new FormData();
+        for (const [name, value] of parsed.entries()) {
+          if (typeof value === 'string') {
+            copy.append(name, value);
+          } else {
+            const bytes = await value.arrayBuffer();
+            copy.append(name, new JsdomFile([bytes], value.name ?? 'blob', {
+              type: value.type,
+              lastModified: value.lastModified,
+            }));
+          }
+        }
+        return copy;
       } finally {
         [globalThis.File, globalThis.Blob] = saved;
       }

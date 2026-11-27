@@ -11,7 +11,7 @@ export const notificationSchema = z.object({
   createdAt: z.string(),
   readAt: z.string().nullable().optional(),
   read: z.boolean(),
-  link: z.string().optional(),
+  link: z.string().nullable().optional(),
 }).transform((item) => ({
   ...item,
   body: item.body ?? '',

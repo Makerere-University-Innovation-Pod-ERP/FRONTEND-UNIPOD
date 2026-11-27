@@ -33,7 +33,7 @@ export function RequestBoardPage({ token, onUnauthorized }) {
       )}
 
       {requestsQuery.isLoading ? (
-        <Loading label="Loading board…" />
+        <Loading label="Loading board…" variant="board" columns={columns.length} />
       ) : (
         <div className="tx-board">
           {columns.map((column) => (

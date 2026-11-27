@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -141,7 +141,7 @@ describe('NewSubmissionPage wizard', () => {
     expect(await screen.findByRole('heading', { name: /thanks — your brief is in/i })).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
-    expect(createSubmission.mock.calls[0][1].acceptedRulesVersion).toBe('general-v1');
+    expect(createSubmission.mock.calls[0][1].acceptedRulesVersion).toMatch(/^general-[a-f\d]{32}$/);
     expect(uploadDocument).toHaveBeenCalledTimes(2);
     expect(maxActiveUploads).toBe(1);
     expect(uploadDocument).toHaveBeenNthCalledWith(1, 'test-token', 'brief-1', expect.any(FormData));
@@ -184,7 +184,8 @@ describe('NewSubmissionPage wizard', () => {
     await user.click(await screen.findByRole('option', { name: 'Student' }));
     await user.type(screen.getByLabelText(/what result are you expecting/i), 'A tested prototype for field trials.');
     await user.click(screen.getByRole('button', { name: 'Preferred date' }));
-    await user.click(screen.getByRole('button', {
+    const dateCalendar = within(await screen.findByRole('dialog'));
+    await user.click(dateCalendar.getByRole('button', {
       name: new RegExp(`${preferredDate.getDate()}.*${preferredDate.getFullYear()}`),
     }));
     fireEvent.change(screen.getByLabelText('Preferred time'), { target: { value: '10:30' } });
@@ -210,7 +211,7 @@ describe('NewSubmissionPage wizard', () => {
       expectedResult: 'A tested prototype for field trials.',
       preferredAt: new Date(preferredAt).toISOString(),
       submitterPhone: '+256 700 123456',
-      acceptedRulesVersion: 'general-v1',
+      acceptedRulesVersion: expect.stringMatching(/^general-[a-f\d]{32}$/),
     }));
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'service-request-1');
   }, 15000);

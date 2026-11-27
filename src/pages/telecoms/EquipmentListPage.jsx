@@ -39,7 +39,8 @@ export function EquipmentListPage({ token, onUnauthorized }) {
 
   const items = equipmentQuery.data ?? [];
   const selectedItem = items.find((candidate) => candidate.id === selectedEqId);
-  const availableUnits = items.reduce((total, item) => total + item.availableQuantity, 0);
+  const availableForAssignment = (item) => item.state === 'AVAILABLE' ? item.availableQuantity : 0;
+  const availableUnits = items.reduce((total, item) => total + availableForAssignment(item), 0);
   const totalUnits = items.reduce((total, item) => total + item.totalQuantity, 0);
   const attentionCount = items.filter((item) => ['FAULTY', 'UNDER_MAINTENANCE'].includes(item.state)).length;
   const normalizedSearch = search.trim().toLowerCase();
@@ -160,9 +161,9 @@ export function EquipmentListPage({ token, onUnauthorized }) {
 
                   <div className="telecoms-equipment-card__availability">
                     <span className="telecoms-equipment-card__label">Available / total</span>
-                    <strong>{eq.availableQuantity}<small> / {eq.totalQuantity} units</small></strong>
+                    <strong>{availableForAssignment(eq)}<small> / {eq.totalQuantity} units</small></strong>
                     <span className="telecoms-equipment-card__meter" aria-hidden="true">
-                      <span style={{ width: `${eq.totalQuantity > 0 ? Math.min(100, (eq.availableQuantity / eq.totalQuantity) * 100) : 0}%` }} />
+                      <span style={{ width: `${eq.totalQuantity > 0 ? Math.min(100, (availableForAssignment(eq) / eq.totalQuantity) * 100) : 0}%` }} />
                     </span>
                   </div>
 

@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
 import { CNC_MOVEMENT_TYPES, evaluateCncMovement } from '@/lib/cnc';
-import { initialCncJobs, initialCncStockItems, initialCncStockMovements } from './fixtures/cnc';
+import { initialCncStockItems, initialCncStockMovements } from './fixtures/cnc';
+import { cncState } from './cnc-state';
 
 const base = `${API_BASE_URL}/cnc/stock`;
 const now = () => new Date().toISOString();
@@ -67,10 +68,14 @@ export const cncStockHandlers = [
 
   http.post(`${base}/movements`, async ({ request }) => {
     const body = await request.json();
+    if (body.type === CNC_MOVEMENT_TYPES.USED_ON_ORDER) {
+      const matchingJob = cncState.jobs.find((candidate) => candidate.id === body.jobId);
+      if (!matchingJob) return problem(400, 'That job does not exist.');
+    }
     const item = initialCncStockItems.find((candidate) => candidate.id === body.itemId);
     const { error, balance } = evaluateCncMovement(item, body);
     if (error) return problem(item && error.includes('below zero') ? 409 : 400, error);
-    const job = initialCncJobs.find((candidate) => candidate.id === body.jobId);
+    const job = cncState.jobs.find((candidate) => candidate.id === body.jobId);
     item.quantity = balance;
     const movement = {
       id: `cnc-mv-${movementSequence++}`,

@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { TrainingMentorshipPage } from './TrainingMentorshipPage';
 
-function renderPage(roles = ['ROLE_ADMINISTRATOR']) {
+function renderPage(roles = ['ROLE_ADMINISTRATOR'], variant = 'training') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <TrainingMentorshipPage token="test-token" roles={roles} />
+        <TrainingMentorshipPage token="test-token" roles={roles} variant={variant} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -105,5 +105,15 @@ describe('TrainingMentorshipPage', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: /create session/i }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(/required/i);
+  });
+
+  it('only links to machine booking for CNC owners or administrators', async () => {
+    const { unmount } = renderPage(['ROLE_MULTIMEDIA_OFFICER'], 'safety');
+    expect(await screen.findByRole('heading', { name: 'Safety Course' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /book a machine/i })).not.toBeInTheDocument();
+    unmount();
+
+    renderPage(['ROLE_CNC_DOMAIN_OWNER'], 'safety');
+    expect(await screen.findByRole('link', { name: /book a machine/i })).toHaveAttribute('href', '/cnc/machines/book');
   });
 });

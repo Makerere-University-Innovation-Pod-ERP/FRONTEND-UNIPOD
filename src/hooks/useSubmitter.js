@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { getAccountIdentity } from '@/lib/auth';
 import { backendApi } from '@/services/backend-api';
 
 /**
@@ -10,7 +11,7 @@ import { backendApi } from '@/services/backend-api';
  */
 export function useSubmitterCapabilities(token, enabled = true) {
   return useQuery({
-    queryKey: ['submitter', 'capabilities'],
+    queryKey: ['submitter', 'capabilities', getAccountIdentity(token)],
     queryFn: ({ signal }) => backendApi.submitterCapabilities(token, signal),
     enabled: Boolean(token) && enabled,
     staleTime: 1000 * 60,

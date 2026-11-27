@@ -31,8 +31,9 @@ export function SubmitterMediaDeliveryPage({ token, onUnauthorized }) {
   }
 
   const { data } = request;
-  const deliveryLinks = data.deliveryPayload?.delivery_links ?? [];
-  const files = data.deliveryPayload?.file_ids ?? [];
+  const delivered = data.status === 'DELIVERED';
+  const deliveryLinks = delivered ? data.deliveryPayload?.delivery_links ?? [] : [];
+  const files = delivered ? data.deliveryPayload?.file_ids ?? [] : [];
 
   return (
     <div className="live-page page-enter">
@@ -40,12 +41,20 @@ export function SubmitterMediaDeliveryPage({ token, onUnauthorized }) {
         <div>
           <p className="eyebrow">MY WORKSPACE · MEDIA DELIVERY</p>
           <h1>{data.title}</h1>
-          <p>Request {data.code} · Delivered {data.deliveredAt ? new Date(data.deliveredAt).toLocaleString() : '—'}</p>
+          <p>
+            Request {data.code}
+            {delivered
+              ? ` · Delivered ${data.deliveredAt ? new Date(data.deliveredAt).toLocaleString() : '—'}`
+              : ` · Status: ${data.status.replaceAll('_', ' ').toLowerCase()}`}
+          </p>
         </div>
-        <span className="tx-status tx-success"><CheckCircle2 size={14} />{data.status}</span>
+        <span className={`tx-status ${delivered ? 'tx-success' : 'tx-progress'}`}>
+          {delivered && <CheckCircle2 size={14} />}
+          {delivered ? 'DELIVERED' : data.status.replaceAll('_', ' ')}
+        </span>
       </div>
 
-      {data.deliveryPayload?.note_to_submitter && (
+      {delivered && data.deliveryPayload?.note_to_submitter && (
         <section className="live-panel">
           <h2 className="tx-panel-title">Message from the media team</h2>
           <p>{data.deliveryPayload.note_to_submitter}</p>
@@ -53,8 +62,10 @@ export function SubmitterMediaDeliveryPage({ token, onUnauthorized }) {
       )}
 
       <section className="live-panel">
-        <h2 className="tx-panel-title">Your delivered files</h2>
-        {deliveryLinks.length > 0 ? (
+        <h2 className="tx-panel-title">{delivered ? 'Your delivered files' : 'Delivery updates'}</h2>
+        {!delivered ? (
+          <p>Your media team is still working on this request. Delivery links will appear here when the request is delivered.</p>
+        ) : deliveryLinks.length > 0 ? (
           <ul>
             {deliveryLinks.map((entry, index) => {
               const label = typeof entry === 'string' ? entry : entry?.label || entry?.name || `Delivery link ${index + 1}`;

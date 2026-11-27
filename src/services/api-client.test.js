@@ -64,4 +64,150 @@ describe('authenticated API requests', () => {
       refreshToken: 'rotated-refresh-token',
     }));
   });
+
+  it('does not retry a stale request with a different account session', async () => {
+    const oldToken = makeMockToken(['ROLE_SUBMITTER'], 'account-one');
+    const newToken = makeMockToken(['ROLE_SUBMITTER'], 'account-two');
+    saveSession(createSession({
+      accessToken: oldToken,
+      refreshToken: 'account-one-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+
+    let releaseProtected;
+    const protectedStarted = new Promise((resolve) => {
+      releaseProtected = resolve;
+    });
+    const fetchMock = vi.fn(async (url) => {
+      if (String(url).endsWith('/protected')) {
+        await protectedStarted;
+        return jsonResponse(401, { detail: 'Expired access token' });
+      }
+      return jsonResponse(200, {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pendingRequest = request('/protected', { token: oldToken });
+    saveSession(createSession({
+      accessToken: newToken,
+      refreshToken: 'account-two-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+    releaseProtected();
+
+    await expect(pendingRequest).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(loadSession().accessToken).toBe(newToken);
+  });
+
+  it('does not clear a newer session when an old refresh fails', async () => {
+    const oldToken = makeMockToken(['ROLE_SUBMITTER'], 'account-one');
+    const newToken = makeMockToken(['ROLE_SUBMITTER'], 'account-two');
+    saveSession(createSession({
+      accessToken: oldToken,
+      refreshToken: 'account-one-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+
+    let releaseRefresh;
+    let refreshStarted;
+    const started = new Promise((resolve) => {
+      refreshStarted = resolve;
+    });
+    const fetchMock = vi.fn(async (url) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        refreshStarted();
+        return new Promise((resolve) => {
+          releaseRefresh = resolve;
+        });
+      }
+      return jsonResponse(401, { detail: 'Expired access token' });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pendingRequest = request('/protected', { token: oldToken });
+    await started;
+    saveSession(createSession({
+      accessToken: newToken,
+      refreshToken: 'account-two-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+    releaseRefresh(jsonResponse(401, { detail: 'Refresh token expired' }));
+
+    await expect(pendingRequest).rejects.toMatchObject({ status: 401 });
+    expect(loadSession().accessToken).toBe(newToken);
+  });
+
+  it('does not overwrite a newer session when an old refresh succeeds late', async () => {
+    const oldToken = makeMockToken(['ROLE_SUBMITTER'], 'account-one');
+    const newToken = makeMockToken(['ROLE_SUBMITTER'], 'account-two');
+    saveSession(createSession({
+      accessToken: oldToken,
+      refreshToken: 'account-one-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+
+    let releaseRefresh;
+    let refreshStarted;
+    const started = new Promise((resolve) => {
+      refreshStarted = resolve;
+    });
+    const refreshedToken = makeMockToken(['ROLE_SUBMITTER'], 'account-one');
+    const fetchMock = vi.fn(async (url) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        refreshStarted();
+        return new Promise((resolve) => {
+          releaseRefresh = resolve;
+        });
+      }
+      return jsonResponse(401, { detail: 'Expired access token' });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pendingRequest = request('/protected', { token: oldToken });
+    await started;
+    saveSession(createSession({
+      accessToken: newToken,
+      refreshToken: 'account-two-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+    releaseRefresh(jsonResponse(200, {
+      accessToken: refreshedToken,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      refreshToken: 'rotated-account-one-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+
+    await expect(pendingRequest).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loadSession().accessToken).toBe(newToken);
+  });
+
+  it('rejects refresh credentials that return a different account token', async () => {
+    const oldToken = makeMockToken(['ROLE_SUBMITTER'], 'account-one');
+    const otherAccountToken = makeMockToken(['ROLE_SUBMITTER'], 'account-two');
+    saveSession(createSession({
+      accessToken: oldToken,
+      refreshToken: 'account-one-refresh',
+      refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }));
+    const fetchMock = vi.fn(async (url) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        return jsonResponse(200, {
+          accessToken: otherAccountToken,
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          refreshToken: 'account-two-refresh',
+          refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        });
+      }
+      return jsonResponse(401, { detail: 'Expired access token' });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(request('/protected', { token: oldToken }))
+      .rejects.toMatchObject({ status: 401 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loadSession()).toBeNull();
+  });
 });

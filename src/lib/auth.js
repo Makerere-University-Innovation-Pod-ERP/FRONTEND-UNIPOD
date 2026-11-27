@@ -43,6 +43,42 @@ function decodePayload(token) {
   }
 }
 
+function getIdentityClaim(token) {
+  const payload = decodePayload(token);
+  if (typeof payload?.sub === 'string' && payload.sub.trim()) {
+    return `sub:${payload.sub.trim()}`;
+  }
+  if (typeof payload?.email === 'string' && payload.email.trim()) {
+    return `email:${payload.email.trim().toLowerCase()}`;
+  }
+  return null;
+}
+
+function fingerprintToken(token) {
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let index = 0; index < token.length; index += 1) {
+    const code = token.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193);
+    second = Math.imul(second ^ code, 0x85ebca6b);
+  }
+  return `${(first >>> 0).toString(16)}${(second >>> 0).toString(16)}`;
+}
+
+export function getAccountIdentity(token) {
+  if (typeof token !== 'string' || !token) return null;
+  return getIdentityClaim(token) ?? `token:${fingerprintToken(token)}`;
+}
+
+export function isSameAccount(firstToken, secondToken) {
+  if (!firstToken || !secondToken) return false;
+  const firstIdentity = getIdentityClaim(firstToken);
+  const secondIdentity = getIdentityClaim(secondToken);
+  return firstIdentity && secondIdentity
+    ? firstIdentity === secondIdentity
+    : firstToken === secondToken;
+}
+
 export function createSession(response, fallbackEmail) {
   const payload = decodePayload(response.accessToken);
   const roles = Array.isArray(payload?.roles) ? payload.roles : [];
@@ -58,18 +94,18 @@ export function createSession(response, fallbackEmail) {
 }
 
 export function saveSession(session) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  localStorage.removeItem(SESSION_KEY);
 }
 
 export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
 }
 
 export function loadSession() {
   try {
-    const saved = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
+    const saved = sessionStorage.getItem(SESSION_KEY);
     if (!saved) return null;
     const session = JSON.parse(saved);
     const payload = decodePayload(session.accessToken);

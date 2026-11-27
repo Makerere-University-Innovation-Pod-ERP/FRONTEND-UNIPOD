@@ -33,10 +33,16 @@ function reasonFor(stage) {
 
 export const factFindingApi = {
   queue: async (token, signal) => {
-    const pages = await Promise.all(
-      FACT_FINDING_QUEUE_STAGES.map((stage) => backendApi.submissions(token, { stage, size: 100 }, signal)),
-    );
-    const items = pages
+    const stagePages = await Promise.all(FACT_FINDING_QUEUE_STAGES.map(async (stage) => {
+      const firstPage = await backendApi.submissions(token, { stage, page: 0, size: 100 }, signal);
+      const totalPages = firstPage.totalPages ?? Math.ceil((firstPage.totalElements ?? firstPage.items.length) / 100);
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+          backendApi.submissions(token, { stage, page: index + 1, size: 100 }, signal)),
+      );
+      return [firstPage, ...remainingPages];
+    }));
+    const items = stagePages.flat()
       .flatMap((page) => page.items)
       .map((item) => factFindingQueueItemSchema.parse({
         id: item.id,

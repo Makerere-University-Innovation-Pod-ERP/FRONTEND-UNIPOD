@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ApiError } from '@/services/api-client';
 import { notificationsApi } from '@/services/notifications';
+
+let subscriptionUpdates = Promise.resolve();
 
 export function isBrowserPushSupported() {
   return typeof window !== 'undefined'
@@ -10,38 +13,65 @@ export function isBrowserPushSupported() {
     && 'serviceWorker' in navigator;
 }
 
-export function useBrowserPushNotifications(token) {
-  const [subscribed, setSubscribed] = useState(false);
+export function useBrowserPushNotifications(token, onUnauthorized, active = true) {
+  const [registeredToken, setRegisteredToken] = useState(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   const supported = isBrowserPushSupported();
   const configuration = useQuery({
     queryKey: ['notifications', 'push-config', token],
     queryFn: ({ signal }) => notificationsApi.pushConfiguration(token, signal),
-    enabled: Boolean(token),
+    enabled: Boolean(token && active),
     retry: false,
     staleTime: 5 * 60_000,
   });
+  const unavailable = configuration.error instanceof ApiError
+    && [404, 501].includes(configuration.error.status);
+
+  useEffect(() => {
+    if (configuration.error instanceof ApiError && configuration.error.status === 401) {
+      onUnauthorized?.();
+    }
+  }, [configuration.error, onUnauthorized]);
 
   useEffect(() => {
     let active = true;
-    if (!supported || !token) return () => { active = false; };
+    if (!active || !supported || !token) return () => { active = false; };
 
-    navigator.serviceWorker.getRegistration('/')
-      .then((registration) => registration?.pushManager.getSubscription())
-      .then(async (subscription) => {
-        if (!active || !subscription) return;
-        setSubscribed(true);
-        if (configuration.data?.enabled) {
-          await notificationsApi.registerPushSubscription(token, subscription.toJSON());
+    const sync = subscriptionUpdates.catch(() => {}).then(async () => {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      const subscription = await registration?.pushManager.getSubscription();
+      if (!active || !subscription || !configuration.data?.enabled) return;
+      try {
+        await notificationsApi.registerPushSubscription(token, subscription.toJSON());
+        if (active) setRegisteredToken(token);
+      } catch (reason) {
+        if (active) {
+          if (reason instanceof ApiError && reason.status === 401) onUnauthorized?.();
+          setError(reason instanceof Error ? reason.message : 'Could not sync this browser subscription.');
         }
-      })
-      .catch((reason) => {
-        if (active) setError(reason instanceof Error ? reason.message : 'Could not sync this browser subscription.');
-      });
+      }
+    });
+    subscriptionUpdates = sync.catch(() => {});
 
-    return () => { active = false; };
-  }, [configuration.data?.enabled, supported, token]);
+    sync.catch((reason) => {
+      if (active) {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized?.();
+        setError(reason instanceof Error ? reason.message : 'Could not sync this browser subscription.');
+      }
+    });
+
+    return () => {
+      active = false;
+      subscriptionUpdates = subscriptionUpdates.catch(() => {}).then(async () => {
+        const registration = await navigator.serviceWorker.getRegistration('/');
+        const subscription = await registration?.pushManager.getSubscription();
+        if (subscription) {
+          await notificationsApi.removePushSubscription(token, subscription.endpoint);
+        }
+      }).catch(() => {});
+    };
+  }, [active, configuration.data?.enabled, onUnauthorized, supported, token]);
 
   const enable = async () => {
     setError('');
@@ -50,7 +80,10 @@ export function useBrowserPushNotifications(token) {
       return false;
     }
     if (!configuration.data?.enabled || !configuration.data.publicKey) {
-      setError('Browser push notifications are not configured on the server.');
+      setError(configuration.error instanceof ApiError
+        && [404, 501].includes(configuration.error.status)
+        ? 'Browser alerts are not available for this workspace yet.'
+        : 'Browser push notifications are not configured on the server.');
       return false;
     }
     if (Notification.permission === 'denied') {
@@ -72,9 +105,10 @@ export function useBrowserPushNotifications(token) {
         applicationServerKey: decodeApplicationServerKey(configuration.data.publicKey),
       });
       await notificationsApi.registerPushSubscription(token, subscription.toJSON());
-      setSubscribed(true);
+      setRegisteredToken(token);
       return true;
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) onUnauthorized?.();
       setError(reason instanceof Error ? reason.message : 'Could not enable browser push notifications.');
       return false;
     } finally {
@@ -89,16 +123,17 @@ export function useBrowserPushNotifications(token) {
       const registration = await navigator.serviceWorker.getRegistration('/');
       const subscription = await registration?.pushManager.getSubscription();
       if (!subscription) {
-        setSubscribed(false);
+        setRegisteredToken(null);
         return true;
       }
 
       await notificationsApi.removePushSubscription(token, subscription.endpoint);
+      setRegisteredToken(null);
       const removed = await subscription.unsubscribe();
       if (!removed) throw new Error('The browser could not remove its push subscription.');
-      setSubscribed(false);
       return true;
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) onUnauthorized?.();
       setError(reason instanceof Error ? reason.message : 'Could not disable browser push notifications.');
       return false;
     } finally {
@@ -109,11 +144,12 @@ export function useBrowserPushNotifications(token) {
   return {
     supported,
     permission: supported ? Notification.permission : 'unsupported',
-    enabled: Boolean(configuration.data?.enabled),
+    enabled: Boolean(active && configuration.data?.enabled),
+    unavailable,
     loading: configuration.isLoading,
-    subscribed,
+    subscribed: Boolean(configuration.data?.enabled && token && registeredToken === token),
     working,
-    error: error || (configuration.error instanceof Error ? configuration.error.message : ''),
+    error: error || (!unavailable && configuration.error instanceof Error ? configuration.error.message : ''),
     enable,
     disable,
   };

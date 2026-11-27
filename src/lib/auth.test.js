@@ -3,6 +3,8 @@ import {
   canCreateSubmission,
   clearSession,
   createSession,
+  getAccountIdentity,
+  isSameAccount,
   loadSession,
   saveSession,
 } from './auth';
@@ -53,7 +55,7 @@ describe('canCreateSubmission', () => {
     });
   });
 
-  it('restores a session from persistent storage even after its access token expires', () => {
+  it('restores a tab-scoped session after its access token expires', () => {
     const tokenParts = makeMockToken(['ROLE_SUBMITTER'], 'submitter').split('.');
     const expiredPayload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
     expiredPayload.exp = Math.floor(Date.now() / 1000) - 60;
@@ -65,12 +67,41 @@ describe('canCreateSubmission', () => {
     });
 
     saveSession(session);
-    sessionStorage.clear();
 
     expect(loadSession()).toEqual(expect.objectContaining({
       accessToken: session.accessToken,
       refreshToken: 'refresh-token',
     }));
+  });
+
+  it('keeps sessions scoped to the current tab', () => {
+    const key = 'unipod.access-token';
+    const session = createSession({
+      accessToken: makeMockToken(['ROLE_SUBMITTER'], 'submitter'),
+    });
+    localStorage.setItem(key, JSON.stringify(session));
+
+    saveSession(session);
+
+    expect(sessionStorage.getItem(key)).toBe(JSON.stringify(session));
+    expect(localStorage.getItem(key)).toBeNull();
+    localStorage.setItem(key, JSON.stringify(session));
+    clearSession();
+    expect(sessionStorage.getItem(key)).toBeNull();
+    expect(localStorage.getItem(key)).toBeNull();
+  });
+
+  it('uses stable token identity before normalized email', () => {
+    const first = makeMockToken([], 'account-1', ' USER@Example.test ');
+    const sameAccount = makeMockToken([], 'account-1', 'different@example.test');
+    const otherAccount = makeMockToken([], 'account-2', 'user@example.test');
+    const emailOnly = makeMockToken([], '', ' USER@Example.test ');
+
+    expect(getAccountIdentity(first)).toBe('sub:account-1');
+    expect(isSameAccount(first, sameAccount)).toBe(true);
+    expect(isSameAccount(first, otherAccount)).toBe(false);
+    expect(getAccountIdentity(emailOnly)).toBe('email:user@example.test');
+    expect(isSameAccount(emailOnly, makeMockToken([], '', 'user@example.test'))).toBe(true);
   });
 
   it('does not grant submission creation to unrelated roles', () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { backendApi } from '@/services/backend-api';
 import { AuditLogPage } from './AuditLogPage';
@@ -49,7 +49,13 @@ describe('AuditLogPage', () => {
     await screen.findByText('No audit entries found');
     await user.selectOptions(screen.getByLabelText('Outcome'), 'FAILURE');
 
-    expect(backendApi.auditLogs).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(backendApi.auditLogs).toHaveBeenLastCalledWith(
+        'mock-token',
+        expect.objectContaining({ page: 0, size: 25, outcome: 'FAILURE' }),
+        expect.any(AbortSignal),
+      );
+    });
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
   });
 
@@ -60,8 +66,22 @@ describe('AuditLogPage', () => {
     await screen.findByText('Updated Martha Akello’s role');
     await user.type(screen.getByLabelText('Search audit logs'), 'Martha');
     await user.click(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => {
+      expect(backendApi.auditLogs).toHaveBeenLastCalledWith(
+        'mock-token',
+        expect.objectContaining({ page: 0, size: 25, q: 'Martha' }),
+        expect.any(AbortSignal),
+      );
+    });
     await user.click(screen.getByRole('button', { name: 'Reset' }));
 
     expect(screen.getByLabelText('Search audit logs')).toHaveValue('');
+    await waitFor(() => {
+      expect(backendApi.auditLogs).toHaveBeenLastCalledWith(
+        'mock-token',
+        expect.objectContaining({ page: 0, size: 25, q: '', action: '', outcome: '', from: '', to: '' }),
+        expect.any(AbortSignal),
+      );
+    });
   });
 });

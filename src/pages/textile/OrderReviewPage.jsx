@@ -12,6 +12,17 @@ import {
 import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
 import { DemoPaymentButton } from './DemoPaymentButton';
 import { useUnauthorizedRedirect } from './helpers';
+import { API_BASE_URL } from '@/services/api-client';
+
+function isApiOriginPhoto(url) {
+  if (!url || url.startsWith('//')) return false;
+  try {
+    const apiOrigin = new URL(API_BASE_URL, window.location.href).origin;
+    return new URL(url, `${API_BASE_URL}/`).origin === apiOrigin;
+  } catch {
+    return false;
+  }
+}
 
 export function OrderReviewPage({ token, onUnauthorized }) {
   const orders = useTextileOrders(token);
@@ -21,6 +32,7 @@ export function OrderReviewPage({ token, onUnauthorized }) {
   const [query, setQuery] = useState('');
   const queue = useMemo(() => (orders.data ?? []).filter((order) => REVIEW_STATUSES.includes(order.status)), [orders.data]);
   const drafts = useMemo(() => (orders.data ?? []).filter((order) => order.status === 'DRAFT'), [orders.data]);
+  const mockTextileEnabled = import.meta.env.MODE === 'test' || import.meta.env.VITE_ENABLE_MOCKS === 'true';
   const visibleQueue = queue.filter((order) => matchesOrderSearch(order, query));
   const selectedId = searchParams.get('order') || queue[0]?.id || '';
 
@@ -55,7 +67,7 @@ export function OrderReviewPage({ token, onUnauthorized }) {
                 <span className="tx-row-status"><OrderStatus status={order.status} />{order.status === 'QUOTED' && <PaymentStatus status={order.payment.status} />}</span>
               </button>
             ))}
-            {drafts.length > 0 && (
+            {mockTextileEnabled && drafts.length > 0 && (
               <div className="tx-drafts">
                 <p className="eyebrow">DRAFTS</p>
                 {drafts.map((order) => <DraftRow key={order.id} token={token} order={order} onUnauthorized={onUnauthorized} />)}
@@ -167,6 +179,9 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
 
   const busy = sendQuote.isPending || requestDetails.isPending || sendBack.isPending || schedule.isPending;
   const actionError = sendQuote.error || requestDetails.error || sendBack.error || schedule.error;
+  const photo = order.photo
+    ? isApiOriginPhoto(order.photo.url) ? order.photo : { ...order.photo, url: null }
+    : null;
   const ignore = () => {};
 
   return (
@@ -183,7 +198,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
           <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
           <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
           <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-          <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} token={token} /></dd></div>
+          <div><dt>Reference photo</dt><dd><PhotoView photo={photo} token={token} /></dd></div>
         </dl>
         {order.status === 'AWAITING_DETAILS' && (
           <p className="tx-inline-note">Waiting for the customer: {order.history.at(-1)?.note}</p>

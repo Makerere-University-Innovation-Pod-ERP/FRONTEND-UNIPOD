@@ -8,6 +8,7 @@ import { PasskeySetupPanel } from './PasskeySetupPanel';
 afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('PasskeySetupPanel', () => {
@@ -33,6 +34,7 @@ describe('PasskeySetupPanel', () => {
     }));
     expect(options).toHaveBeenCalledWith('new-session-token', 'correct-password');
     expect(onDone).toHaveBeenCalledWith(session);
-    expect(localStorage.getItem('unipod.access-token')).toContain('new-session-token');
+    expect(sessionStorage.getItem('unipod.access-token')).toContain('new-session-token');
+    expect(localStorage.getItem('unipod.access-token')).toBeNull();
   });
 });

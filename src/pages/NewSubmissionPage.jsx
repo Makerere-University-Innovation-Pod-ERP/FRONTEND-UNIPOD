@@ -255,14 +255,14 @@ export function NewSubmissionPage({
     setStep((value) => Math.max(0, value - 1));
   }
 
-  function buildBody() {
+  async function buildBody() {
     return {
       category,
       title: title.trim(),
       purpose: purpose.trim(),
       problemAddressed: problemAddressed.trim(),
-      acceptedRulesVersion: computeAcceptedRulesVersion(
-        generalRules.filter((rule) => acceptedRuleIds.includes(rule.id)),
+      acceptedRulesVersion: await computeAcceptedRulesVersion(
+        generalRules.filter((rule) => rule.mustAccept && acceptedRuleIds.includes(rule.id)),
       ),
       ...(!isSubmitter && submitterId.trim() ? { submitterId: submitterId.trim() } : {}),
       ...(category === 'student'
@@ -307,9 +307,10 @@ export function NewSubmissionPage({
     setDraftNotice('');
     setSavingDraft(true);
     try {
+      const body = await buildBody();
       const saved = draftId
-        ? await backendApi.updateSubmission(token, draftId, buildBody())
-        : await backendApi.createSubmission(token, buildBody());
+        ? await backendApi.updateSubmission(token, draftId, body)
+        : await backendApi.createSubmission(token, body);
       await uploadNewDocuments(saved.id);
       setDraftId(saved.id);
       setDraftNotice('Draft saved. You can come back to finish it any time from My Submissions.');
@@ -328,9 +329,8 @@ export function NewSubmissionPage({
     }
     setError('');
     setBusy(true);
-    const body = buildBody();
-
     try {
+      const body = await buildBody();
       const created = draftId
         ? await backendApi.updateSubmission(token, draftId, body)
         : await backendApi.createSubmission(token, body);

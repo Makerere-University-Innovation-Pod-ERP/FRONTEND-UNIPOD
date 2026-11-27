@@ -19,7 +19,7 @@ import {
   initialSubmitterBookings,
   initialTimetableBlocks,
 } from './fixtures/bookings';
-import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
+import { initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
@@ -32,6 +32,8 @@ import {
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
 import { cncStockHandlers } from './cnc-handlers';
+import { equipment as initialTelecomEquipment } from './fixtures/telecoms';
+import { cncState } from './cnc-state';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -86,7 +88,6 @@ function updateTrainingParticipant(sessionId, participantId, change) {
 let mediaRequests = [...initialMediaRequests];
 let multimediaEquipment = [...initialEquipment];
 let facilities = [...initialFacilities];
-let cncJobs = [...initialCncJobs];
 const CNC_STAGES = ['NEW', 'QUOTED', 'PAYMENT_GATE', 'SCHEDULED', 'IN_PRODUCTION', 'READY', 'COLLECTED'];
 let bookings = [...initialBookings];
 const timetableBlocks = [...initialTimetableBlocks];
@@ -102,12 +103,20 @@ function bookingProblem(status, detail) {
 
 function updateBooking(id, change) {
   const index = bookings.findIndex((b) => b.id === id);
-  if (index === -1) return bookingProblem(404, 'Booking not found.');
-  const previous = bookings[index];
+  const submitterIndex = submitterBookings.findIndex((b) => b.id === id);
+  const inSubmitterScope = submitterIndex !== -1;
+  if (index === -1 && !inSubmitterScope) return bookingProblem(404, 'Booking not found.');
+  const collection = inSubmitterScope ? submitterBookings : bookings;
+  const collectionIndex = inSubmitterScope ? submitterIndex : index;
+  const previous = collection[collectionIndex];
   const result = change(previous);
   if (result.error) return bookingProblem(...result.error);
   const updated = { ...result, decidedAt: result.decidedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
-  bookings = bookings.map((b, i) => (i === index ? updated : b));
+  if (inSubmitterScope) {
+    submitterBookings = submitterBookings.map((b, i) => (i === submitterIndex ? updated : b));
+  } else {
+    bookings = bookings.map((b, i) => (i === index ? updated : b));
+  }
   const statusNotifications = {
     APPROVED: ['BOOKING_APPROVED', `Booking approved: ${updated.reference}`, `Your booking for ${updated.facilityName} has been approved.`],
     REJECTED: ['BOOKING_REJECTED', `Booking rejected: ${updated.reference}`, `Your booking for ${updated.facilityName} was rejected.`],
@@ -154,6 +163,8 @@ const createSubmitterBookingMocks = () => initialSubmitterBookings.map((booking)
 let submitterBookings = createSubmitterBookingMocks();
 let nextSubmitterBookingNumber = 1202;
 
+let telecomEquipmentMocks = initialTelecomEquipment.map((item) => ({ ...item }));
+
 // Reviewer decisions, keyed by submission id — GET /cases/:id/my-review
 // reads these back; a submitted decision is immutable, matching the real
 // POST /cases/{id}/reviews contract ("cannot be edited afterward").
@@ -194,22 +205,19 @@ function mockSubmitterEmail(request) {
   }
 }
 
-// submissions[].submitterId holds the short subject ("brian.s"), not the
-// login email mockSubmitterEmail() above returns — this mirrors that helper
-// but reads the token's `sub` claim, so a submitter's own self-created brief
-// gets an owner id the /me/submissions "mine" filter actually recognizes.
-function mockSubmitterSubject(request) {
+function mockIdentity(request) {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   const encodedPayload = token?.split('.')[1];
   if (!encodedPayload) return null;
   try {
-    const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
-    return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.sub === 'string'
-      ? payload.sub
-      : null;
+    return JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
   } catch {
     return null;
   }
+}
+
+function findSubmissionItem(id) {
+  return submissions.find((submission) => submission.id === id);
 }
 
 function findSubmitterInvoice(request, id) {
@@ -287,6 +295,60 @@ const toApiInvoice = (invoice) => {
     receipt,
   };
 };
+
+function submitterInvoiceToFinance(invoice) {
+  const status = {
+    WAITING_FOR_PROOF: 'Pending evidence',
+    WAITING_FOR_CHECK: 'Awaiting verification',
+    PAID: 'Verified',
+    RECEIPTED: 'Receipted',
+  }[invoice.status] ?? 'Pending evidence';
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.number,
+    title: invoice.description,
+    client: invoice.customerName,
+    amount: `UGX ${Number(invoice.amount || 0).toLocaleString()}`,
+    amountNumeric: Number(invoice.amount || 0),
+    status,
+    paymentReference: invoice.paymentProof?.reference ?? null,
+    paymentProofStatus: invoice.paymentProof?.status ?? null,
+    rejectionReason: invoice.paymentProof?.rejectionReason ?? null,
+    receiptNumber: invoice.receipt?.receiptNumber ?? null,
+  };
+}
+
+function syncSubmitterInvoiceFromFinance(invoice) {
+  const index = submitterInvoices.findIndex((item) => item.id === invoice.id);
+  if (index === -1) return;
+  const status = invoiceStatusMap[invoice.status] ?? 'WAITING_FOR_PROOF';
+  submitterInvoices[index] = {
+    ...submitterInvoices[index],
+    status,
+    statusLabel: invoice.status,
+    updatedAt: new Date().toISOString(),
+    paymentProof: invoice.paymentReference
+      ? {
+          ...(submitterInvoices[index].paymentProof ?? {}),
+          id: submitterInvoices[index].paymentProof?.id ?? `proof-${invoice.id}`,
+          reference: invoice.paymentReference,
+          amount: invoice.amountNumeric,
+          status: invoice.paymentProofStatus
+            ?? (status === 'PAID' || status === 'RECEIPTED' ? 'VERIFIED' : 'PENDING'),
+          rejectionReason: invoice.rejectionReason ?? null,
+        }
+      : submitterInvoices[index].paymentProof,
+    receipt: invoice.receiptNumber
+      ? {
+          id: crypto.randomUUID(),
+          invoiceId: invoice.id,
+          receiptNumber: invoice.receiptNumber,
+          issuedBy: 'Daniel Kato',
+          issuedAt: new Date().toISOString(),
+        }
+      : submitterInvoices[index].receipt,
+  };
+}
 
 // In-memory stores for admin/reception endpoints that aren't part of the
 // submissions fixture — mock-only state, reset on page reload.
@@ -450,6 +512,10 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/submissions`, async ({ request }) => {
     const body = await request.json();
+    const identity = mockIdentity(request);
+    const submitterId = identity?.roles?.includes('ROLE_SUBMITTER')
+      ? String(identity.sub || body.submitterId || '').trim() || null
+      : body.submitterId ?? null;
     const now = new Date().toISOString().slice(0, 10);
     const created = {
       id: `IH-${String(Date.now()).slice(-5)}`,
@@ -459,10 +525,7 @@ export const handlers = [
       purpose: String(body.purpose ?? ''),
       problemAddressed: String(body.problemAddressed ?? ''),
       registeredBy: 'Mock account',
-      // A submitter self-creates without passing submitterId (the backend
-      // derives ownership from the bearer token); staff pass it explicitly
-      // when creating on behalf of someone (Reception's assisted flow).
-      submitterId: body.submitterId ?? mockSubmitterSubject(request),
+      submitterId,
       receivingOfficer: null,
       assignedReviewerSubject: null,
       studentNumber: body.studentNumber ?? null,
@@ -734,11 +797,16 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
-    // Service requests are the same /submissions resource as briefs — the
-    // tab just filters by category, not a different table (§5.4).
-    const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
-      ? submissions.filter((item) => item.submitterId && item.category === 'service_request')
-      : submissions.filter((item) => item.submitterId && item.category !== 'service_request');
+    const identity = mockIdentity(request);
+    const submitterId = identity?.roles?.includes('ROLE_SUBMITTER')
+      ? identity.sub
+      : null;
+    if (!submitterId) return new HttpResponse(null, { status: 401 });
+    const serviceRequests = url.searchParams.get('tab') === 'SERVICE_REQUESTS';
+    const mine = submissions.filter((item) => (
+      item.submitterId === submitterId
+      && (serviceRequests ? item.category === 'service_request' : item.category !== 'service_request')
+    ));
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
   }),
@@ -769,13 +837,13 @@ export const handlers = [
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
 
   http.post(`${API_BASE_URL}/submissions/:id/documents`, async ({ params, request }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
     const document = {
@@ -793,7 +861,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/submissions/:id/documents/upload`, async ({ params, request }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const formData = await request.formData();
     const file = formData.get('file');
@@ -827,7 +895,7 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE_URL}/cases/:id/outcome`, async ({ params, request }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
     item.outcomeDecision = body.decision;
@@ -837,7 +905,7 @@ export const handlers = [
   }),
 
   http.patch(`${API_BASE_URL}/cases/:id/documents/:documentId`, async ({ params, request }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
     const list = documentsBySubmission[params.id] ?? [];
@@ -847,19 +915,19 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/cases/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
 
   http.get(`${API_BASE_URL}/cases/:id/transitions/allowed`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ allowedTransitions: toCaseFile(item).transitionOptions.allowedTransitions });
   }),
 
   http.post(`${API_BASE_URL}/cases/:id/transitions`, async ({ params, request }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = findSubmissionItem(params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
     if (body.to_stage === 'REFINEMENT_REQUESTED') {
@@ -925,18 +993,24 @@ export const handlers = [
     return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.get(`${API_BASE_URL}/queues/reviews`, () => HttpResponse.json({
-    items: submissions
-      .filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage))
-      .map((item) => ({
-        id: item.id,
-        code: item.code,
-        title: item.title,
-        category: item.category,
-        stage: item.stage,
-        assignedAt: item.forwardedAt ?? item.updatedAt,
-      })),
-  })),
+  http.get(`${API_BASE_URL}/queues/reviews`, ({ request }) => {
+    const identity = mockIdentity(request);
+    const reviewerSubject = identity?.roles?.includes('ROLE_REVIEWER') ? identity.sub : null;
+    if (!reviewerSubject) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({
+      items: submissions
+        .filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage))
+        .filter((item) => item.assignedReviewerSubject === reviewerSubject)
+        .map((item) => ({
+          id: item.id,
+          code: item.code,
+          title: item.title,
+          category: item.category,
+          stage: item.stage,
+          assignedAt: item.forwardedAt ?? item.updatedAt,
+        })),
+    });
+  }),
 
   http.post(`${API_BASE_URL}/cases/:id/reviews`, async ({ params, request }) => {
     const id = params.id;
@@ -1167,6 +1241,19 @@ export const handlers = [
     return HttpResponse.json(multimediaEquipment[index]);
   }),
 
+  http.post(`${API_BASE_URL}/operations/equipment/:id/mark-working`, async ({ params, request }) => {
+    const index = multimediaEquipment.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json().catch(() => ({}));
+    multimediaEquipment[index] = {
+      ...multimediaEquipment[index],
+      state: 'AVAILABLE',
+      note: body.note?.trim() || 'Marked working',
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    return HttpResponse.json(multimediaEquipment[index]);
+  }),
+
   // Facilities, bookings, equipment allocations and timetable
   http.get(`${API_BASE_URL}/facilities`, () => HttpResponse.json(facilities)),
 
@@ -1221,6 +1308,10 @@ export const handlers = [
       && overlaps(booking.startsAt, booking.endsAt, body.startsAt, body.endsAt)
     ));
     if (conflicts) return bookingProblem(409, 'The facility is already booked for that time.');
+    if (timetableBlocks.some((block) => block.facility_id === facility.id
+      && overlaps(block.starts_at, block.ends_at, body.startsAt, body.endsAt))) {
+      return bookingProblem(409, 'The selected time clashes with a scheduled timetable block.');
+    }
 
     const now = new Date().toISOString();
     const sequence = nextSubmitterBookingNumber++;
@@ -1289,7 +1380,7 @@ export const handlers = [
     const url = new URL(request.url);
     const date = url.searchParams.get('date');
     const status = url.searchParams.get('status');
-    const items = bookings
+    const items = [...bookings, ...submitterBookings]
       .filter((b) => !status || b.status === status)
       .filter((b) => !date || b.startsAt.slice(0, 10) === date || (b.startsAt.slice(0, 10) <= date && b.endsAt.slice(0, 10) >= date))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -1403,8 +1494,8 @@ export const handlers = [
 
   // CNC & Carpentry orders
   http.get(`${API_BASE_URL}/departments/cnc/orders`, () => {
-    const columns = Object.fromEntries(CNC_STAGES.map((stage) => [stage, cncJobs.filter((j) => j.stage === stage)]));
-    return HttpResponse.json({ department: 'CNC', columns, page: 0, size: 100, totalElements: cncJobs.length, totalPages: 1 });
+    const columns = Object.fromEntries(CNC_STAGES.map((stage) => [stage, cncState.jobs.filter((j) => j.stage === stage)]));
+    return HttpResponse.json({ department: 'CNC', columns, page: 0, size: 100, totalElements: cncState.jobs.length, totalPages: 1 });
   }),
 
   http.post(`${API_BASE_URL}/departments/cnc/orders`, async ({ request }) => {
@@ -1413,7 +1504,7 @@ export const handlers = [
     const now = new Date().toISOString();
     const created = {
       id: `cnc-${Date.now()}`,
-      code: `ORD-CNC-2026-${String(cncJobs.length + 1).padStart(6, '0')}`,
+      code: `ORD-CNC-2026-${String(cncState.jobs.length + 1).padStart(6, '0')}`,
       department: 'CNC',
       customerId: 'cnc@unipod.test',
       title: body.title,
@@ -1427,23 +1518,23 @@ export const handlers = [
       stageHistory: [{ stage: 'NEW', at: now, by: 'cnc@unipod.test', notes: 'Order created' }],
       createdBy: 'cnc@unipod.test', createdAt: now, updatedAt: now,
     };
-    cncJobs = [created, ...cncJobs];
+    cncState.jobs = [created, ...cncState.jobs];
     return HttpResponse.json(created, { status: 201 });
   }),
 
   http.post(`${API_BASE_URL}/departments/cnc/orders/:id/quote`, async ({ params, request }) => {
     const { quote } = await request.json();
-    const current = cncJobs.find((j) => j.id === params.id);
+    const current = cncState.jobs.find((j) => j.id === params.id);
     if (!current) return bookingProblem(404, 'Order not found.');
     if (!quote || !(quote.amount > 0)) return bookingProblem(400, 'quote.amount must be > 0.');
     const updated = { ...current, quote, quoteSubmittedAt: new Date().toISOString(), quotedBy: 'cnc@unipod.test', invoiceId: `inv-${current.id}`, invoiceStatus: 'WAITING_FOR_PROOF' };
-    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
+    cncState.jobs = cncState.jobs.map((j) => (j.id === current.id ? updated : j));
     return HttpResponse.json(updated);
   }),
 
   http.patch(`${API_BASE_URL}/departments/cnc/orders/:id/stage`, async ({ params, request }) => {
     const body = await request.json();
-    const current = cncJobs.find((j) => j.id === params.id);
+    const current = cncState.jobs.find((j) => j.id === params.id);
     if (!current) return bookingProblem(404, 'Order not found.');
     const target = String(body.stage ?? '').toUpperCase();
     if (!CNC_STAGES.includes(target)) return bookingProblem(400, `Invalid stage '${target}' for department CNC.`);
@@ -1466,7 +1557,7 @@ export const handlers = [
       stageHistory: [...current.stageHistory, { stage: target, at: now, by: 'cnc@unipod.test', notes: body.notes ?? null }],
       updatedAt: now,
     };
-    cncJobs = cncJobs.map((j) => (j.id === current.id ? updated : j));
+    cncState.jobs = cncState.jobs.map((j) => (j.id === current.id ? updated : j));
     return HttpResponse.json(updated);
   }),
 
@@ -1601,7 +1692,7 @@ export const handlers = [
       : new HttpResponse(null, { status: result.status });
   }),
 
-  http.post(`${API_BASE_URL}/me/invoices/:id/proof`, ({ params, request }) => {
+  http.post(`${API_BASE_URL}/me/invoices/:id/proof`, async ({ params, request }) => {
     const result = findSubmitterInvoice(request, params.id);
     if (!result.invoice) return new HttpResponse(null, { status: result.status });
     const index = submitterInvoices.findIndex((invoice) => invoice.id === params.id);
@@ -1610,6 +1701,8 @@ export const handlers = [
       return HttpResponse.json({ detail: 'Payment proof is no longer accepted for this invoice.' }, { status: 409 });
     }
 
+    const formData = await request.formData();
+    const file = formData.get('file');
     const updated = {
       ...invoice,
       status: 'WAITING_FOR_CHECK',
@@ -1617,12 +1710,12 @@ export const handlers = [
       updatedAt: new Date().toISOString(),
       paymentProof: {
         id: '00000000-0000-4000-8000-000000000304',
-        reference: 'DEMO-PAYMENT-REFERENCE',
-        amount: invoice.amount,
-        paidOn: '2026-11-18',
-        contentType: 'application/pdf',
-        fileSize: 1024,
-        originalFilename: 'payment-proof.pdf',
+        reference: String(formData.get('reference') ?? ''),
+        amount: Number(formData.get('amount') ?? invoice.amount),
+        paidOn: String(formData.get('paidOn') ?? new Date().toISOString().slice(0, 10)),
+        contentType: file instanceof File && file.type ? file.type : 'application/octet-stream',
+        fileSize: file instanceof File ? file.size : 0,
+        originalFilename: file instanceof File ? file.name : null,
         status: 'PENDING',
         rejectionReason: null,
         uploadedBy: invoice.customerEmail,
@@ -1632,6 +1725,13 @@ export const handlers = [
       },
     };
     submitterInvoices[index] = updated;
+    const financeIndex = invoices.findIndex((item) => item.id === updated.id);
+    if (financeIndex === -1) {
+      invoices = [submitterInvoiceToFinance(updated), ...invoices];
+    } else {
+      invoices[financeIndex] = submitterInvoiceToFinance(updated);
+      syncSubmitterInvoiceFromFinance(invoices[financeIndex]);
+    }
     return HttpResponse.json(updated, { status: 201 });
   }),
 
@@ -1696,12 +1796,17 @@ export const handlers = [
   http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const submitterFinanceInvoices = submitterInvoices.map(submitterInvoiceToFinance);
+    const allInvoices = [...invoices];
+    submitterFinanceInvoices.forEach((submitterInvoice) => {
+      if (!allInvoices.some((item) => item.id === submitterInvoice.id)) allInvoices.push(submitterInvoice);
+    });
     const filtered = status
-      ? invoices.filter((inv) => {
+      ? allInvoices.filter((inv) => {
           const mapped = invoiceStatusMap[inv.status];
           return mapped === status;
         })
-      : invoices;
+      : allInvoices;
 
     return HttpResponse.json({
       items: filtered.map(toApiInvoice),
@@ -1714,13 +1819,15 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/invoices/:id`, ({ params }) => {
     const id = params.id;
-    const invoice = invoices.find((item) => item.id === id);
+    const invoice = invoices.find((item) => item.id === id)
+      ?? submitterInvoices.map(submitterInvoiceToFinance).find((item) => item.id === id);
     if (!invoice) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toApiInvoice(invoice));
   }),
 
   http.get(`${API_BASE_URL}/invoices/:id/proof/file`, ({ params }) => {
-    const invoice = invoices.find((item) => item.id === params.id);
+    const invoice = invoices.find((item) => item.id === params.id)
+      ?? submitterInvoices.map(submitterInvoiceToFinance).find((item) => item.id === params.id);
     if (!invoice?.paymentReference) return new HttpResponse(null, { status: 404 });
     return new HttpResponse(new Blob([`Payment proof for ${invoice.invoiceNumber}`]), {
       headers: { 'Content-Type': 'application/octet-stream' },
@@ -1738,7 +1845,14 @@ export const handlers = [
   http.post(`${API_BASE_URL}/invoices/:id/verify`, async ({ params, request }) => {
     const id = params.id;
     const url = new URL(request.url);
-    const index = invoices.findIndex((inv) => inv.id === id);
+    let index = invoices.findIndex((inv) => inv.id === id);
+    if (index === -1) {
+      const submitterInvoice = submitterInvoices.find((inv) => inv.id === id);
+      if (submitterInvoice) {
+        invoices = [submitterInvoiceToFinance(submitterInvoice), ...invoices];
+        index = 0;
+      }
+    }
     if (index === -1) return new HttpResponse(null, { status: 404 });
 
     const proofId = url.searchParams.get('proofId');
@@ -1750,6 +1864,7 @@ export const handlers = [
     }
 
     invoices[index] = { ...invoices[index], status: 'Verified', paymentReference: invoices[index].paymentReference || 'BANK-REF-AUTOUPLOAD' };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(toApiInvoice(invoices[index]));
   }),
 
@@ -1767,6 +1882,7 @@ export const handlers = [
       paymentProofStatus: 'REJECTED',
       rejectionReason: body.reason,
     };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(toApiInvoice(invoices[index]));
   }),
 
@@ -1782,6 +1898,7 @@ export const handlers = [
     }
     const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
     invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(toApiInvoice(invoices[index]));
   }),
 
@@ -1797,6 +1914,7 @@ export const handlers = [
       status: 'Awaiting verification',
       paymentReference,
     };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(toApiInvoice(invoices[index]));
   }),
 
@@ -1842,6 +1960,7 @@ export const handlers = [
     const index = invoices.findIndex((inv) => inv.id === id);
     if (index === -1) return new HttpResponse(null, { status: 404 });
     invoices[index] = { ...invoices[index], status: 'Verified' };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(invoices[index]);
   }),
 
@@ -1857,6 +1976,7 @@ export const handlers = [
     }
     const receiptNumber = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
     invoices[index] = { ...invoices[index], status: 'Receipted', receiptNumber };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(invoices[index]);
   }),
 
@@ -1870,8 +1990,25 @@ export const handlers = [
       status: 'Awaiting verification',
       paymentReference: body.paymentReference || 'BANK-REF-AUTOUPLOAD',
     };
+    syncSubmitterInvoiceFromFinance(invoices[index]);
     return HttpResponse.json(invoices[index]);
   }),
+  http.get(`${API_BASE_URL}/telecoms/equipment`, () => HttpResponse.json({ items: telecomEquipmentMocks })),
+
+  http.post(`${API_BASE_URL}/telecoms/equipment/:id/mark-working`, async ({ params, request }) => {
+    const item = telecomEquipmentMocks.find((candidate) => candidate.id === params.id);
+    if (!item) return HttpResponse.json({ message: 'Equipment not found.' }, { status: 404 });
+    const body = await request.json().catch(() => ({}));
+    const updated = {
+      ...item,
+      state: 'AVAILABLE',
+      note: body.note?.trim() || 'Marked working',
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    telecomEquipmentMocks = telecomEquipmentMocks.map((candidate) => candidate.id === item.id ? updated : candidate);
+    return HttpResponse.json(updated);
+  }),
+
   ...textileHandlers,
   ...telecomsHandlers,
   ...cncStockHandlers,

@@ -41,6 +41,7 @@ export function AdminManagementPage({
 
   const selectedSector = sectors.find((sector) => sector.id === selectedId) ?? null;
   const selectedDepartment = departments.find((department) => department.id === departmentId) ?? null;
+  const activeSectors = sectors.filter((sector) => sector.active);
   const loadAdminData = useCallback(async () => {
     try {
       const [currentDepartments, currentRoles, currentPermissions] = await Promise.all([
@@ -181,11 +182,6 @@ export function AdminManagementPage({
       setSectors((current) => selectedSector
         ? current.map((sector) => sector.id === updated.id ? updated : sector)
         : [...current, updated].sort((a, b) => a.name.localeCompare(b.name)));
-      setDepartments((current) => {
-        const remaining = current.filter((department) => department.id !== updated.id);
-        if (updated.active) remaining.push({ id: updated.id, name: updated.name, active: true });
-        return remaining.sort((a, b) => a.name.localeCompare(b.name));
-      });
       setSelectedId(updated.id);
       setNotice(selectedSector ? 'Sector settings saved.' : 'Sector created.');
     } catch (reason) {
@@ -270,10 +266,10 @@ export function AdminManagementPage({
       <section className="live-panel management-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">ORGANIZATION</p><h2>Staff assignment areas</h2></div></div>
         <p className="management-help">Assign one or more active sectors to staff in the directory. Create or update assignment areas in Sector Routing below.</p>
-        {loadingAdmin
+        {loadingAdmin || loadingSectors
           ? <div className="live-loading"><LoaderCircle className="spin" size={18} />Loading assignment areas…</div>
-          : departments.length
-            ? <div className="management-assignment-areas">{departments.map((item) => <span key={item.id}>{item.name}</span>)}</div>
+          : activeSectors.length
+            ? <div className="management-assignment-areas">{activeSectors.map((sector) => <span key={sector.id}>{sector.name}</span>)}</div>
             : <p className="live-empty">No active assignment areas are available.</p>}
       </section>
 

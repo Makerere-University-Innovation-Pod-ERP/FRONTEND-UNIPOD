@@ -4,6 +4,27 @@
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme inline {
+  --color-mak-red-500: var(--mak-red-500);
+  --color-mak-red-600: var(--mak-red-600);
+  --color-mak-red-700: var(--mak-red-700);
+  --color-mak-red-800: var(--mak-red-800);
+  --color-mak-red-tint: var(--mak-red-tint);
+  --color-mak-black-900: var(--mak-black-900);
+  --color-mak-black-800: var(--mak-black-800);
+  --color-mak-green-500: var(--mak-green-500);
+  --color-mak-green-600: var(--mak-green-600);
+  --color-mak-green-tint: var(--mak-green-tint);
+  --color-mak-card-green: var(--mak-card-green);
+  --color-mak-gold-500: var(--mak-gold-500);
+  --color-mak-gold-700: var(--mak-gold-700);
+  --color-mak-gold-tint: var(--mak-gold-tint);
+  --color-mak-silver-100: var(--mak-silver-100);
+  --color-mak-silver-300: var(--mak-silver-300);
+  --color-mak-silver-500: var(--mak-silver-500);
+  --color-mak-silver-700: var(--mak-silver-700);
+}
+
 :root {
   /* Mapped onto the Mak palette: red = primary emphasis, black = text,
      silver = neutral surfaces/borders. See styles/tokens.css for the
