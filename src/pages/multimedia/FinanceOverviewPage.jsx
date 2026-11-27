@@ -25,7 +25,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton';
  * month-to-date income analytics, live facility occupancy, and recent activity log.
  */
 export function FinanceOverviewPage({ token, onUnauthorized }) {
-  const { data: overview, isLoading, error } = useFinanceOverview(token);
+  const { data: overview, isLoading, isError, error, refetch } = useFinanceOverview(token);
 
   // Modal interaction states
   const [selectedAttentionItem, setSelectedAttentionItem] = useState(null);
@@ -39,6 +39,17 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
 
   if (isLoading && !overview) {
     return <LoadingSkeleton label="Loading finance and operational overview…" variant="dashboard" />;
+  }
+
+  if (isError) {
+    return (
+      <div className="api-error api-error-banner" role="alert">
+        <span>{error instanceof Error ? error.message : 'Could not load the finance overview.'}</span>
+        <button type="button" className="btn btn-outline" onClick={() => void refetch()}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   const {

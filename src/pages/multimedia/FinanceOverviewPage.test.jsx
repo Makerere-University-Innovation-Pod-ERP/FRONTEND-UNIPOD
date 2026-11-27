@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { financeOverviewApi } from '@/services/overview';
 import { FinanceOverviewPage } from './FinanceOverviewPage';
 
 function renderPage() {
@@ -99,4 +100,16 @@ describe('FinanceOverviewPage', () => {
     expect(screen.getByText('Martha Akello')).toBeInTheDocument();
     expect(screen.getByText('Amina Ssemanda')).toBeInTheDocument();
   });
+
+  it('shows a retry action when the overview request fails', async () => {
+    vi.spyOn(financeOverviewApi, 'getOverview').mockRejectedValueOnce(new Error('network down'));
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByText('network down')).toBeInTheDocument();
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });

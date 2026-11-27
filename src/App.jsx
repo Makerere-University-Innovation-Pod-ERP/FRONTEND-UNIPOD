@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackendWorkspace } from '@/components/BackendWorkspace';
 import {
@@ -37,6 +37,8 @@ import { RulesManagerPage } from '@/pages/RulesManagerPage';
 import { NewSubmissionPage } from '@/pages/NewSubmissionPage';
 import { BriefSubmittedPage } from '@/pages/BriefSubmittedPage';
 import { SubmissionDetailPage } from '@/pages/SubmissionDetailPage';
+import { SubmissionConfirmationPage } from '@/pages/SubmissionConfirmationPage';
+import { SubmitterBriefPage } from '@/pages/SubmitterBriefPage';
 import { RespondToRequestPage } from '@/pages/RespondToRequestPage';
 import { MySubmissionsPage } from '@/pages/MySubmissionsPage';
 import {
@@ -108,6 +110,16 @@ import { ApiError, backendApi } from '@/services/backend-api';
 import './api.css';
 
 const queryClient = new QueryClient();
+
+function SubmissionWorkspaceRoute({ session, onUnauthorized }) {
+  const { id = '' } = useParams();
+  const hasIntakeRole = session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role));
+  const isSubmitterOnly = session.roles.includes('ROLE_SUBMITTER') && !hasIntakeRole;
+  if (id.startsWith('local-') || isSubmitterOnly) {
+    return <SubmitterBriefPage key={id} session={session} onUnauthorized={onUnauthorized} />;
+  }
+  return <SubmissionDetailPage key={id} session={session} onUnauthorized={onUnauthorized} />;
+}
 
 // `npm run dev:textile` runs the app as the Textile Operations screens only:
 // no login, no dashboard, every other route redirects to the order board.
@@ -315,7 +327,8 @@ function AuthenticatedApp({
           <Route path="/rules/manager" element={isAdministrator ? <RulesManagerPage token={session.accessToken} /> : <AccessRestricted label="The department rules manager is only available to administrators." />} />
           <Route path="/submissions/new" element={mayCreateSubmission ? <NewSubmissionPage token={session.accessToken} onUnauthorized={onLogout} isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
           <Route path="/submissions/new/confirmation" element={mayCreateSubmission ? <BriefSubmittedPage isSubmitter={session.roles.includes('ROLE_SUBMITTER')} /> : <AccessRestricted label="Your account cannot create submissions." />} />
-          <Route path="/submissions/:id" element={<SubmissionDetailPage session={session} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/:id/confirmation" element={<SubmissionConfirmationPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} />} />
+          <Route path="/submissions/:id" element={<SubmissionWorkspaceRoute session={session} onUnauthorized={onLogout} />} />
           <Route path="/submissions/:id/respond" element={session.roles.includes('ROLE_SUBMITTER') ? <RespondToRequestPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           {/* Reception (Assignment 3 - Peter Arnold Mukasa) */}
           <Route path="/reception/home" element={reception(ReceptionHomePage)} />
