@@ -64,7 +64,7 @@ export function OrderBoardPage({ token, onUnauthorized }) {
       </PageHeading>
       <ErrorBanner error={orders.error} fallback="Could not load the order board." />
       {sentBack > 0 && <p className="tx-inline-note">{sentBack} order{sentBack === 1 ? ' was' : 's were'} sent back to reception and {sentBack === 1 ? 'is' : 'are'} not shown.</p>}
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" variant="board" columns={columns.length} /> : (
         <>
           <div className="tx-filters">
             <input

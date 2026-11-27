@@ -25,6 +25,8 @@ import {
 } from '@/lib/permissions';
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
+import { NotificationsPage } from '@/pages/NotificationsPage';
+import { NotificationRecordRedirectPage } from '@/pages/NotificationRecordRedirectPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
 import { ReceptionQueuePage } from '@/pages/ReceptionQueuePage';
@@ -40,6 +42,7 @@ import {
   SubmitterInvoicesPage,
   SubmitterServiceRequestsPage,
 } from '@/pages/SubmitterSectionPage';
+import { SubmitterMediaDeliveryPage } from '@/pages/SubmitterMediaDeliveryPage';
 import { FactFindingOverview } from '@/pages/fact-finding/FactFindingOverview';
 import { FactFindingWorkspace } from '@/pages/fact-finding/FactFindingWorkspace';
 import { FactFindingCaseFile } from '@/pages/fact-finding/FactFindingCaseFile';
@@ -92,6 +95,7 @@ import { MachineBookingPage as CncMachineBookingPage } from '@/pages/cnc/Machine
 import { MachineListPage as CncMachineListPage } from '@/pages/cnc/MachineListPage';
 import { SafetyCoursePage as CncSafetyCoursePage } from '@/pages/cnc/SafetyCoursePage';
 import { StockListPage as CncStockListPage } from '@/pages/cnc/StockListPage';
+import { StockMovementPage as CncStockMovementPage } from '@/pages/cnc/StockMovementPage';
 import { ReceptionHomePage } from '@/pages/reception/ReceptionHomePage';
 import { BriefCheckPage } from '@/pages/reception/BriefCheckPage';
 import { MissingDocumentsPage } from '@/pages/reception/MissingDocumentsPage';
@@ -107,6 +111,18 @@ const queryClient = new QueryClient();
 // no login, no dashboard, every other route redirects to the order board.
 const TEXTILE_ONLY = import.meta.env.MODE === 'textile';
 const TEXTILE_HOME = '/textile/board';
+const TRAINING_READ_ROLES = new Set([
+  'ROLE_ADMINISTRATOR',
+  'ROLE_DEPARTMENT_COORDINATOR',
+  'ROLE_INNOVATION_COORDINATOR',
+  'ROLE_RECEPTIONIST',
+  'ROLE_FACT_FINDING_OFFICER',
+  'ROLE_REVIEWER',
+  'ROLE_SECTOR_OFFICER',
+  'ROLE_IP_LIAISON',
+  'ROLE_FINANCE_OFFICER',
+  'ROLE_OBSERVER',
+]);
 
 async function textileMockSession() {
   const { makeMockToken } = await import('@/mocks/jwt');
@@ -148,6 +164,32 @@ function AuthenticatedApp({
   const canFinance = isFinanceOfficer(session.roles);
   const canMultimedia = isMultimediaOfficer(session.roles);
   const isAdministrator = session.roles.includes('ROLE_ADMINISTRATOR');
+  const canManageEquipment = isAdministrator || session.roles.includes('ROLE_DEPARTMENT_COORDINATOR');
+  const canReadTraining = session.roles.some((role) => TRAINING_READ_ROLES.has(role));
+  const canReadPartners = session.roles.some((role) => [
+    'ROLE_ADMINISTRATOR',
+    'ROLE_DEPARTMENT_COORDINATOR',
+    'ROLE_INNOVATION_COORDINATOR',
+    'ROLE_RECEPTIONIST',
+    'ROLE_FACT_FINDING_OFFICER',
+    'ROLE_REVIEWER',
+    'ROLE_SECTOR_OFFICER',
+    'ROLE_IP_LIAISON',
+    'ROLE_FINANCE_OFFICER',
+    'ROLE_OBSERVER',
+  ].includes(role));
+  const canReadMedia = canMultimedia || session.roles.some((role) => [
+    'ROLE_ADMINISTRATOR',
+    'ROLE_DEPARTMENT_COORDINATOR',
+    'ROLE_INNOVATION_COORDINATOR',
+    'ROLE_RECEPTIONIST',
+    'ROLE_FACT_FINDING_OFFICER',
+    'ROLE_REVIEWER',
+    'ROLE_SECTOR_OFFICER',
+    'ROLE_IP_LIAISON',
+    'ROLE_FINANCE_OFFICER',
+    'ROLE_OBSERVER',
+  ].includes(role));
   const mayCreateSubmission = canCreateSubmission(session.roles);
   const reception = (Page) => (canReception
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
@@ -158,16 +200,37 @@ function AuthenticatedApp({
   const textile = (Page) => (canTextile
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Textile Operations is only available to the Textile domain owner." />);
-  const finance = (Page) => (canFinance
+  const finance = (Page) => (canFinance || isAdministrator
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
-    : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />);
+    : <AccessRestricted label="Finance screens are only available to Finance officers and administrators." />);
   const multimedia = (Page) => (canMultimedia
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Multimedia screens are only available to the Multimedia officer." />);
+  const training = (Page, props = {}) => (canReadTraining
+    ? <Page token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} {...props} />
+    : <AccessRestricted label="Your account cannot view training sessions." />);
+  const cncSafety = (Page) => (canCnc || canReadTraining
+    ? <Page token={session.accessToken} roles={session.roles} canReadTraining={canReadTraining} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Your account cannot view training sessions." />);
   const submitter = (Page) => (session.roles.includes('ROLE_SUBMITTER')
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="This page is for submitter accounts." />);
   const canTelecoms = isTelecomsDomainOwner(session.roles) || isAdministrator;
+  const telecomsEquipment = (Page) => (canTelecoms || canManageEquipment
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Equipment management access is required." />);
+  const multimediaEquipment = (Page) => (canMultimedia || canManageEquipment
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Equipment management access is required." />);
+  const textileEquipment = (Page) => (canTextile || canManageEquipment
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Equipment management access is required." />);
+  const cncEquipment = (Page) => (canCnc || canManageEquipment
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Equipment management access is required." />);
+  const mediaPage = (Page) => (canReadMedia
+    ? <Page token={session.accessToken} onUnauthorized={onLogout} />
+    : <AccessRestricted label="Your account cannot access media operations." />);
   const telecoms = (Page) => (canTelecoms
     ? <Page token={session.accessToken} onUnauthorized={onLogout} />
     : <AccessRestricted label="Telecoms Operations is only available to the Telecoms domain owner." />);
@@ -196,11 +259,14 @@ function AuthenticatedApp({
               <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
               <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
               <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
+              <Route path="/notifications/open/:entityType/:entityId" element={<NotificationRecordRedirectPage token={session.accessToken} onUnauthorized={onLogout} />} />
+              <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} />} />
               <Route path="*" element={<Navigate to="/telecoms/requests" replace />} />
             </>
           ) : (
             <>
               {TEXTILE_ONLY ? null : <>
+          <Route path="/overview" element={<Navigate to="/" replace />} />
           <Route path="/" element={
             getRoleLandingPath(session.roles) === '/'
               ? <LiveDashboard token={session.accessToken} roles={session.roles} subject={session.subject} onUnauthorized={onLogout} />
@@ -210,22 +276,22 @@ function AuthenticatedApp({
           {/* Multimedia & Finance Domain (Ssebyala Denis Ntendo) */}
           <Route path="/finance/overview" element={finance(FinanceOverviewPage)} />
           <Route path="/finance" element={finance(FinanceOverviewPage)} />
-          <Route path="/multimedia/training" element={multimedia(TrainingMentorshipPage)} />
-          <Route path="/operations/training" element={multimedia(TrainingMentorshipPage)} />
-          <Route path="/training" element={multimedia(TrainingMentorshipPage)} />
-          <Route path="/multimedia/media" element={multimedia(MediaServicesPage)} />
-          <Route path="/operations/media" element={multimedia(MediaServicesPage)} />
-          <Route path="/media" element={multimedia(MediaServicesPage)} />
+          <Route path="/multimedia/training" element={training(TrainingMentorshipPage)} />
+          <Route path="/operations/training" element={training(TrainingMentorshipPage)} />
+          <Route path="/training" element={training(TrainingMentorshipPage)} />
+          <Route path="/multimedia/media" element={mediaPage(MediaServicesPage)} />
+          <Route path="/operations/media" element={mediaPage(MediaServicesPage)} />
+          <Route path="/media" element={mediaPage(MediaServicesPage)} />
           <Route path="/multimedia/mentorship" element={multimedia(StudentsFollowedUpPage)} />
-          <Route path="/multimedia/equipment" element={multimedia(MultimediaEquipmentListPage)} />
-          <Route path="/multimedia/equipment/report-fault" element={multimedia(MultimediaReportFaultPage)} />
-          <Route path="/multimedia/equipment/lending" element={multimedia(MultimediaEquipmentLendingPage)} />
+          <Route path="/multimedia/equipment" element={multimediaEquipment(MultimediaEquipmentListPage)} />
+          <Route path="/multimedia/equipment/report-fault" element={multimediaEquipment(MultimediaReportFaultPage)} />
+          <Route path="/multimedia/equipment/lending" element={multimediaEquipment(MultimediaEquipmentLendingPage)} />
           <Route path="/multimedia/podcast" element={multimedia(PodcastBookingPage)} />
           <Route path="/multimedia/contracts" element={multimedia(ContractsPage)} />
-          <Route path="/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
-          <Route path="/multimedia/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
-          <Route path="/operations/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
-          <Route path="/finance/partners" element={canFinance ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Finance & Partners screens are only available to the Finance officer." />} />
+          <Route path="/partners" element={canReadPartners ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view partners." />} />
+          <Route path="/multimedia/partners" element={canReadPartners ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view partners." />} />
+          <Route path="/operations/partners" element={canReadPartners ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view partners." />} />
+          <Route path="/finance/partners" element={canReadPartners ? <PartnersMousPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view partners." />} />
           <Route path="/finance/invoices" element={finance(PriceListsInvoicesPage)} />
           <Route path="/finance/prices" element={finance(PriceListsInvoicesPage)} />
           <Route path="/invoices" element={finance(PriceListsInvoicesPage)} />
@@ -238,6 +304,7 @@ function AuthenticatedApp({
           <Route path="/my-submissions" element={session.roles.includes('ROLE_SUBMITTER') ? <MySubmissionsPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="This page is for submitter accounts." />} />
           <Route path="/my-submissions/service-requests" element={submitter(SubmitterServiceRequestsPage)} />
           <Route path="/my-submissions/invoices" element={submitter(SubmitterInvoicesPage)} />
+          <Route path="/my-submissions/media/:id" element={submitter(SubmitterMediaDeliveryPage)} />
           <Route path="/my-submissions/bookings" element={submitter(SubmitterBookingsPage)} />
           <Route path="/reception" element={session.roles.some((role) => SUBMISSION_INTAKE_ROLES.includes(role)) ? <ReceptionQueuePage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Your account cannot view the reception queue." />} />
           <Route path="/management" element={session.roles.includes('ROLE_ADMINISTRATOR') ? <AdminManagementPage token={session.accessToken} onUnauthorized={onLogout} /> : <AccessRestricted label="Administrator access is required." />} />
@@ -273,19 +340,21 @@ function AuthenticatedApp({
           <Route path="/cnc/review" element={cnc(CncDesignCheckPage)} />
           <Route path="/cnc/board" element={cnc(CncJobBoardPage)} />
           <Route path="/cnc/jobs/:id" element={cnc(CncJobPage)} />
-          <Route path="/cnc/machines" element={cnc(CncMachineListPage)} />
+          <Route path="/cnc/machines" element={cncEquipment(CncMachineListPage)} />
           <Route path="/cnc/machines/book" element={cnc(CncMachineBookingPage)} />
-          <Route path="/cnc/safety" element={cnc(CncSafetyCoursePage)} />
+          <Route path="/cnc/safety" element={cncSafety(CncSafetyCoursePage)} />
+          <Route path="/cnc/stock" element={cncEquipment(CncStockListPage)} />
+          <Route path="/cnc/stock/movements" element={cncEquipment(CncStockMovementPage)} />
           <Route path="/cnc/stock" element={cnc(CncStockListPage)} />
           <Route path="/textile/orders/new" element={textile(NewOrderPage)} />
           <Route path="/textile/review" element={textile(OrderReviewPage)} />
           <Route path="/textile/board" element={textile(OrderBoardPage)} />
           <Route path="/textile/orders" element={textile(OrdersIndexPage)} />
           <Route path="/textile/orders/:id" element={textile(OrderPage)} />
-          <Route path="/textile/stock" element={textile(StockListPage)} />
-          <Route path="/textile/stock/movements" element={textile(StockMovementPage)} />
-          <Route path="/textile/machines" element={textile(MachineListPage)} />
-          <Route path="/textile/machines/report" element={textile(ReportFaultPage)} />
+          <Route path="/textile/stock" element={textileEquipment(StockListPage)} />
+          <Route path="/textile/stock/movements" element={textileEquipment(StockMovementPage)} />
+          <Route path="/textile/machines" element={textileEquipment(MachineListPage)} />
+          <Route path="/textile/machines/report" element={textileEquipment(ReportFaultPage)} />
           <Route path="/textile/bookings" element={textile(WorkshopBookingPage)} />
           {/* Telecoms Operations (Domain 6: Assignment 11) */}
           <Route path="/telecoms/requests/new" element={telecoms(NewRequestPage)} />
@@ -294,11 +363,13 @@ function AuthenticatedApp({
           <Route path="/telecoms/requests" element={telecoms(RequestsIndexPage)} />
           <Route path="/telecoms/requests/:id" element={telecoms(RequestPage)} />
           <Route path="/telecoms/lab-booking" element={telecoms(LabBookingPage)} />
-          <Route path="/telecoms/equipment" element={telecoms(EquipmentListPage)} />
-          <Route path="/telecoms/equipment/lending" element={telecoms(EquipmentLendingPage)} />
+          <Route path="/telecoms/equipment" element={telecomsEquipment(EquipmentListPage)} />
+          <Route path="/telecoms/equipment/lending" element={telecomsEquipment(EquipmentLendingPage)} />
           <Route path="/telecoms/bootcamps" element={telecoms(BootcampSessionsPage)} />
-          <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
-          <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
+          <Route path="/telecoms/stock" element={telecomsEquipment(TelecomsStockListPage)} />
+          <Route path="/telecoms/stock/movements" element={telecomsEquipment(TelecomsStockMovementPage)} />
+          <Route path="/notifications/open/:entityType/:entityId" element={<NotificationRecordRedirectPage token={session.accessToken} onUnauthorized={onLogout} />} />
+          <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} />} />
           {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
             <Route key={href} path={href} element={<OtherModulePage title={label} />} />
           ))}

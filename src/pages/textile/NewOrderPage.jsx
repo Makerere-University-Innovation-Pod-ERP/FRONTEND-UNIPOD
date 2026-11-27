@@ -24,7 +24,7 @@ export function NewOrderPage({ token, onUnauthorized }) {
   const draft = useTextileOrder(token, draftId);
   useUnauthorizedRedirect(onUnauthorized, draft.error);
 
-  if (draftId && draft.isLoading) return <Loading label="Loading draft…" />;
+  if (draftId && draft.isLoading) return <Loading label="Loading draft…" variant="form" />;
   if (draftId && draft.data && draft.data.status !== 'DRAFT') {
     return (
       <div className="live-page page-enter">
@@ -88,11 +88,6 @@ function NewOrderForm({ token, draft, loadError, onUnauthorized }) {
       sizeDesign: values.sizeDesign.trim(),
       dateNeeded: values.dateNeeded || null,
       rulesAccepted,
-      ...(usePublished ? {
-        acceptedRules: publishedRules.rules
-          .filter((rule) => acceptedRuleIds.includes(rule.id))
-          .map((rule) => ({ id: rule.id, version: rule.version })),
-      } : {}),
       submit,
     };
     try {

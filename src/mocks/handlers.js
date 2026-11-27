@@ -1,13 +1,17 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
 import { makeMockToken } from './jwt';
-import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
-import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
-import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
+import {
+  documentsBySubmission,
+  sectors,
+  submissions,
+  submitterServiceRequests,
+  toCaseFile,
+} from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
-import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
+import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment } from './fixtures/equipment';
 import {
@@ -18,7 +22,6 @@ import {
 } from './fixtures/bookings';
 import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
-import { initialRules } from './fixtures/rules';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
 import {
@@ -29,6 +32,7 @@ import {
 } from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
+import { cncStockHandlers } from './cnc-handlers';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -136,7 +140,6 @@ function notificationsForRequest(request) {
   return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
 }
 let eventContracts = [...initialContracts];
-let rules = [...initialRules];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
 let notificationRecords = notifications.map((item) => ({ ...item }));
@@ -151,6 +154,17 @@ let submitterInvoices = createSubmitterInvoiceMocks();
 const createSubmitterBookingMocks = () => initialSubmitterBookings.map((booking) => ({ ...booking }));
 let submitterBookings = createSubmitterBookingMocks();
 let nextSubmitterBookingNumber = 1202;
+
+// Reviewer decisions, keyed by submission id — GET /cases/:id/my-review
+// reads these back; a submitted decision is immutable, matching the real
+// POST /cases/{id}/reviews contract ("cannot be edited afterward").
+const myReviewBySubmission = {
+  'IH-26029': {
+    decision: 'CHANGES_NEEDED',
+    comment: 'The follow-up workflow needs a clearer description of how missed appointments are detected before this can move forward.',
+    decidedAt: '2026-10-02',
+  },
+};
 
 export function resetSubmitterInvoiceMocks() {
   submitterInvoices = createSubmitterInvoiceMocks();
@@ -261,9 +275,11 @@ const toApiInvoice = (invoice) => {
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
 const departments = [
-  { id: 'dept-1', name: 'Innovation & Research', active: true, version: 1 },
-  { id: 'dept-2', name: 'Finance & Administration', active: true, version: 1 },
-  { id: 'dept-3', name: 'Textile Operations', active: true, version: 1 },
+  { id: 'dept-1', name: 'Innovation & Research', notificationEmail: 'innovation@example.test', active: true, version: 1 },
+  { id: 'dept-2', name: 'Finance & Administration', notificationEmail: 'finance@example.test', active: true, version: 1 },
+  { id: 'dept-3', name: 'Textile Operations', notificationEmail: 'textile@example.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000001', name: 'Multimedia', notificationEmail: 'multimedia@unipod.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000002', name: 'CNC & Carpentry', notificationEmail: 'cnc@unipod.test', active: true, version: 1 },
 ];
 let adminUsers = [
   { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
@@ -273,29 +289,30 @@ let adminUsers = [
   { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
 ];
 const adminPermissions = [
-  { id: 'USERS_MANAGE', name: 'Manage user accounts', description: 'Create, update, and deactivate staff accounts.' },
-  { id: 'ROLES_MANAGE', name: 'Manage roles and permissions', description: 'Configure role access to system capabilities.' },
-  { id: 'DEPARTMENTS_MANAGE', name: 'Manage departments', description: 'Create and maintain departments.' },
-  { id: 'SUBMISSIONS_VIEW', name: 'View submissions', description: 'View submitted innovation briefs.' },
-  { id: 'SUBMISSIONS_REGISTER', name: 'Register submissions', description: 'Register and route submissions.' },
-  { id: 'FACT_FINDING_MANAGE', name: 'Fact-finding', description: 'Perform fact-finding on assigned submissions.' },
-  { id: 'REVIEWS_MANAGE', name: 'Review submissions', description: 'Review assigned submissions.' },
-  { id: 'FINANCE_MANAGE', name: 'Manage finance', description: 'Access finance and invoice workflows.' },
+  { id: 'CASE_VIEW', name: 'View submissions', description: "View submissions within the role's assigned scope." },
+  { id: 'CASE_EDIT', name: 'Edit submissions', description: "Edit submissions within the role's assigned scope." },
+  { id: 'CASE_FORWARD', name: 'Route submissions', description: 'Forward submissions to the next workflow stage.' },
+  { id: 'CASE_ASSIGN_REVIEWER', name: 'Assign reviewers', description: 'Assign reviewers to submissions.' },
+  { id: 'CASE_REVIEW', name: 'Review submissions', description: 'Submit reviews for assigned submissions.' },
+  { id: 'CASE_DECIDE', name: 'Decide submissions', description: 'Make workflow decisions on submissions.' },
+  { id: 'AUDIT_VIEW', name: 'View audit log', description: 'View recorded system activity.' },
+  { id: 'USER_MANAGE', name: 'Manage user accounts', description: 'Create and manage user accounts.' },
+  { id: 'PRICE_LIST_MANAGE', name: 'Manage finance', description: 'Manage price lists and finance operations.' },
+  { id: 'PRICE_LIST_PROPOSE', name: 'Propose price list updates', description: 'Propose price-list updates within the assigned scope.' },
+  { id: 'REPORT_VIEW', name: 'View reports', description: 'View system reports.' },
 ];
-let adminRoles = [
-  { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
-  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['FINANCE_MANAGE'], version: 1, editable: true },
-  { id: 'REVIEWER', name: 'Reviewer', permissions: ['SUBMISSIONS_VIEW', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
-  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner', permissions: [], version: 1, editable: true },
-  { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
-  { id: 'OBSERVER', name: 'Observer', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
+const adminRoles = [
+  { role: 'ADMINISTRATOR', staff: true },
+  { role: 'INNOVATION_COORDINATOR', staff: true },
+  { role: 'DEPARTMENT_COORDINATOR', staff: true },
+  { role: 'RECEPTIONIST', staff: true },
+  { role: 'FACT_FINDING_OFFICER', staff: true },
+  { role: 'REVIEWER', staff: true },
+  { role: 'SECTOR_OFFICER', staff: true },
+  { role: 'IP_LIAISON', staff: true },
+  { role: 'SUBMITTER', staff: false },
+  { role: 'FINANCE_OFFICER', staff: true },
+  { role: 'OBSERVER', staff: true },
 ];
 
 export const handlers = [
@@ -408,7 +425,7 @@ export const handlers = [
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
-      acceptedRules: Array.isArray(body.acceptedRules) ? body.acceptedRules : [],
+      acceptedRulesVersion: body.acceptedRulesVersion ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
@@ -468,88 +485,94 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
+  http.get(`${API_BASE_URL}/users`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const items = adminUsers.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: adminUsers.length,
+      totalPages: Math.ceil(adminUsers.length / size),
+    });
+  }),
 
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
     const email = String(body.email ?? '').trim().toLowerCase();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
-    }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
-      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
     }
     if (adminUsers.some((user) => user.email.toLowerCase() === email)) {
       return HttpResponse.json({ message: 'A staff account with this email already exists.' }, { status: 409 });
     }
-    const createdAt = new Date().toISOString().slice(0, 10);
     const created = {
       id: `staff-${Date.now()}`,
-      fullName: String(body.fullName ?? email.split('@')[0]),
       email,
       role: body.role,
-      departmentId: body.departmentId ?? '',
+      departmentIds: [],
+      profile: null,
       active: true,
-      version: 1,
-      createdAt,
+      createdAt: new Date().toISOString(),
     };
     adminUsers = [created, ...adminUsers];
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
     if (user.role === 'ADMINISTRATOR') {
       return HttpResponse.json({ message: 'Administrator role assignments are protected.' }, { status: 409 });
     }
     const body = await request.json();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
     }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+    if (!Array.isArray(body.departmentIds)
+      || body.departmentIds.some((id) => !departments.some((department) => department.id === id && department.active))) {
       return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
-    }
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
     }
     Object.assign(user, {
       role: body.role,
-      departmentId: body.departmentId ?? '',
-      version: user.version + 1,
+      departmentIds: body.departmentIds,
     });
     return HttpResponse.json(user);
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id/status`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/users/:id/deactivate`, ({ params }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    if (user.role === 'ADMINISTRATOR' && !body.active
+    if (user.role === 'ADMINISTRATOR'
       && adminUsers.filter((candidate) => candidate.role === 'ADMINISTRATOR' && candidate.active).length <= 1) {
       return HttpResponse.json({ message: 'The last active administrator cannot be deactivated.' }, { status: 409 });
     }
-    Object.assign(user, { active: Boolean(body.active), version: user.version + 1 });
+    user.active = false;
     return HttpResponse.json(user);
   }),
 
-  http.get(`${API_BASE_URL}/admin/departments`, () => HttpResponse.json(departments)),
+  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(departments)),
 
-  http.post(`${API_BASE_URL}/admin/departments`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/departments`, async ({ request }) => {
     const body = await request.json();
     const name = String(body.name ?? '').trim();
     if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
       return HttpResponse.json({ message: 'A department with this name already exists.' }, { status: 409 });
     }
-    const created = { id: `dept-${Date.now()}`, name, active: body.active ?? true, version: 1 };
+    const created = {
+      id: `dept-${Date.now()}`,
+      name,
+      notificationEmail: String(body.notificationEmail ?? '').trim(),
+      active: body.active ?? true,
+      version: 1,
+    };
     departments.push(created);
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.put(`${API_BASE_URL}/admin/departments/:id`, async ({ params, request }) => {
+  http.put(`${API_BASE_URL}/departments/:id`, async ({ params, request }) => {
     const department = departments.find((candidate) => candidate.id === params.id);
     if (!department) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -558,32 +581,21 @@ export const handlers = [
     }
     Object.assign(department, {
       name: String(body.name ?? department.name).trim(),
+      notificationEmail: String(body.notificationEmail ?? department.notificationEmail).trim(),
       active: Boolean(body.active),
       version: department.version + 1,
     });
     return HttpResponse.json(department);
   }),
 
-  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(adminRoles)),
-  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
-
-  http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
-    const role = adminRoles.find((candidate) => candidate.id === params.id);
-    if (!role) return new HttpResponse(null, { status: 404 });
-    if (!role.editable) {
-      return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
-    }
-    const body = await request.json();
-    if (body.version !== role.version) {
-      return HttpResponse.json({ message: 'This role changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    const knownPermissions = new Set(adminPermissions.map(({ id }) => id));
-    if (!Array.isArray(body.permissions) || body.permissions.some((id) => !knownPermissions.has(id))) {
-      return HttpResponse.json({ message: 'One or more permissions are invalid.' }, { status: 400 });
-    }
-    Object.assign(role, { permissions: body.permissions, version: role.version + 1 });
-    return HttpResponse.json(role);
+  http.post(`${API_BASE_URL}/users/:id/reactivate`, ({ params }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    user.active = true;
+    return HttpResponse.json(user);
   }),
+
+  http.get(`${API_BASE_URL}/roles`, () => HttpResponse.json(adminRoles)),
 
   http.get(`${API_BASE_URL}/queues/reception`, ({ request }) => {
     const url = new URL(request.url);
@@ -598,7 +610,9 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
-    const mine = submissions.filter((item) => item.submitterId);
+    const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
+      ? submitterServiceRequests
+      : submissions.filter((item) => item.submitterId);
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
   }),
@@ -621,7 +635,8 @@ export const handlers = [
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id);
+    const item = submissions.find((submission) => submission.id === params.id)
+      ?? submitterServiceRequests.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
@@ -723,7 +738,7 @@ export const handlers = [
     return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/submissions/:id/respond`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/submissions/:id/reply`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -757,60 +772,56 @@ export const handlers = [
     return HttpResponse.json(item);
   }),
 
-  http.get(`${API_BASE_URL}/fact-finding/queue`, () => HttpResponse.json({ items: factFindingQueue })),
-
-  http.get(`${API_BASE_URL}/fact-finding/cases/:id`, ({ params }) => {
-    const item = factFindingCases[params.id];
+  // POST /cases/:id/fact-finding/complete — advances a case specifically out
+  // of fact-finding into review. The real backend's target stage is
+  // READY_FOR_REVIEW; this mock instead reuses the local fixture's existing
+  // UNDER_REVIEW value so the case lands exactly where GET /queues/reviews
+  // (below) already looks for it, without rewriting the shared stage
+  // vocabulary used across the rest of the app (that migration belongs to
+  // Assignment 2's case-file stepper rebuild, not this one).
+  http.post(`${API_BASE_URL}/cases/:id/fact-finding/complete`, async ({ params, request }) => {
+    const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
+    const body = await request.json().catch(() => ({}));
+    if (typeof body.version === 'number' && body.version !== item.version) {
+      return HttpResponse.json({ code: 'STALE_VERSION', detail: 'This case was updated elsewhere. Reload and try again.' }, { status: 409 });
+    }
+    item.stage = 'UNDER_REVIEW';
+    item.updatedAt = new Date().toISOString().slice(0, 10);
+    item.version += 1;
+    return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/fact-finding/cases/:id/assessment`, async ({ params, request }) => {
+  http.get(`${API_BASE_URL}/queues/reviews`, () => HttpResponse.json({
+    items: submissions
+      .filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage))
+      .map((item) => ({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        category: item.category,
+        stage: item.stage,
+        assignedAt: item.forwardedAt ?? item.updatedAt,
+      })),
+  })),
+
+  http.post(`${API_BASE_URL}/cases/:id/reviews`, async ({ params, request }) => {
     const id = params.id;
-    const existing = factFindingCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    const updated = {
-      ...existing,
-      checklist: body.checklist,
-      assessment: body.assessment,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      nextAction: { ...existing.nextAction, recommendation: body.nextAction || existing.nextAction.recommendation },
-    };
-    factFindingCases[id] = updated;
-    return HttpResponse.json(updated);
-  }),
-
-  http.get(`${API_BASE_URL}/reviewer/assigned`, () => HttpResponse.json({ items: reviewerAssigned })),
-
-  http.get(`${API_BASE_URL}/reviewer/cases/:id`, ({ params }) => {
-    const item = reviewerCases[params.id];
+    const item = submissions.find((submission) => submission.id === id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
-  }),
-
-  http.post(`${API_BASE_URL}/reviewer/cases/:id/decision`, async ({ params, request }) => {
-    const id = params.id;
-    const existing = reviewerCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    if (existing.decisionStatus !== 'pending') {
-      return HttpResponse.json({ message: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 400 });
+    if (myReviewBySubmission[id]) {
+      return HttpResponse.json({ code: 'ALREADY_REVIEWED', detail: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 409 });
     }
     const body = await request.json();
-    const updated = {
-      ...existing,
-      decisionStatus: body.decision,
-      comment: body.comment,
-      decidedAt: new Date().toISOString().slice(0, 10),
-      pendingAction: body.decision === 'recommended' ? 'Decision recorded — no further action needed' : 'Decision recorded — awaiting coordinator follow-up',
-    };
-    reviewerCases[id] = updated;
-    const assignedEntry = reviewerAssigned.find((entry) => entry.id === id);
-    if (assignedEntry) {
-      assignedEntry.decisionStatus = updated.decisionStatus;
-      assignedEntry.pendingAction = updated.pendingAction;
-    }
-    return HttpResponse.json(updated);
+    const review = { decision: body.decision, comment: body.comment, decidedAt: new Date().toISOString().slice(0, 10) };
+    myReviewBySubmission[id] = review;
+    return HttpResponse.json(review);
+  }),
+
+  http.get(`${API_BASE_URL}/cases/:id/my-review`, ({ params }) => {
+    const review = myReviewBySubmission[params.id];
+    if (!review) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(review);
   }),
 
   http.get(`${API_BASE_URL}/notifications`, ({ request }) => {
@@ -874,8 +885,6 @@ export const handlers = [
   ...receptionHandlers,
   ...coordinatorHandlers,
   // Operations / Multimedia - Training & Mentorship
-  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(trainingDepartments)),
-
   http.get(`${API_BASE_URL}/operations/training/overview`, () => {
     const live = trainingSessions.filter((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS');
     return HttpResponse.json({
@@ -1386,46 +1395,9 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
-  // Department Rules Manager (Assignment 12)
-  http.get(`${API_BASE_URL}/rules`, () => {
-    return HttpResponse.json(rules);
-  }),
-
-  http.post(`${API_BASE_URL}/rules`, async ({ request }) => {
-    const body = await request.json();
-    const newRule = {
-      id: `rule-${Date.now()}`,
-      scope: 'GENERAL',
-      scopeId: null,
-      mustAccept: false,
-      published: false,
-      version: 1,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      ...body,
-    };
-    rules = [...rules, newRule];
-    return HttpResponse.json(newRule, { status: 201 });
-  }),
-
-  http.patch(`${API_BASE_URL}/rules/:id`, async ({ params, request }) => {
-    const index = rules.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    rules[index] = {
-      ...rules[index],
-      ...body,
-      version: rules[index].version + 1,
-      updatedAt: new Date().toISOString().slice(0, 10),
-    };
-    return HttpResponse.json(rules[index]);
-  }),
-
-  http.post(`${API_BASE_URL}/rules/:id/retire`, ({ params }) => {
-    const index = rules.findIndex((item) => item.id === params.id);
-    if (index === -1) return new HttpResponse(null, { status: 404 });
-    rules[index] = { ...rules[index], published: false, updatedAt: new Date().toISOString().slice(0, 10) };
-    return HttpResponse.json(rules[index]);
-  }),
+  // Department Rules Manager (Assignment 12) has no real /rules* endpoint
+  // family on the backend — see src/services/rules.js for why this is now a
+  // browser-persisted, backend-free module instead of MSW handlers.
 
   // Operations / Multimedia - Partners & MOUs
   http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
@@ -1769,4 +1741,5 @@ export const handlers = [
   }),
   ...textileHandlers,
   ...telecomsHandlers,
+  ...cncStockHandlers,
 ];

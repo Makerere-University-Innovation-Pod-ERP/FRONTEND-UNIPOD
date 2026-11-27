@@ -38,7 +38,7 @@ export function OrderPage({ token, onUnauthorized }) {
   const machines = useMachines(token);
   useUnauthorizedRedirect(onUnauthorized, order.error, machines.error);
 
-  if (order.isLoading) return <Loading label="Loading order…" />;
+  if (order.isLoading) return <Loading label="Loading order…" variant="detail" />;
   if (!order.data) {
     return (
       <div className="live-page">
@@ -84,7 +84,7 @@ function OrderView({ token, order, machines, onUnauthorized }) {
       <div className="detail-grid">
         <div className="tx-stack">
           {/* Always visible: the maker needs the size/design and date while producing. */}
-          <OrderSummary order={order} />
+          <OrderSummary order={order} token={token} />
           {inProduction && <ProductionPanel key={JSON.stringify(order.production)} token={token} order={order} machines={machines} onUnauthorized={onUnauthorized} />}
           {inProduction && <QualityPanel token={token} order={order} onUnauthorized={onUnauthorized} />}
         </div>
@@ -159,7 +159,7 @@ function CollectionSlip({ order }) {
   );
 }
 
-function OrderSummary({ order }) {
+function OrderSummary({ order, token }) {
   return (
     <section className="live-panel">
       <h2 className="tx-panel-title">Order details</h2>
@@ -167,7 +167,7 @@ function OrderSummary({ order }) {
         <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
         <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
         <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
+        <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} token={token} /></dd></div>
       </dl>
     </section>
   );
@@ -311,7 +311,7 @@ export function OrdersIndexPage({ token, onUnauthorized }) {
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · ORDERS" title="Order pages" intro="Open an order to record materials, machine, staff, quality checks and collection." />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : !all.length ? (
+      {orders.isLoading ? <Loading label="Loading orders…" variant="table" /> : !all.length ? (
         <section className="live-panel">
           <p className="live-empty">No orders yet. <Link to="/textile/orders/new">Create the first order</Link>.</p>
         </section>

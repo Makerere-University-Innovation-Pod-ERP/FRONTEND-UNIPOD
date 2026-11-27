@@ -28,6 +28,25 @@ export const submissions = [
   { id: 'IH-26020', code: 'STU-2026-007', category: 'student', title: 'Rainwater Harvesting Design Kit', purpose: 'Demonstrate accessible climate adaptation.', problemAddressed: 'Practical planning tools are limited in local classrooms.', registeredBy: 'Joseph Lwanga', submitterId: 'mark.w', receivingOfficer: 'Martha Akello', assignedReviewerSubject: null, studentNumber: 'S22/0713', programme: 'BSc Civil Engineering', supervisor: 'Eng. Sarah Tendo', recommendationLetterStatus: 'not_required', responsibleSectorId: null, responsibleSectorName: null, stage: 'RECEIVED', receivedAt: '2026-10-18', forwardedAt: null, createdAt: '2026-10-18', updatedAt: '2026-10-18', version: 1 },
 ];
 
+export const submitterServiceRequests = [
+  {
+    id: 'IH-26032',
+    code: 'SRV-2026-001',
+    category: 'service_request',
+    title: 'Prepare acrylic prototype parts',
+    purpose: 'Cut the enclosure pieces for a student prototype.',
+    serviceRequested: 'Laser cutting',
+    serviceRequester: 'STUDENT',
+    department: 'CNC & Carpentry',
+    expectedResult: 'Acrylic enclosure pieces ready for assembly.',
+    submitterId: 'brian.s',
+    stage: 'UNDER_REVIEW',
+    receivedAt: '2026-10-20',
+    createdAt: '2026-10-19',
+    updatedAt: '2026-10-21',
+  },
+];
+
 const stageHistoryFor = (submission) => [
   { fromStage: null, toStage: 'RECEIVED', changedBy: submission.receivingOfficer ?? 'Reception', changedAt: submission.receivedAt ?? submission.createdAt, note: null },
   ...(submission.stage !== 'RECEIVED' && submission.stage !== 'DRAFT'

@@ -17,6 +17,20 @@ export function allMustAcceptAccepted(rules, value) {
   return rules.filter((rule) => rule.mustAccept).every((rule) => value.includes(rule.id));
 }
 
+/**
+ * The real backend's acceptedRulesVersion/rulesVersion fields are a single opaque
+ * string (max ~32-40 chars), not a per-rule {id, version} array — rule *content*
+ * stays frontend-managed, but the acceptance record sent to the backend must
+ * collapse down to one version label. Derived from the highest rule version
+ * among the rules being accepted, so it changes whenever any of them is edited.
+ * Returns null when there's nothing to accept yet (matches the field's nullable contract).
+ */
+export function computeAcceptedRulesVersion(rules) {
+  if (rules.length === 0) return null;
+  const maxVersion = Math.max(...rules.map((rule) => rule.version));
+  return `general-v${maxVersion}`;
+}
+
 export function RulesAcceptance({ rules, value = [], onChange, readOnly = false }) {
   if (rules.length === 0) {
     return <p className="live-empty">No rules are published for this request yet.</p>;

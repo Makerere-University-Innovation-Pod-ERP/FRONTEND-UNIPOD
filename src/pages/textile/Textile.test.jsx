@@ -17,6 +17,7 @@ import { StockMovementPage } from './StockMovementPage';
 import { ReportFaultPage } from './ReportFaultPage';
 import { WorkshopBookingPage } from './WorkshopBookingPage';
 import { NewOrderPage } from './NewOrderPage';
+import { PhotoView } from './shared';
 
 const token = makeMockToken(['ROLE_TEXTILE_DOMAIN_OWNER'], 'Faith Nabwire');
 
@@ -33,6 +34,36 @@ function renderPage(Page, { path = '/', route = '/' } = {}) {
     </QueryClientProvider>,
   );
 }
+
+describe('Reference photos', () => {
+  it('loads protected photos with the current bearer token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(['photo'], { type: 'image/png' }),
+    });
+    const urlApi = {
+      createObjectURL: vi.fn(() => 'blob:reference-photo'),
+      revokeObjectURL: vi.fn(),
+    };
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('URL', urlApi);
+    const { unmount } = render(
+      <PhotoView photo={{ name: 'reference.png', url: '/textile/orders/order-id/photo' }} token="session-token" />,
+    );
+
+    try {
+      expect(await screen.findByRole('img', { name: 'reference.png' })).toHaveAttribute('src', 'blob:reference-photo');
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/textile\/orders\/order-id\/photo$/),
+        expect.objectContaining({ headers: { Authorization: 'Bearer session-token' }, credentials: 'omit' }),
+      );
+    } finally {
+      unmount();
+      vi.unstubAllGlobals();
+    }
+    expect(urlApi.revokeObjectURL).toHaveBeenCalledWith('blob:reference-photo');
+  });
+});
 
 describe('Order Review & Quote', () => {
   it('keeps an unpaid quoted order out of Scheduled and says why', async () => {
@@ -192,13 +223,16 @@ describe('New Order', () => {
 
   it('uses the Textile rules published in the Rules Manager when there are any', async () => {
     let sentOrder = null;
+    // rulesApi (Assignment 12, Path 1) reads/writes localStorage directly —
+    // there is no real /rules endpoint to override via MSW — so published
+    // rules are seeded the same way the Rules Manager itself persists them.
+    localStorage.setItem('unipod.rules.v1', JSON.stringify([
+      { id: 'r-tx', title: 'Fabric deposit', body: 'Customers pay for special-order fabric up front.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 2, published: true, updatedAt: '2026-11-20' },
+      { id: 'r-draft', title: 'Unpublished textile rule', body: 'Not live yet.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 1, published: false, updatedAt: '2026-11-20' },
+      { id: 'r-other', title: 'Technical Assessment turnaround', body: 'Other department.', scope: 'SECTOR', scopeId: 'sec-1', mustAccept: true, version: 1, published: true, updatedAt: '2026-11-20' },
+    ]));
     server.use(
       http.get(`${API_BASE_URL}/sectors`, () => HttpResponse.json([{ id: 'sec-tx', name: 'Textile' }, { id: 'sec-1', name: 'Technical Assessment' }])),
-      http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json([
-        { id: 'r-tx', title: 'Fabric deposit', body: 'Customers pay for special-order fabric up front.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 2, published: true, updatedAt: '2026-11-20T08:00:00Z' },
-        { id: 'r-draft', title: 'Unpublished textile rule', body: 'Not live yet.', scope: 'SECTOR', scopeId: 'sec-tx', mustAccept: true, version: 1, published: false, updatedAt: '2026-11-20T08:00:00Z' },
-        { id: 'r-other', title: 'Technical Assessment turnaround', body: 'Other department.', scope: 'SECTOR', scopeId: 'sec-1', mustAccept: true, version: 1, published: true, updatedAt: '2026-11-20T08:00:00Z' },
-      ])),
       http.post(`${API_BASE_URL}/textile/orders`, async ({ request }) => {
         sentOrder = JSON.parse(await (await request.formData()).get('order').text());
         return HttpResponse.json({ message: 'stop here' }, { status: 400 });
@@ -219,11 +253,12 @@ describe('New Order', () => {
     await user.click(screen.getByRole('checkbox', { name: /read and accept this rule/i }));
     await user.click(screen.getByRole('button', { name: 'Send order' }));
     await screen.findByText('stop here');
-    expect(sentOrder).toMatchObject({ rulesAccepted: true, acceptedRules: [{ id: 'r-tx', version: 2 }] });
+    expect(sentOrder).toMatchObject({ rulesAccepted: true });
+    expect(sentOrder.acceptedRules).toBeUndefined();
   });
 
-  it('falls back to the built-in Textile rules when the published rules cannot be loaded', async () => {
-    server.use(http.get(`${API_BASE_URL}/rules`, () => HttpResponse.json({ message: 'Forbidden' }, { status: 403 })));
+  it('falls back to the built-in Textile rules when none are published for this department', async () => {
+    localStorage.removeItem('unipod.rules.v1');
     renderPage(NewOrderPage);
     expect(await screen.findByRole('checkbox', { name: /accepts the Textile department/i })).toBeRequired();
     expect(screen.getByText(/Work starts only after the quote is accepted/i)).toBeInTheDocument();

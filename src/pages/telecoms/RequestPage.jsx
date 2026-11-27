@@ -103,7 +103,7 @@ export function RequestPage({ token, onUnauthorized }) {
   const requestQuery = useTelecomsRequest(token, id ?? '');
   useUnauthorizedRedirect(onUnauthorized, requestQuery.error);
 
-  if (requestQuery.isLoading) return <Loading label="Loading request file…" />;
+  if (requestQuery.isLoading) return <Loading label="Loading request file…" variant="detail" />;
   if (!requestQuery.data) {
     return (
       <div className="live-page page-enter">
@@ -243,7 +243,7 @@ function RequestDetailView({ token, request, onUnauthorized }) {
 
           {/* Audit History */}
           <section className="live-panel telecoms-history-panel" style={{ marginTop: '20px' }}>
-            <h3 className="tx-panel-title" style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>
+            <h3 className="tx-panel-title" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', marginBottom: '16px' }}>
               Activity & State History
             </h3>
             <div className="telecoms-history-list" style={{ display: 'grid', gap: '12px' }}>
@@ -255,9 +255,9 @@ function RequestDetailView({ token, request, onUnauthorized }) {
                     alignItems: 'flex-start',
                     gap: '14px',
                     padding: '14px 16px',
-                    background: '#f8fafc',
+                    background: 'var(--surface-raised)',
                     borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <span
@@ -273,20 +273,20 @@ function RequestDetailView({ token, request, onUnauthorized }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '6px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#176b52', background: '#e4efe6', padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.04em' }}>
                           {entry.status}
                         </span>
-                        <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                          by <strong style={{ color: '#0f172a' }}>{entry.by}</strong>
+                        <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-soft)' }}>
+                          by <strong style={{ color: 'var(--ink)' }}>{entry.by}</strong>
                         </span>
                       </div>
-                      <time style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: '#1e293b', background: '#ffffff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                        <Clock size={13} style={{ color: '#176b52' }} />
+                      <time style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: 'var(--ink)', background: 'var(--surface)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                        <Clock size={13} style={{ color: 'var(--green)' }} />
                         {formatDateTime(entry.at)}
                       </time>
                     </div>
                     {entry.note && (
-                      <p style={{ margin: '6px 0 0', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.55 }}>
+                      <p style={{ margin: '6px 0 0', fontSize: '13.5px', color: 'var(--ink)', lineHeight: 1.55 }}>
                         {entry.note}
                       </p>
                     )}

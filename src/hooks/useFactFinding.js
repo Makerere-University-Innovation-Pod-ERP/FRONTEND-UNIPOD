@@ -22,13 +22,25 @@ export function useFactFindingCase(token, id) {
   });
 }
 
-export function useSaveAssessment(token, id) {
+function onCaseActionSettled(queryClient, token, id) {
+  return (updated) => {
+    queryClient.setQueryData(factFindingKeys.case(token, id), updated);
+    void queryClient.invalidateQueries({ queryKey: factFindingKeys.queue(token) });
+  };
+}
+
+export function useCompleteFactFinding(token, id) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body) => factFindingApi.saveAssessment(token, id, body),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(factFindingKeys.case(token, id), updated);
-      void queryClient.invalidateQueries({ queryKey: factFindingKeys.queue(token) });
-    },
+    mutationFn: (body) => factFindingApi.completeFactFinding(token, id, body),
+    onSuccess: onCaseActionSettled(queryClient, token, id),
+  });
+}
+
+export function useRequestImprovement(token, id) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => factFindingApi.requestImprovement(token, id, body),
+    onSuccess: onCaseActionSettled(queryClient, token, id),
   });
 }

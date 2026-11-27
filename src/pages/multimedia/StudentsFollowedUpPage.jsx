@@ -111,7 +111,7 @@ export function StudentsFollowedUpPage({ token }) {
 
       <section className="live-panel tx-table-panel">
         {followUpsQuery.isPending ? (
-          <Loading label="Loading follow-ups…" />
+          <Loading label="Loading follow-ups…" variant="table" />
         ) : (
           <div className="live-table-wrap">
             <table className="live-table">

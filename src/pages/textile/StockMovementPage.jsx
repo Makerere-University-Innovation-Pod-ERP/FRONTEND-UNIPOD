@@ -53,7 +53,7 @@ export function StockMovementPage({ token, onUnauthorized }) {
     <div className="live-page page-enter">
       <PageHeading eyebrow="TEXTILE · INVENTORY" title="Add or Use Stock" intro="Record every stock movement — received, used on an order, or a correction." />
       <ErrorBanner error={stock.error} fallback="Could not load the stock list." />
-      {stock.isLoading ? <Loading label="Loading stock…" /> : (
+      {stock.isLoading ? <Loading label="Loading stock…" variant="table" /> : (
         <form className="live-panel tx-form tx-narrow" onSubmit={onSubmit}>
           <div className="tx-segments" role="radiogroup" aria-label="Movement type">
             {Object.values(MOVEMENT_TYPES).map((value) => (
@@ -120,7 +120,7 @@ export function StockMovementPage({ token, onUnauthorized }) {
       )}
       <section className="live-panel tx-table-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">AUDIT TRAIL</p><h2>Recent movements</h2></div></div>
-        {movements.isLoading ? <Loading label="Loading movements…" /> : <MovementTable movements={movements.data ?? []} limit={8} />}
+        {movements.isLoading ? <Loading label="Loading movements…" variant="table" /> : <MovementTable movements={movements.data ?? []} limit={8} />}
       </section>
     </div>
   );

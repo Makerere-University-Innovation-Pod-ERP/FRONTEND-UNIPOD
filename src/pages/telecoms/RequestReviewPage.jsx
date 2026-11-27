@@ -158,7 +158,7 @@ function ReviewPanel({ token, id, onUnauthorized }) {
   if (requestQuery.isLoading || stockQuery.isLoading || priceListQuery.isLoading) {
     return (
       <section className="live-panel">
-        <Loading label="Loading request details…" />
+        <Loading label="Loading request details…" variant="detail" />
       </section>
     );
   }
@@ -193,7 +193,8 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
     request.quote?.priceQuantity ?? request.estimate?.priceQuantity ?? 1,
   );
   const [expectedCompletion, setExpectedCompletion] = useState(
-    request.quote?.expectedCompletion ?? (initialPrice ? addDays(todayIso(), initialPrice.leadDays) : ''),
+    request.quote?.expectedCompletion
+      ?? (initialPrice?.leadDays != null ? addDays(todayIso(), initialPrice.leadDays) : ''),
   );
   const [panel, setPanel] = useState(null);
   const [message, setMessage] = useState('');
@@ -223,7 +224,7 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
     setPriceListItemId(nextId);
     const item = priceList.find((candidate) => candidate.id === nextId);
     if (item && !request.quote) {
-      setExpectedCompletion(addDays(todayIso(), item.leadDays));
+      setExpectedCompletion(item.leadDays != null ? addDays(todayIso(), item.leadDays) : '');
     }
   };
 
@@ -278,8 +279,8 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
         type: 'info',
         diffDays: null,
         message: request.preferredDate
-          ? `Client requested completion by ${formatDate(request.preferredDate)}. Select a service rate to view estimated lab delivery.`
-          : 'No specific completion date requested by the client. Standard diagnostic lead times apply.',
+          ? `Client requested completion by ${formatDate(request.preferredDate)}. Select an estimated completion date to compare the schedule.`
+          : 'No specific completion date requested by the client. Select an estimated lab delivery date.',
       };
     }
     const prefTime = new Date(request.preferredDate).getTime();
@@ -343,7 +344,7 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
           {/* Timeline & Schedule Alignment Card */}
           <div className="tx-schedule-card">
             <div className="tx-schedule-header">
-              <Calendar className="tx-schedule-icon" size={20} color="#0b3426" />
+              <Calendar className="tx-schedule-icon" size={20} color="var(--forest-deep)" />
               <div>
                 <h4>Schedule & Delivery Alignment</h4>
                 <p>Compare customer requested target against lab diagnostic lead time</p>
@@ -371,7 +372,9 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
                   {expectedCompletion ? formatDate(expectedCompletion) : 'Pending selection'}
                 </b>
                 <span className="milestone-desc">
-                  {selectedPriceItem ? `${selectedPriceItem.leadDays} day(s) lead time` : 'Set rate below'}
+                  {selectedPriceItem?.leadDays != null
+                    ? `${selectedPriceItem.leadDays} day(s) lead time`
+                    : selectedPriceItem ? 'Set estimated date below' : 'Set rate below'}
                 </span>
               </div>
             </div>
@@ -396,10 +399,10 @@ function ReviewForm({ token, request, stockItems, priceList, onUnauthorized }) {
               {assessedParts.map((line, index) => {
                 const stockStatusClass = !line.sufficient ? 'short' : line.lowAfter ? 'low' : 'sufficient';
                 const statusLabel = !line.sufficient
-                  ? `Insufficient stock: need ${line.quantity}, only ${line.balance} available`
+                  ? `Insufficient stock: need ${line.quantity}, only ${line.available} available`
                   : line.lowAfter
-                    ? `Low stock alert: only ${line.balance - line.quantity} left after use`
-                    : `${line.balance} available in stock`;
+                    ? `Low stock alert: only ${line.remaining} left after use`
+                    : `${line.available} available in stock`;
 
                 return (
                   <li key={line.itemId}>

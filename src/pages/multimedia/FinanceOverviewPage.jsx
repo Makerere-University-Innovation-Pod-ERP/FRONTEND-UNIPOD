@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useFinanceOverview } from '@/hooks/useOverview';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 /**
  * Finance Officer - Overview Page
@@ -37,12 +38,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
   }
 
   if (isLoading && !overview) {
-    return (
-      <div className="live-panel" style={{ padding: '40px', textAlign: 'center' }}>
-        <p className="eyebrow" style={{ color: '#1b5e43' }}>LOADING DASHBOARD</p>
-        <p style={{ color: '#6b7280', marginTop: '8px' }}>Retrieving finance and operational overview…</p>
-      </div>
-    );
+    return <LoadingSkeleton label="Loading finance and operational overview…" variant="dashboard" />;
   }
 
   const {
@@ -67,8 +63,8 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: isSpecialVariant ? 'rgba(255, 255, 255, 0.12)' : '#eef7f0',
-      color: isSpecialVariant ? '#ffffff' : '#1b5e43',
+      background: isSpecialVariant ? 'rgba(255, 255, 255, 0.12)' : 'var(--green-bg)',
+      color: isSpecialVariant ? '#ffffff' : 'var(--green)',
     };
 
     switch (iconName) {
@@ -118,7 +114,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         <p
           className="eyebrow"
           style={{
-            color: '#1b5e43',
+            color: 'var(--green)',
             fontSize: '11px',
             fontWeight: 700,
             letterSpacing: '0.08em',
@@ -133,7 +129,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: '34px',
             fontWeight: 400,
-            color: '#111827',
+            color: 'var(--ink)',
             letterSpacing: '-0.02em',
             margin: '0 0 6px 0',
             lineHeight: 1.15,
@@ -141,7 +137,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         >
           {greeting}
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '13px', margin: 0, fontWeight: 400 }}>
+        <p style={{ color: 'var(--muted)', fontSize: '13px', margin: 0, fontWeight: 400 }}>
           {subtitle}
         </p>
       </div>
@@ -157,9 +153,9 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             ? 'overview-metric-card card-burgundy'
             : 'overview-metric-card card-default';
 
-          const labelColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : '#6b7280';
-          const valueColor = isForest || isBurgundy ? '#ffffff' : '#111827';
-          const subtextColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : '#6b7280';
+          const labelColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : 'var(--muted)';
+          const valueColor = isForest || isBurgundy ? '#ffffff' : 'var(--ink)';
+          const subtextColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : 'var(--muted)';
 
           return (
             <div key={card.id} className={cardClass}>
@@ -207,10 +203,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px' }}>
               <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 3px 0' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink)', margin: '0 0 3px 0' }}>
                   Pipeline at a glance
                 </h2>
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
                   A flexible guide, not a fixed sequence.
                 </p>
               </div>
@@ -223,7 +219,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                   padding: 0,
                   fontSize: '12px',
                   fontWeight: 600,
-                  color: '#1b5e43',
+                  color: 'var(--green)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -243,7 +239,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                       fontSize: '10px',
                       fontWeight: 700,
                       letterSpacing: '0.05em',
-                      color: '#6b7280',
+                      color: 'var(--muted)',
                       textTransform: 'uppercase',
                     }}
                   >
@@ -253,7 +249,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     style={{
                       fontSize: '24px',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: 'var(--ink)',
                       marginTop: '6px',
                       lineHeight: 1,
                     }}
@@ -269,10 +265,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         {/* Right: Needs attention */}
         <div className="overview-panel-card">
           <div style={{ marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 3px 0' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink)', margin: '0 0 3px 0' }}>
               Needs attention
             </h2>
-            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
               {needsAttention.length} items with an open next step
             </p>
           </div>
@@ -296,8 +292,8 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                   transition: 'background-color .12s ease, border-color .12s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8faf7';
-                  e.currentTarget.style.borderColor = '#e3e7df';
+                  e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
+                  e.currentTarget.style.borderColor = 'var(--border)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
@@ -310,8 +306,8 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     width: 26,
                     height: 26,
                     borderRadius: '50%',
-                    background: '#e8f5ec',
-                    color: '#1b5e43',
+                    background: 'var(--green-bg)',
+                    color: 'var(--green)',
                     fontSize: '11px',
                     fontWeight: 700,
                     display: 'flex',
@@ -330,7 +326,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     style={{
                       fontSize: '13px',
                       fontWeight: 600,
-                      color: '#111827',
+                      color: 'var(--ink)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -338,13 +334,13 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                   >
                     {item.title}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
                     {item.subtext}
                   </div>
                 </div>
 
                 {/* Chevron */}
-                <ChevronRight size={15} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                <ChevronRight size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
               </button>
             ))}
           </div>
@@ -362,17 +358,17 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', margin: 0 }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
                 Income (month to date)
               </h2>
-              <DollarSign size={16} style={{ color: '#1b5e43' }} />
+              <DollarSign size={16} style={{ color: 'var(--green)' }} />
             </div>
 
             <div
               style={{
                 fontSize: '26px',
                 fontWeight: 700,
-                color: '#111827',
+                color: 'var(--ink)',
                 letterSpacing: '-0.02em',
                 margin: '8px 0 18px',
               }}
@@ -406,7 +402,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             </div>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '14px', fontWeight: 500 }}>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '14px', fontWeight: 500 }}>
             {income.subtext}
           </div>
         </div>
@@ -414,10 +410,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         {/* Card 2: Facilities right now */}
         <div className="overview-panel-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', margin: 0 }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
               Facilities right now
             </h2>
-            <Building2 size={16} style={{ color: '#6b7280' }} />
+            <Building2 size={16} style={{ color: 'var(--muted)' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -437,8 +433,8 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     marginBottom: '5px',
                   }}
                 >
-                  <span style={{ fontWeight: 600, color: '#1f2937' }}>{facility.name}</span>
-                  <span style={{ color: '#6b7280' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{facility.name}</span>
+                  <span style={{ color: 'var(--muted)' }}>
                     {facility.bookings} {facility.bookings === 1 ? 'booking' : 'bookings'}
                   </span>
                 </div>
@@ -449,7 +445,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     width: '100%',
                     height: 5,
                     borderRadius: 9999,
-                    background: '#e5e7eb',
+                    background: 'var(--surface-raised)',
                     overflow: 'hidden',
                   }}
                 >
@@ -457,7 +453,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     style={{
                       height: '100%',
                       width: `${facility.percentage}%`,
-                      background: facility.percentage > 0 ? '#1b5e43' : 'transparent',
+                      background: facility.percentage > 0 ? 'var(--green)' : 'transparent',
                       borderRadius: 9999,
                       transition: 'width .2s ease',
                     }}
@@ -471,10 +467,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
         {/* Card 3: Recent activity */}
         <div className="overview-panel-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', margin: 0 }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
               Recent activity
             </h2>
-            <Clock size={16} style={{ color: '#6b7280' }} />
+            <Clock size={16} style={{ color: 'var(--muted)' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -485,19 +481,19 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     width: 7,
                     height: 7,
                     borderRadius: '50%',
-                    background: '#1b5e43',
+                    background: 'var(--green)',
                     marginTop: '5px',
                     flexShrink: 0,
                   }}
                 />
                 <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
-                  <span style={{ fontWeight: 600, color: '#111827' }}>{act.actor}</span>{' '}
-                  <span style={{ color: '#4b5563' }}>{act.action}</span>{' '}
-                  <span style={{ fontWeight: 600, color: '#111827' }}>{act.target}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{act.actor}</span>{' '}
+                  <span style={{ color: 'var(--ink-soft)' }}>{act.action}</span>{' '}
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{act.target}</span>
                   {act.actionSuffix && (
-                    <span style={{ color: '#4b5563' }}> {act.actionSuffix}</span>
+                    <span style={{ color: 'var(--ink-soft)' }}> {act.actionSuffix}</span>
                   )}
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
                     {act.timestamp}
                   </div>
                 </div>
@@ -522,8 +518,8 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                     width: 28,
                     height: 28,
                     borderRadius: '50%',
-                    background: '#e8f5ec',
-                    color: '#1b5e43',
+                    background: 'var(--green-bg)',
+                    color: 'var(--green)',
                     fontSize: '12px',
                     fontWeight: 700,
                     display: 'flex',
@@ -534,10 +530,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
                   {selectedAttentionItem.index}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink)' }}>
                     {selectedAttentionItem.title}
                   </h3>
-                  <small style={{ color: '#6b7280' }}>Code: {selectedAttentionItem.code}</small>
+                  <small style={{ color: 'var(--muted)' }}>Code: {selectedAttentionItem.code}</small>
                 </div>
               </div>
               <button
@@ -550,33 +546,33 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
               </button>
             </div>
 
-            <div style={{ background: '#f9fafb', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
                 <div>
-                  <span style={{ color: '#6b7280', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <span style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
                     Current Next Step
                   </span>
-                  <strong style={{ color: '#111827' }}>{selectedAttentionItem.subtext}</strong>
+                  <strong style={{ color: 'var(--ink)' }}>{selectedAttentionItem.subtext}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#6b7280', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <span style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
                     Assigned Sector
                   </span>
-                  <strong style={{ color: '#111827' }}>{selectedAttentionItem.sector}</strong>
+                  <strong style={{ color: 'var(--ink)' }}>{selectedAttentionItem.sector}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#6b7280', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <span style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
                     Category
                   </span>
-                  <strong style={{ color: '#111827', textTransform: 'capitalize' }}>
+                  <strong style={{ color: 'var(--ink)', textTransform: 'capitalize' }}>
                     {selectedAttentionItem.category} submission
                   </strong>
                 </div>
                 <div>
-                  <span style={{ color: '#6b7280', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <span style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
                     Assigned Officer
                   </span>
-                  <strong style={{ color: '#111827' }}>Daniel Kato (Finance)</strong>
+                  <strong style={{ color: 'var(--ink)' }}>Daniel Kato (Finance)</strong>
                 </div>
               </div>
             </div>
@@ -614,10 +610,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--ink)' }}>
                   Pipeline Analytics & Reports
                 </h3>
-                <small style={{ color: '#6b7280' }}>
+                <small style={{ color: 'var(--muted)' }}>
                   Performance breakdown across active submission pipelines
                 </small>
               </div>
@@ -632,21 +628,21 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ background: '#f8faf7', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Active Cases</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1b5e43', marginTop: '4px' }}>8</div>
+              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Cases</span>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>8</div>
               </div>
-              <div style={{ background: '#f8faf7', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Avg. Velocity</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1b5e43', marginTop: '4px' }}>4.2 d</div>
+              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Avg. Velocity</span>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>4.2 d</div>
               </div>
-              <div style={{ background: '#f8faf7', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Rate</span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1b5e43', marginTop: '4px' }}>92%</div>
+              <div style={{ background: 'var(--surface-raised)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Rate</span>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--green)', marginTop: '4px' }}>92%</div>
               </div>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.5, margin: '0 0 20px 0' }}>
+            <p style={{ fontSize: '13px', color: 'var(--ink-soft)', lineHeight: 1.5, margin: '0 0 20px 0' }}>
               All 10 recorded submissions are indexed across Mak engineering faculties. Revenue verification and MOU renewal checks are on track.
             </p>
 
@@ -673,10 +669,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--ink)' }}>
                   Month-to-Date Revenue Breakdown
                 </h3>
-                <small style={{ color: '#6b7280' }}>
+                <small style={{ color: 'var(--muted)' }}>
                   Total: {income.amountFormatted} ({income.subtext})
                 </small>
               </div>
@@ -691,66 +687,66 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: '#f8faf7', border: '1px solid #e3e7df' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#111827' }}>INV-2026-041 · Studio Hire</strong>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>Kampala AgriTech Collective · Verified</div>
+                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-041 · Studio Hire</strong>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Kampala AgriTech Collective · Verified</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: '#1b5e43' }}>UGX 550,000</strong>
-                  <div style={{ fontSize: '10px', color: '#1b5e43', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 550,000</strong>
+                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                     <CheckCircle size={10} /> Verified
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: '#f8faf7', border: '1px solid #e3e7df' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#111827' }}>INV-2026-039 · CNC Prototyping</strong>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>EcoBuild Uganda Ltd · Verified</div>
+                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-039 · CNC Prototyping</strong>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>EcoBuild Uganda Ltd · Verified</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: '#1b5e43' }}>UGX 420,000</strong>
-                  <div style={{ fontSize: '10px', color: '#1b5e43', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 420,000</strong>
+                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                     <CheckCircle size={10} /> Verified
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: '#f8faf7', border: '1px solid #e3e7df' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#111827' }}>INV-2026-037 · Media Production</strong>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>Makerere Health Sciences · Verified</div>
+                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-037 · Media Production</strong>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Makerere Health Sciences · Verified</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: '#1b5e43' }}>UGX 380,000</strong>
-                  <div style={{ fontSize: '10px', color: '#1b5e43', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 380,000</strong>
+                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                     <CheckCircle size={10} /> Verified
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: '#f8faf7', border: '1px solid #e3e7df' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#111827' }}>INV-2026-035 · Equipment Testing</strong>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>Telecoms Lab · Verified</div>
+                  <strong style={{ fontSize: '13px', color: 'var(--ink)' }}>INV-2026-035 · Equipment Testing</strong>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Telecoms Lab · Verified</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: '#1b5e43' }}>UGX 270,000</strong>
-                  <div style={{ fontSize: '10px', color: '#1b5e43', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--green)' }}>UGX 270,000</strong>
+                  <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                     <CheckCircle size={10} /> Verified
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: '#fff9eb', border: '1px solid #fde68a' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--amber-bg)', border: '1px solid color-mix(in srgb, var(--amber) 35%, var(--border))' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#92400e' }}>INV-2026-042 · Audio Recording</strong>
-                  <div style={{ fontSize: '11px', color: '#b45309' }}>Innovation Spotlight · Awaiting bank evidence</div>
+                  <strong style={{ fontSize: '13px', color: 'var(--amber)' }}>INV-2026-042 · Audio Recording</strong>
+                  <div style={{ fontSize: '11px', color: 'var(--amber)' }}>Innovation Spotlight · Awaiting bank evidence</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '13px', color: '#92400e' }}>UGX 150,000</strong>
-                  <div style={{ fontSize: '10px', color: '#d97706', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--amber)' }}>UGX 150,000</strong>
+                  <div style={{ fontSize: '10px', color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                     <AlertCircle size={10} /> Pending
                   </div>
                 </div>
@@ -780,10 +776,10 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--ink)' }}>
                   {selectedFacility.name}
                 </h3>
-                <small style={{ color: '#6b7280' }}>
+                <small style={{ color: 'var(--muted)' }}>
                   Active Bookings: {selectedFacility.bookings} of {selectedFacility.capacity} slots
                 </small>
               </div>
@@ -797,7 +793,7 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
               </button>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '13px', color: 'var(--ink-soft)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               {selectedFacility.bookings > 0
                 ? `${selectedFacility.name} currently has ${selectedFacility.bookings} scheduled sessions today. Equipment calibration is up to date.`
                 : `${selectedFacility.name} has no bookings right now and is available for ad-hoc reservation.`}

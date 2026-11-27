@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CircleAlert, LoaderCircle } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function DepartmentQueue({ token, onUnauthorized }) {
   const [result, setResult] = useState(null);
@@ -33,7 +34,7 @@ export function DepartmentQueue({ token, onUnauthorized }) {
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
       <section className="live-panel">
         {loading
-          ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading the department queue…</div>
+          ? <LoadingSkeleton label="Loading the department queue…" variant="table" />
           : result?.items.length
             ? <div className="live-table-wrap"><table className="live-table">
               <thead><tr><th>Case</th><th>Type</th><th>Forwarded</th><th>Sector</th></tr></thead>

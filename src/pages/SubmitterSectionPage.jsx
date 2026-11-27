@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   Ban,
@@ -17,6 +19,7 @@ import {
   FileCheck2,
   LoaderCircle,
   MapPin,
+  Plus,
   Receipt,
   Search,
   Upload,
@@ -26,6 +29,9 @@ import {
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { toast } from 'sonner';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SubmissionDatePicker } from '@/components/SubmissionDatePicker';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -34,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import {
   useCancelSubmitterBooking,
   useCreateSubmitterBooking,
@@ -53,6 +60,8 @@ import {
   SUBMITTER_INVOICE_STATUSES,
 } from '@/services/invoices';
 import { ApiError } from '@/services/api-client';
+import { backendApi } from '@/services/backend-api';
+import { formatDate, formatStage } from '@/lib/presentation';
 
 function SubmitterWorkspacePage({
   variant,
@@ -65,6 +74,7 @@ function SubmitterWorkspacePage({
   recordsTitle,
   recordsDescription,
   recordsContent,
+  heroAction,
   emptyTitle,
   emptyDescription,
   tipsTitle,
@@ -81,6 +91,7 @@ function SubmitterWorkspacePage({
             <CircleCheck size={16} aria-hidden="true" />
             <span>A clear view of activity linked to your account</span>
           </div>
+          {heroAction}
         </div>
 
         <div className="submitter-hub__preview" aria-label={previewLabel}>
@@ -144,12 +155,149 @@ function SubmitterWorkspacePage({
   );
 }
 
-export function SubmitterServiceRequestsPage() {
+function SubmitterServiceRequestRecords({ token, onUnauthorized }) {
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const query = useQuery({
+    queryKey: ['submitter', 'service-requests', page],
+    queryFn: ({ signal }) => backendApi.submitterSubmissions(
+      token,
+      { page, size: 25, tab: 'SERVICE_REQUESTS' },
+      signal,
+    ),
+    enabled: Boolean(token),
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (query.error instanceof ApiError && query.error.status === 401) onUnauthorized?.();
+  }, [onUnauthorized, query.error]);
+
+  const requests = query.data?.items ?? [];
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const visibleRequests = requests.filter((request) => (
+    [
+      request.code,
+      request.title,
+      request.serviceRequested,
+      request.department,
+      request.stage,
+    ].some((value) => String(value ?? '').toLocaleLowerCase().includes(normalizedSearch))
+  ));
+
+  return (
+    <div className="submitter-service-requests">
+      <label className="submitter-service-requests__search">
+        <Search size={15} aria-hidden="true" />
+        <input
+          type="search"
+          aria-label="Search service requests"
+          placeholder="Search reference, service or status"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(0);
+          }}
+        />
+        {search && (
+          <button type="button" aria-label="Clear service request search" onClick={() => setSearch('')}>
+            <X size={14} />
+          </button>
+        )}
+      </label>
+      <p className="submitter-service-requests__count" aria-live="polite">
+        {query.data
+          ? `${normalizedSearch ? visibleRequests.length : query.data.totalElements} ${normalizedSearch ? 'matches on this page' : query.data.totalElements === 1 ? 'service request' : 'service requests'}`
+          : 'Your service requests'}
+      </p>
+      {query.error && (
+        <div className="submitter-service-requests__error" role="alert">
+          <CircleAlert size={15} aria-hidden="true" />
+          <span>{query.error instanceof Error ? query.error.message : 'Service requests could not be loaded.'}</span>
+          <button type="button" onClick={() => query.refetch()}>Retry</button>
+        </div>
+      )}
+      {query.isPending ? (
+        <div className="submitter-service-requests__state" role="status">
+          <LoaderCircle className="spin" size={18} />
+          <span>Loading your service requests…</span>
+        </div>
+      ) : query.data && visibleRequests.length === 0 ? (
+        <div className="submitter-service-requests__state">
+          <span className="submitter-hub__empty-icon"><ClipboardList size={22} aria-hidden="true" /></span>
+          <h3>{normalizedSearch ? 'No matching service requests' : 'No service requests yet'}</h3>
+          <p>{normalizedSearch
+            ? 'Try another reference, service or status.'
+            : 'Service requests linked to your account will appear here.'}</p>
+        </div>
+      ) : (
+        <div className="submitter-service-requests__list">
+          {visibleRequests.map((request) => {
+            const service = request.serviceRequested || request.title;
+            const stageClass = request.stage.toLowerCase().replaceAll('_', '-');
+            return (
+              <article className="submitter-service-request" key={request.id}>
+                <div className="submitter-service-request__top">
+                  <div className="submitter-service-request__identity">
+                    <p className="submitter-service-request__reference">{request.code || 'Draft · no reference yet'}</p>
+                    <h3>{service}</h3>
+                    {request.title && request.title !== service && <p>{request.title}</p>}
+                  </div>
+                  <span className={`submitter-service-request__status submitter-service-request__status--${stageClass}`}>
+                    {formatStage(request.stage)}
+                  </span>
+                </div>
+                {(request.purpose || request.expectedResult) && (
+                  <p className="submitter-service-request__purpose">{request.purpose || request.expectedResult}</p>
+                )}
+                <div className="submitter-service-request__meta">
+                  {request.department && <span>{request.department}</span>}
+                  {request.serviceRequester && (
+                    <span>{request.serviceRequester.replaceAll('_', ' ').toLowerCase()}</span>
+                  )}
+                  <span>Updated {formatDate(request.updatedAt || request.createdAt)}</span>
+                </div>
+                {request.waitingForYou && (
+                  <p className="submitter-service-request__waiting">{request.waitingForYou}</p>
+                )}
+                <Link className="submitter-service-request__link" to={`/submissions/${request.id}`}>
+                  View request <ArrowRight size={13} aria-hidden="true" />
+                </Link>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      {query.data?.totalPages > 1 && (
+        <nav className="submitter-service-requests__pagination" aria-label="Service request pages">
+          <span>Page {page + 1} of {query.data.totalPages}</span>
+          <div>
+            <button type="button" disabled={page === 0 || query.isFetching} onClick={() => setPage((current) => current - 1)}>
+              Previous
+            </button>
+            <button type="button" disabled={page + 1 >= query.data.totalPages || query.isFetching} onClick={() => setPage((current) => current + 1)}>
+              Next
+            </button>
+          </div>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+export function SubmitterServiceRequestsPage({ token, onUnauthorized }) {
   return (
     <SubmitterWorkspacePage
       variant="requests"
       title="Service requests"
       description="Keep an eye on requests, updates and the next step from one place."
+      heroAction={
+        <Link className="btn btn-primary submitter-hub__hero-action" to="/submissions/new?category=service_request">
+          <Plus size={15} aria-hidden="true" />
+          New service request
+        </Link>
+      }
       icon={ClipboardList}
       previewLabel="REQUEST JOURNEY"
       previewTitle="From request to resolution"
@@ -161,14 +309,7 @@ export function SubmitterServiceRequestsPage() {
       ]}
       recordsTitle="Your service requests"
       recordsDescription="A private activity list for requests linked to your account."
-      emptyTitle="No service requests to show"
-      emptyDescription="Service activity linked to your account will appear here."
-      tipsTitle="Keep requests moving"
-      tips={[
-        'Include the details the service team needs to understand your request.',
-        'Check this page for status changes and follow-up information.',
-        'Keep related documents together with the request they support.',
-      ]}
+      recordsContent={<SubmitterServiceRequestRecords token={token} onUnauthorized={onUnauthorized} />}
     />
   );
 }
@@ -291,15 +432,15 @@ function SubmitterPaymentProofForm({ invoice, onCancel, onSubmit, pending }) {
             onChange={(event) => setAmount(event.target.value)}
           />
         </label>
-        <label>
-          Date paid
-          <input
-            required
-            type="date"
+        <div className="submitter-proof-form__date">
+          <span>Date paid</span>
+          <SubmissionDatePicker
+            id="payment-proof-date"
+            label="Date paid"
             value={paidOn}
-            onChange={(event) => setPaidOn(event.target.value)}
+            onChange={setPaidOn}
           />
-        </label>
+        </div>
         <label className="submitter-proof-form__file">
           Proof document
           <input
@@ -340,7 +481,7 @@ function SubmitterInvoiceDetails({ invoiceId, token, onUnauthorized, onDownload 
   }, [invoiceQuery.error, onUnauthorized, receiptQuery.error]);
 
   if (invoiceQuery.isPending) {
-    return <div className="submitter-invoice-details__loading" role="status"><LoaderCircle className="spin" size={16} />Loading invoice details…</div>;
+    return <LoadingSkeleton label="Loading invoice details…" variant="compact" />;
   }
   if (invoiceQuery.error || !invoice) {
     return <div className="submitter-invoice-details__error" role="alert">
@@ -399,26 +540,35 @@ function SubmitterInvoiceDetails({ invoiceId, token, onUnauthorized, onDownload 
 }
 
 function SubmitterInvoiceRecords({ token, onUnauthorized }) {
+  const linkedInvoiceId = new URLSearchParams(window.location.search).get('invoice');
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(linkedInvoiceId);
   const [proofInvoiceId, setProofInvoiceId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
   const query = useSubmitterInvoices(token, { page, size: 25, status: status || undefined });
+  const linkedInvoiceQuery = useSubmitterInvoice(token, linkedInvoiceId, Boolean(linkedInvoiceId));
   const uploadMutation = useUploadSubmitterPaymentProof(token);
 
   useEffect(() => {
     if (query.error instanceof ApiError && query.error.status === 401) onUnauthorized?.();
   }, [onUnauthorized, query.error]);
+  useEffect(() => {
+    if (linkedInvoiceQuery.error instanceof ApiError && linkedInvoiceQuery.error.status === 401) onUnauthorized?.();
+  }, [linkedInvoiceQuery.error, onUnauthorized]);
 
   const invoices = query.data?.items ?? [];
   const filteredInvoices = invoices.filter((invoice) => (
     [invoice.number, invoice.description, invoice.statusLabel, invoice.sourceId]
       .some((value) => String(value ?? '').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   ));
+  const displayedInvoices = [...filteredInvoices];
+  if (linkedInvoiceQuery.data && !displayedInvoices.some((invoice) => invoice.id === linkedInvoiceQuery.data.id)) {
+    displayedInvoices.unshift(linkedInvoiceQuery.data);
+  }
 
   function showActionError(error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -484,6 +634,12 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           <button type="button" onClick={() => query.refetch()}>Retry</button>
         </div>
       )}
+      {linkedInvoiceQuery.error && (
+        <div className="submitter-invoice-alert" role="alert">
+          <CircleAlert size={16} />
+          <span>{linkedInvoiceQuery.error instanceof Error ? linkedInvoiceQuery.error.message : 'The linked invoice could not be loaded.'}</span>
+        </div>
+      )}
       <div className="submitter-invoice-controls">
         <label className="submitter-invoice-search">
           <Search size={16} aria-hidden="true" />
@@ -496,23 +652,28 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
           />
           {search && <button type="button" aria-label="Clear invoice search" onClick={() => setSearch('')}><X size={14} /></button>}
         </label>
-        <label className="submitter-invoice-filter">
+        <div className="submitter-invoice-filter">
           <span>Payment status</span>
-          <select aria-label="Filter invoices by status" value={status} onChange={(event) => toggleStatus(event.target.value)}>
-            <option value="">All invoices</option>
-            {SUBMITTER_INVOICE_STATUSES.map((invoiceStatus) => (
-              <option key={invoiceStatus} value={invoiceStatus}>{invoiceStatusLabels[invoiceStatus]}</option>
-            ))}
-          </select>
-        </label>
+          <Select value={status || '__all__'} onValueChange={(value) => toggleStatus(value === '__all__' ? '' : value)}>
+            <SelectTrigger aria-label="Filter invoices by status" className="submitter-invoice-filter__trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="submission-select-content submitter-invoice-select-content" sideOffset={6}>
+              <SelectItem value="__all__">All invoices</SelectItem>
+              {SUBMITTER_INVOICE_STATUSES.map((invoiceStatus) => (
+                <SelectItem key={invoiceStatus} value={invoiceStatus}>{invoiceStatusLabels[invoiceStatus]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <p className="submitter-invoice-count" aria-live="polite">
         {query.data
           ? `${query.data.totalElements} ${query.data.totalElements === 1 ? 'invoice' : 'invoices'}${status ? ` · ${invoiceStatusLabels[status]}` : ''}`
           : 'Your invoice list'}
       </p>
-      {query.isPending && <div className="submitter-invoice-state" role="status"><LoaderCircle className="spin" size={20} />Loading your invoices…</div>}
-      {query.data && filteredInvoices.length === 0 && (
+      {query.isPending && <LoadingSkeleton label="Loading your invoices…" variant="table" />}
+      {query.data && displayedInvoices.length === 0 && (
         <div className="submitter-invoice-state">
           <span className="submitter-invoice-state__icon"><Receipt size={21} /></span>
           <h3>{search ? 'No matching invoices' : status ? 'No invoices in this status' : 'No invoices yet'}</h3>
@@ -521,7 +682,7 @@ function SubmitterInvoiceRecords({ token, onUnauthorized }) {
         </div>
       )}
       <div className="submitter-invoice-list">
-        {filteredInvoices.map((invoice) => {
+        {displayedInvoices.map((invoice) => {
           const expanded = expandedId === invoice.id;
           const proofOpen = proofInvoiceId === invoice.id;
           const invoicePdfKey = `${invoice.id}:invoice`;
@@ -885,7 +1046,7 @@ const bookingStatusLabels = {
 
 function SubmitterBookingDetails({ query }) {
   if (query.isPending) {
-    return <p className="submitter-booking-details__state"><LoaderCircle className="spin" size={15} />Loading booking details…</p>;
+    return <LoadingSkeleton label="Loading booking details…" variant="compact" />;
   }
   if (query.error) {
     return <p className="submitter-booking-alert" role="alert">{query.error.message || 'Could not load booking details.'}</p>;
@@ -904,7 +1065,146 @@ function SubmitterBookingDetails({ query }) {
   );
 }
 
+function SubmitterBookingDetailsDialog({ open, onOpenChange, booking, query }) {
+  const details = query.data ?? booking;
+  const statusLabel = bookingStatusLabels[details?.status] ?? details?.status;
+  const decisionNote = details?.rejectionReason || details?.decisionNote;
+  const requestType = details?.isEquipmentRequest ? 'Equipment request' : 'Facility booking';
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="submitter-booking-details-overlay" />
+        <DialogPrimitive.Content className="submitter-booking-details-dialog">
+          <header className="submitter-booking-details-dialog__header">
+            <span className="submitter-booking-details-dialog__icon"><CalendarDays size={20} aria-hidden="true" /></span>
+            <div className="submitter-booking-details-dialog__heading">
+              <span className="submitter-hub__eyebrow">BOOKING OVERVIEW</span>
+              <DialogPrimitive.Title className="submitter-booking-details-dialog__title">Booking details</DialogPrimitive.Title>
+              <DialogPrimitive.Description className="submitter-booking-details-dialog__description">
+                {details?.reference} · {details?.facilityName}
+              </DialogPrimitive.Description>
+            </div>
+            <DialogPrimitive.Close className="submitter-booking-details-dialog__close" aria-label="Close booking details">
+              <X size={17} aria-hidden="true" />
+            </DialogPrimitive.Close>
+          </header>
+
+          <div className="submitter-booking-details-dialog__body">
+            {query.isPending && (
+              <p className="submitter-booking-details-dialog__loading" role="status">
+                <LoaderCircle className="spin" size={15} aria-hidden="true" />Refreshing booking details…
+              </p>
+            )}
+            {query.error && (
+              <div className="submitter-booking-details-dialog__error" role="alert">
+                <CircleAlert size={16} aria-hidden="true" />
+                <span>{query.error.message || 'Could not refresh booking details. Showing the available summary.'}</span>
+                <button type="button" onClick={() => query.refetch()}>Retry</button>
+              </div>
+            )}
+            <div className="submitter-booking-details-dialog__summary">
+              <div>
+                <span>Request reference</span>
+                <strong>{details?.reference}</strong>
+              </div>
+              <span className={`submitter-booking-status submitter-booking-status--${details?.status?.toLowerCase()}`}>
+                <i aria-hidden="true" />{statusLabel}
+              </span>
+            </div>
+
+            <div className="submitter-booking-details-dialog__grid">
+              <div className="submitter-booking-details-dialog__item submitter-booking-details-dialog__item--facility">
+                <span>Facility</span>
+                <strong>{details?.facilityName}</strong>
+                {details?.facilityLocation && <small><MapPin size={12} aria-hidden="true" />{details.facilityLocation}</small>}
+              </div>
+              <div className="submitter-booking-details-dialog__item">
+                <span>Visit date</span>
+                <strong>{formatBookingDate(details?.startsAt)}</strong>
+              </div>
+              <div className="submitter-booking-details-dialog__item">
+                <span>Time</span>
+                <strong>{formatBookingTime(details?.startsAt)} – {formatBookingTime(details?.endsAt)}</strong>
+              </div>
+              <div className="submitter-booking-details-dialog__item">
+                <span>Attendees</span>
+                <strong>{details?.attendees} {details?.attendees === 1 ? 'person' : 'people'}</strong>
+              </div>
+              <div className="submitter-booking-details-dialog__item">
+                <span>Request type</span>
+                <strong>{requestType}</strong>
+              </div>
+              {details?.operator && (
+                <div className="submitter-booking-details-dialog__item">
+                  <span>Contact / operator</span>
+                  <strong>{details.operator}</strong>
+                </div>
+              )}
+              {details?.equipmentName && (
+                <div className="submitter-booking-details-dialog__item">
+                  <span>Equipment</span>
+                  <strong>{details.equipmentName}</strong>
+                </div>
+              )}
+              {details?.conditionOut && (
+                <div className="submitter-booking-details-dialog__item">
+                  <span>Condition when issued</span>
+                  <strong>{details.conditionOut.replaceAll('_', ' ')}</strong>
+                </div>
+              )}
+              {details?.conditionReturned && (
+                <div className="submitter-booking-details-dialog__item">
+                  <span>Return condition</span>
+                  <strong>{details.conditionReturned.replaceAll('_', ' ')}</strong>
+                </div>
+              )}
+              {details?.returnedAt && (
+                <div className="submitter-booking-details-dialog__item">
+                  <span>Returned</span>
+                  <strong>{formatBookingDate(details.returnedAt)} · {formatBookingTime(details.returnedAt)}</strong>
+                </div>
+              )}
+            </div>
+
+            <section className="submitter-booking-details-dialog__note">
+              <span>Purpose</span>
+              <p>{details?.purpose || 'No purpose provided.'}</p>
+            </section>
+            {details?.purposeDetail && (
+              <section className="submitter-booking-details-dialog__note">
+                <span>Additional details</span>
+                <p>{details.purposeDetail}</p>
+              </section>
+            )}
+            {decisionNote && (
+              <section className="submitter-booking-details-dialog__note submitter-booking-details-dialog__note--decision">
+                <span>Decision note</span>
+                <p>{decisionNote}</p>
+              </section>
+            )}
+            {details?.returnNotes && (
+              <section className="submitter-booking-details-dialog__note">
+                <span>Return notes</span>
+                <p>{details.returnNotes}</p>
+              </section>
+            )}
+          </div>
+
+          <footer className="submitter-booking-details-dialog__footer">
+            <span>{details?.createdAt ? `Submitted ${formatBookingDate(details.createdAt)}` : ''}</span>
+            <DialogPrimitive.Close className="submitter-booking-button submitter-booking-button--primary">
+              Close details
+            </DialogPrimitive.Close>
+          </footer>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 function SubmitterBookingRecords({ token, onUnauthorized }) {
+  const linkedBookingId = new URLSearchParams(window.location.search).get('booking');
   const [page, setPage] = useState(0);
   const bookingsQuery = useSubmitterBookings(token, { page, size: 25 });
   const facilitiesQuery = useFacilities(token);
@@ -921,7 +1221,7 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
   }));
   const [now, setNow] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
-  const [detailsId, setDetailsId] = useState(null);
+  const [detailsId, setDetailsId] = useState(linkedBookingId);
   const [cancelId, setCancelId] = useState(null);
   const facilities = facilitiesQuery.data ?? [];
   const availableFacilities = facilities.filter((facility) => facility.status !== 'MAINTENANCE');
@@ -1016,9 +1316,14 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
   }
 
   const list = bookingsQuery.data?.items ?? [];
-  const bookingToCancel = list.find((booking) => booking.id === cancelId);
-  const actionError = createBooking.error || cancelBooking.error;
   const detailsQuery = useSubmitterBooking(token, detailsId, Boolean(detailsId));
+  const linkedBooking = detailsQuery.data;
+  const showLinkedBooking = Boolean(
+    linkedBookingId && linkedBooking && !list.some((booking) => booking.id === linkedBooking.id),
+  );
+  const bookingToCancel = list.find((booking) => booking.id === cancelId);
+  const bookingForDetails = list.find((booking) => booking.id === detailsId);
+  const actionError = createBooking.error || cancelBooking.error;
   useEffect(() => {
     if (detailsQuery.error instanceof ApiError && detailsQuery.error.status === 401) onUnauthorized?.();
   }, [detailsQuery.error, onUnauthorized]);
@@ -1143,8 +1448,8 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         )}
         {bookingsQuery.isPending ? (
-          <div className="submitter-booking-state"><LoaderCircle className="spin" size={19} /><span>Loading your bookings…</span></div>
-        ) : list.length === 0 ? (
+          <LoadingSkeleton label="Loading your bookings…" variant="list" />
+        ) : list.length === 0 && !linkedBookingId ? (
           <div className="submitter-booking-state">
             <span className="submitter-hub__empty-icon"><CalendarDays size={22} aria-hidden="true" /></span>
             <h4>No bookings to show</h4>
@@ -1152,11 +1457,56 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         ) : (
           <div className="submitter-booking-list">
+            {showLinkedBooking && (
+              <article className="submitter-booking-card" data-notification-target="true">
+                <div className="submitter-booking-card__top">
+                  <div>
+                    <p className="submitter-booking-card__reference">{linkedBooking.reference}</p>
+                    <h4>{linkedBooking.facilityName}</h4>
+                    <p className="submitter-booking-card__purpose">{linkedBooking.purpose}</p>
+                  </div>
+                  <span className={`submitter-booking-status submitter-booking-status--${linkedBooking.status.toLowerCase()}`}>
+                    <i aria-hidden="true" />{bookingStatusLabels[linkedBooking.status] ?? linkedBooking.status}
+                  </span>
+                </div>
+                <div className="submitter-booking-card__actions">
+                  <button
+                    type="button"
+                    className="submitter-booking-button"
+                    aria-haspopup="dialog"
+                    onClick={() => setDetailsId(linkedBooking.id)}
+                  >
+                    Booking details
+                  </button>
+                  {['PENDING', 'APPROVED'].includes(linkedBooking.status) && (
+                    <button
+                      type="button"
+                      className="submitter-booking-button submitter-booking-button--quiet"
+                      onClick={() => {
+                        cancelBooking.reset();
+                        setCancelId(linkedBooking.id);
+                      }}
+                    >
+                      Cancel booking
+                    </button>
+                  )}
+                </div>
+              </article>
+            )}
+            {linkedBookingId && !linkedBooking && !detailsQuery.isPending && detailsQuery.error && (
+              <div className="submitter-booking-alert" role="alert">
+                {detailsQuery.error.message || 'The linked booking could not be loaded.'}
+              </div>
+            )}
             {list.map((booking) => {
               const statusLabel = bookingStatusLabels[booking.status] ?? booking.status;
               const canCancel = ['PENDING', 'APPROVED'].includes(booking.status);
               return (
-                <article className="submitter-booking-card" key={booking.id}>
+                <article
+                  className="submitter-booking-card"
+                  key={booking.id}
+                  data-notification-target={booking.id === linkedBookingId ? 'true' : undefined}
+                >
                   <div className="submitter-booking-card__top">
                     <div>
                       <p className="submitter-booking-card__reference">{booking.reference}</p>
@@ -1176,10 +1526,10 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                     <button
                       type="button"
                       className="submitter-booking-button"
-                      aria-expanded={detailsId === booking.id}
-                      onClick={() => setDetailsId((current) => current === booking.id ? null : booking.id)}
+                      aria-haspopup="dialog"
+                      onClick={() => setDetailsId(booking.id)}
                     >
-                      {detailsId === booking.id ? 'Hide details' : 'Booking details'}
+                      Booking details
                     </button>
                     {canCancel && (
                       <button
@@ -1194,7 +1544,6 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
                       </button>
                     )}
                   </div>
-                  {detailsId === booking.id && <SubmitterBookingDetails query={detailsQuery} />}
                 </article>
               );
             })}
@@ -1214,6 +1563,14 @@ function SubmitterBookingRecords({ token, onUnauthorized }) {
           </div>
         )}
       </section>
+      <SubmitterBookingDetailsDialog
+        open={Boolean(detailsId)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsId(null);
+        }}
+        booking={bookingForDetails}
+        query={detailsQuery}
+      />
       <AlertDialog
         open={Boolean(cancelId)}
         onOpenChange={(open) => {

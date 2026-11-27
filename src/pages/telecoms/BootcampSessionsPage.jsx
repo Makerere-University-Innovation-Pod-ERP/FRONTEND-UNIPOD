@@ -230,7 +230,7 @@ export function BootcampSessionsPage({ token, onUnauthorized }) {
       )}
 
       {bootcampsQuery.isLoading ? (
-        <Loading label="Loading bootcamp sessions…" />
+        <Loading label="Loading bootcamp sessions…" variant="split" />
       ) : (
         <div className="queue-grid">
           {/* Left Column: Sessions List */}
@@ -310,7 +310,7 @@ export function BootcampSessionsPage({ token, onUnauthorized }) {
               <div className="bootcamp-overview-grid">
                 <div className="bootcamp-stat-card">
                   <span className="stat-label">Training Date & Schedule</span>
-                  <span className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0b3426' }}>
+                  <span className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--green)' }}>
                     <Calendar size={16} /> {formatDate(currentSession.date)}
                   </span>
                   <span className="stat-sub">{currentSession.start} – {currentSession.end} ({currentSession.instructor})</span>
@@ -330,7 +330,7 @@ export function BootcampSessionsPage({ token, onUnauthorized }) {
 
                 <div className="bootcamp-stat-card">
                   <span className="stat-label">Registration Fee</span>
-                  <span className="stat-value" style={{ color: '#0b3426' }}>{formatUgx(currentSession.fee)}</span>
+                  <span className="stat-value" style={{ color: 'var(--green)' }}>{formatUgx(currentSession.fee)}</span>
                   <span className="stat-sub">Per participant · Certificate included</span>
                 </div>
 
@@ -344,8 +344,8 @@ export function BootcampSessionsPage({ token, onUnauthorized }) {
               </div>
 
               {showEnroll && (
-                <div style={{ background: '#f5f8f5', border: '1.5px solid #d4e5da', padding: 18, borderRadius: 16, marginBottom: 18 }}>
-                  <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: '#0b3426' }}>
+                <div style={{ background: 'var(--surface-raised)', border: '1.5px solid color-mix(in srgb, var(--green) 25%, var(--border))', padding: 18, borderRadius: 16, marginBottom: 18 }}>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: 'var(--green)' }}>
                     Register Participant: {currentSession.topic}
                   </h4>
                   <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--ink-soft)' }}>

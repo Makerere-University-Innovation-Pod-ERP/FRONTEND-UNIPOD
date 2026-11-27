@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, CircleAlert, LoaderCircle, UserPlus } from 'lucide-react';
+import { ArrowUpRight, CircleAlert, UserPlus } from 'lucide-react';
 import { useReviewerAssigned, useReviewerCase } from '@/hooks/useReviewer';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
 import { REVIEWER_CANNOT_ASSIGN_REASON } from '@/lib/permissions';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const decisionLabel = {
   pending: 'Decision pending',
@@ -34,7 +35,7 @@ export function ReviewerWorkspace({ token, onUnauthorized }) {
         <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error instanceof Error ? error.message : 'Could not load your assigned cases.'}</div>
       )}
       {isLoading ? (
-        <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading your assigned cases…</div>
+        <LoadingSkeleton label="Loading your assigned cases…" variant="queue-detail" />
       ) : !assigned?.length ? (
         <p className="live-empty">No cases are currently assigned to you.</p>
       ) : (
@@ -68,7 +69,7 @@ function CaseSummaryPanel({ token, id, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  if (isLoading) return <section className="live-panel"><div className="live-loading"><LoaderCircle className="spin" size={20} />Loading case…</div></section>;
+  if (isLoading) return <section className="live-panel"><LoadingSkeleton label="Loading case…" variant="detail" /></section>;
   if (!summary) return <section className="live-panel"><p className="live-empty">Select a case to view its summary.</p></section>;
 
   return (
@@ -84,7 +85,7 @@ function CaseSummaryPanel({ token, id, onUnauthorized }) {
         <Field label="Pending action" value={summary.pendingAction} />
       </div>
       <div className="requirement-block" style={{ marginTop: 16 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 11, color: '#89918a', textTransform: 'uppercase', letterSpacing: '.08em' }}>Documents</h3>
+        <h3 style={{ margin: '0 0 10px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Documents</h3>
         {summary.documents.length ? (
           <ul className="document-list">{summary.documents.map((document) => <li key={document.id}><span><b>{document.name}</b><small>{formatStage(document.status)}</small></span></li>)}</ul>
         ) : <p className="live-empty">No documents recorded for this case.</p>}

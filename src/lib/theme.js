@@ -21,10 +21,15 @@ export function prefersDarkSystemTheme() {
 export function applyStoredTheme() {
   const stored = getStoredTheme();
   if (stored) document.documentElement.setAttribute('data-theme', stored);
+  document.documentElement.classList.toggle(
+    'dark',
+    stored ? stored === 'dark' : prefersDarkSystemTheme(),
+  );
 }
 
 export function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.classList.toggle('dark', theme === 'dark');
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

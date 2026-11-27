@@ -4,7 +4,6 @@ import {
   CircleHelp,
   FileText,
   Inbox,
-  LoaderCircle,
   LockKeyhole,
   Search,
   X,
@@ -13,6 +12,8 @@ import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { useSubmitterCapabilities } from '@/hooks/useSubmitter';
 
 function isSubmitterCapabilities(value) {
   return value !== null
@@ -34,31 +35,39 @@ export function MySubmissionsPage({
   onUnauthorized,
 }) {
   const [result, setResult] = useState(null);
-  const [capabilities, setCapabilities] = useState(null);
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // GET /me/capabilities, shared with BackendWorkspace's nav via the same query cache.
+  const capabilitiesQuery = useSubmitterCapabilities(token);
+  const capabilities = capabilitiesQuery.isSuccess && isSubmitterCapabilities(capabilitiesQuery.data)
+    ? capabilitiesQuery.data
+    : null;
+
+  useEffect(() => {
+    if (capabilitiesQuery.error instanceof ApiError && capabilitiesQuery.error.status === 401) onUnauthorized();
+  }, [capabilitiesQuery.error, onUnauthorized]);
+
+  useEffect(() => {
+    if (capabilitiesQuery.isSuccess && !isSubmitterCapabilities(capabilitiesQuery.data)) {
+      setError('The account capabilities response is invalid. Refresh the page or contact support.');
+    }
+  }, [capabilitiesQuery.isSuccess, capabilitiesQuery.data]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    void Promise.all([
-      backendApi.submitterSubmissions(token, page, 25, controller.signal),
-      backendApi.submitterCapabilities(token, controller.signal),
-    ]).then(([submissions, currentCapabilities]) => {
-      if (!isSubmitterCapabilities(currentCapabilities)) {
-        throw new Error('The account capabilities response is invalid. Refresh the page or contact support.');
-      }
-      setResult(submissions);
-      setCapabilities(currentCapabilities);
-    }).catch((reason) => {
-      if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
-      else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
-        setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
-      }
-    }).finally(() => setLoading(false));
+    backendApi.submitterSubmissions(token, { page, size: 25 }, controller.signal)
+      .then(setResult)
+      .catch((reason) => {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
+        }
+      }).finally(() => setLoading(false));
     return () => controller.abort();
   }, [token, page, onUnauthorized]);
 
@@ -141,23 +150,23 @@ export function MySubmissionsPage({
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5}><div className="my-submissions-table-state"><LoaderCircle className="spin" size={20} />Loading your submissions…</div></td></tr>
+                  <tr><td colSpan={5}><LoadingSkeleton label="Loading your submissions…" variant="table" className="my-submissions-table-state" /></td></tr>
                 ) : visibleSubmissions.length ? visibleSubmissions.map((item) => {
                   const waitingOnYou = item.stage === 'REFINEMENT_REQUESTED';
                   const stageClass = item.stage.toLowerCase().replaceAll('_', '-');
                   return (
                     <tr key={item.id}>
-                      <td>
+                      <td data-label="Submission">
                         <Link className="case-title" to={`/submissions/${item.id}`}>
                           <b>{item.title}</b>
                           <small>{item.code || 'Draft · no reference yet'}</small>
                         </Link>
                         {waitingOnYou && <Link to={`/submissions/${item.id}/respond`} className="decision-badge decision-changes_needed my-submissions-response">Waiting on you — respond</Link>}
                       </td>
-                      <td><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
-                      <td><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
-                      <td>{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
-                      <td>{formatDate(item.updatedAt)}</td>
+                      <td data-label="Category"><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
+                      <td data-label="Current stage"><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
+                      <td data-label="Received">{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
+                      <td data-label="Last updated">{formatDate(item.updatedAt)}</td>
                     </tr>
                   );
                 }) : (

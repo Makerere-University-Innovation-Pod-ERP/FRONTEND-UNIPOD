@@ -17,6 +17,7 @@ import { useDecisionView, useRecordDecision } from '@/hooks/useCoordinator';
 import { ApiError } from '@/services/api-client';
 import { formatDate, formatStage } from '@/lib/presentation';
 import { COORDINATOR_OUTCOMES, findOutcome, reviewProgressLabel } from '@/lib/case-status';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './coordinator.css';
 
 /**
@@ -99,10 +100,7 @@ export function CoordinatorDecisionPage({ token, onUnauthorized }) {
       </div>
 
       {isLoading && (
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={22} />
-          Loading the review record…
-        </div>
+        <LoadingSkeleton label="Loading the review record…" variant="detail" />
       )}
 
       {error && !unauthorized && (

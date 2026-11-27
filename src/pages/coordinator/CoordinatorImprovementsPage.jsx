@@ -5,7 +5,6 @@ import {
   CalendarClock,
   CircleAlert,
   Clock,
-  LoaderCircle,
   RotateCw,
   Search,
   TriangleAlert,
@@ -15,6 +14,7 @@ import { useImprovementQueue } from '@/hooks/useCoordinator';
 import { ApiError } from '@/services/api-client';
 import { formatDate } from '@/lib/presentation';
 import { calendarDaysUntil, deadlineLabel } from '@/lib/case-status';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import './coordinator.css';
 
 /**
@@ -99,10 +99,7 @@ export function CoordinatorImprovementsPage({ token, onUnauthorized }) {
       )}
 
       {isLoading ? (
-        <div className="live-loading">
-          <LoaderCircle className="spin" size={22} />
-          Loading briefs being improved…
-        </div>
+        <LoadingSkeleton label="Loading briefs being improved…" variant="metrics-list" />
       ) : (
         <>
           <section className="live-metrics" aria-label="Improvement queue summary">
