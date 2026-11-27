@@ -258,8 +258,8 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
             : isForest
             ? 'overview-metric-card card-forest'
             : 'overview-metric-card card-default';
-          const labelColor = isBurgundy ? '#c99b8f' : isForest ? '#9ec5b1' : 'var(--muted)';
-          const valueColor = isBurgundy || isForest ? '#ffffff' : 'var(--ink)';
+          const labelColor = isBurgundy || isForest ? '#ffffff' : '#6b7280';
+          const valueColor = isBurgundy || isForest ? '#ffffff' : '#111827';
 
           return (
             <div key={card.id} className={cardClass} style={{ minHeight: '130px' }}>
