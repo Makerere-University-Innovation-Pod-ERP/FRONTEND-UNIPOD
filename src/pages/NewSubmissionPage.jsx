@@ -18,12 +18,13 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRules } from '@/hooks/useRules';
 import { allMustAcceptAccepted, computeAcceptedRulesVersion, RulesAcceptance } from '@/components/RulesAcceptance';
 import { SubmissionDatePicker } from '@/components/SubmissionDatePicker';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const STEPS = ['Type', 'Details', 'Documents', 'Department rules', 'Check & submit'];
 const REGISTRATION_FLOW = [
@@ -98,6 +99,7 @@ export function NewSubmissionPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const { id: editingId } = useParams();
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState(() => (
     isSubmitter && new URLSearchParams(location.search).get('category') === 'service_request'
@@ -129,6 +131,16 @@ export function NewSubmissionPage({
   const [attemptedAdvance, setAttemptedAdvance] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // Resuming a draft (PUT /submissions/{id}): draftId starts from the route
+  // once an existing draft has been saved under this session, subsequent
+  // saves PUT instead of POST. existingDocuments holds what GET
+  // /me/submissions/{id} already reports stored, since a <input type="file">
+  // can never be refilled with a file the browser didn't just pick.
+  const [draftId, setDraftId] = useState(editingId ?? null);
+  const [loadingDraft, setLoadingDraft] = useState(Boolean(editingId));
+  const [existingDocuments, setExistingDocuments] = useState([]);
+  const [draftNotice, setDraftNotice] = useState('');
+  const [savingDraft, setSavingDraft] = useState(false);
 
   const rulesQuery = useRules(token);
   const generalRules = useMemo(
@@ -149,6 +161,47 @@ export function NewSubmissionPage({
     return () => URL.revokeObjectURL(previewFile.url);
   }, [previewFile]);
 
+  useEffect(() => {
+    if (!editingId) return undefined;
+    const controller = new AbortController();
+    setLoadingDraft(true);
+    (isSubmitter ? backendApi.submitterSubmissionDetail(token, editingId, controller.signal) : backendApi.caseFile(token, editingId, controller.signal))
+      .then((caseFile) => {
+        const draft = caseFile.submission;
+        setCategory(draft.category);
+        setTitle(draft.title ?? '');
+        setPurpose(draft.purpose ?? '');
+        setProblemAddressed(draft.problemAddressed ?? '');
+        setServiceRequested(draft.serviceRequested ?? '');
+        setServiceRequester(draft.serviceRequester ?? '');
+        setDepartment(draft.department ?? '');
+        setExpectedResult(draft.expectedResult ?? '');
+        setPreferredAt(draft.preferredAt ? draft.preferredAt.slice(0, 16) : '');
+        setSubmitterPhone(draft.submitterPhone ?? '');
+        setStudentNumber(draft.studentNumber ?? '');
+        setProgramme(draft.programme ?? '');
+        setSupervisor(draft.supervisor ?? '');
+        setRecommendationLetterStatus(draft.recommendationLetterStatus ?? 'submitted');
+        // The version string can't be reversed into individual rule ids —
+        // a draft that already recorded an acceptance is treated as having
+        // accepted whichever must-accept rules are live now.
+        if (draft.acceptedRulesVersion) {
+          setAcceptedRuleIds(generalRules.filter((rule) => rule.mustAccept).map((rule) => rule.id));
+        }
+        setExistingDocuments(caseFile.documents ?? []);
+      })
+      .catch((reason) => {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setError(reason instanceof Error ? reason.message : 'Could not load this draft.');
+        }
+      })
+      .finally(() => setLoadingDraft(false));
+    return () => controller.abort();
+    // Deliberately only re-runs when editingId changes — prefill should
+    // happen once, not every time the (still-loading) rules list resolves.
+  }, [editingId, token, isSubmitter, onUnauthorized]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const detailsValid = Boolean(
     title.trim() && purpose.trim() && problemAddressed.trim() &&
     (category !== 'student' || (studentNumber.trim() && programme.trim())) &&
@@ -161,7 +214,9 @@ export function NewSubmissionPage({
     )),
   );
   const documentsValid = documentRequirements.every(
-    (requirement) => !requirement.required || documentFiles[requirement.id] instanceof File,
+    (requirement) => !requirement.required
+      || documentFiles[requirement.id] instanceof File
+      || existingDocuments.some((document) => document.name === requirement.label),
   );
   const stepValid = [true, detailsValid, documentsValid, rulesAccepted, true][step];
   const isServiceRequest = category === 'service_request';
@@ -200,14 +255,8 @@ export function NewSubmissionPage({
     setStep((value) => Math.max(0, value - 1));
   }
 
-  async function submit() {
-    if (!rulesAccepted || !detailsValid || !documentsValid) {
-      setAttemptedAdvance(true);
-      return;
-    }
-    setError('');
-    setBusy(true);
-    const body = {
+  function buildBody() {
+    return {
       category,
       title: title.trim(),
       purpose: purpose.trim(),
@@ -230,24 +279,62 @@ export function NewSubmissionPage({
             serviceRequester,
             ...(department.trim() ? { department: department.trim() } : {}),
             expectedResult: expectedResult.trim(),
-            preferredAt: new Date(preferredAt).toISOString(),
+            ...(isFutureDateTime(preferredAt) ? { preferredAt: new Date(preferredAt).toISOString() } : {}),
             submitterPhone: submitterPhone.trim(),
           }
         : {}),
     };
+  }
+
+  async function uploadNewDocuments(id) {
+    for (const requirement of documentRequirements) {
+      const file = documentFiles[requirement.id];
+      if (!(file instanceof File)) continue;
+      const formData = new FormData();
+      formData.set('name', requirement.label);
+      formData.set('status', 'SUBMITTED');
+      formData.set('documentType', requirement.documentType);
+      formData.set('file', file);
+      await backendApi.uploadDocument(token, id, formData);
+    }
+  }
+
+  // Drafts may be saved incomplete (§5.4) — no validation gate here. Stays
+  // on the page so the submitter can keep editing; a second save PUTs the
+  // same draft instead of creating another one.
+  async function saveDraft() {
+    setError('');
+    setDraftNotice('');
+    setSavingDraft(true);
+    try {
+      const saved = draftId
+        ? await backendApi.updateSubmission(token, draftId, buildBody())
+        : await backendApi.createSubmission(token, buildBody());
+      await uploadNewDocuments(saved.id);
+      setDraftId(saved.id);
+      setDraftNotice('Draft saved. You can come back to finish it any time from My Submissions.');
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+      else setError(reason instanceof Error ? reason.message : 'Could not save this draft.');
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
+  async function submit() {
+    if (!rulesAccepted || !detailsValid || !documentsValid) {
+      setAttemptedAdvance(true);
+      return;
+    }
+    setError('');
+    setBusy(true);
+    const body = buildBody();
 
     try {
-      const created = await backendApi.createSubmission(token, body);
-      for (const requirement of documentRequirements) {
-        const file = documentFiles[requirement.id];
-        if (!(file instanceof File)) continue;
-        const formData = new FormData();
-        formData.set('name', requirement.label);
-        formData.set('status', 'SUBMITTED');
-        formData.set('documentType', requirement.documentType);
-        formData.set('file', file);
-        await backendApi.uploadDocument(token, created.id, formData);
-      }
+      const created = draftId
+        ? await backendApi.updateSubmission(token, draftId, body)
+        : await backendApi.createSubmission(token, body);
+      await uploadNewDocuments(created.id);
       const submission = isSubmitter
         ? await backendApi.submitSubmission(token, created.id)
         : created;
@@ -261,6 +348,10 @@ export function NewSubmissionPage({
     } finally {
       setBusy(false);
     }
+  }
+
+  if (loadingDraft) {
+    return <div className="live-page"><LoadingSkeleton label="Loading your draft…" variant="detail" /></div>;
   }
 
   return (
@@ -535,9 +626,16 @@ export function NewSubmissionPage({
         )}
 
         {error && <div className="api-error api-error-banner" role="alert">{error}</div>}
+        {draftNotice && <p className="live-note" role="status">{draftNotice}</p>}
         <div className="form-actions">
           {step > 0 && <button className="btn btn-outline" type="button" onClick={goBack} disabled={busy}>Back</button>}
           {step === 0 && <Link to={onBehalfOf ? cancelPath : effectiveCancelPath} className="btn btn-outline">Cancel</Link>}
+          {isSubmitter && (
+            <button className="btn btn-outline" type="button" onClick={saveDraft} disabled={savingDraft || busy}>
+              {savingDraft ? <LoaderCircle size={15} className="spin" /> : null}
+              {savingDraft ? 'Saving draft…' : 'Save draft'}
+            </button>
+          )}
           {step < STEPS.length - 1
             ? <button className="btn btn-primary" type="button" onClick={goNext}>Next<ArrowRight size={15} /></button>
             : <button className="btn btn-primary" type="button" onClick={submit} disabled={busy || !rulesAccepted}>

@@ -112,8 +112,15 @@ export const backendApi = {
     request('/me/capabilities', { token, signal }),
   createSubmission: (token, body) =>
     request('/submissions', { token, body }),
+  updateSubmission: (
+    token,
+    id,
+    body,
+  ) => request(`/submissions/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
   submitSubmission: (token, id) =>
     request(`/submissions/${encodeURIComponent(id)}/submit`, { token, method: 'POST' }),
+  submitterSubmissionDetail: (token, id, signal) =>
+    request(`/me/submissions/${encodeURIComponent(id)}`, { token, signal }),
   submissionCaseFile: (token, id, signal) =>
     request(
       `/submissions/${encodeURIComponent(id)}`,
