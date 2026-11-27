@@ -1,26 +1,19 @@
 import { useEffect, useState } from 'react';
 import {
-  CalendarDays,
   CircleAlert,
-  ClipboardList,
+  CircleHelp,
   FileText,
   Inbox,
-  LoaderCircle,
   LockKeyhole,
-  Receipt,
   Search,
   X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
-
-const TABS = [
-  { id: 'briefs', label: 'Briefs', icon: FileText },
-  { id: 'service-requests', label: 'Service requests', icon: ClipboardList, reason: 'Service requests belong to the operational domains (Multimedia, Textile, CNC & Carpentry, Telecoms) — not yet built.' },
-  { id: 'invoices', label: 'Invoices and payments', icon: Receipt, reason: 'Invoices and payments are owned by the shared Finance module (Assignment 6) — not yet built.' },
-  { id: 'bookings', label: 'Bookings', icon: CalendarDays, reason: 'Bookings belong to the operational domains\' schedule/lab/workshop screens — not yet built.' },
-];
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { useSubmitterCapabilities } from '@/hooks/useSubmitter';
 
 function isSubmitterCapabilities(value) {
   return value !== null
@@ -42,32 +35,39 @@ export function MySubmissionsPage({
   onUnauthorized,
 }) {
   const [result, setResult] = useState(null);
-  const [capabilities, setCapabilities] = useState(null);
   const [page, setPage] = useState(0);
-  const [activeTab, setActiveTab] = useState('briefs');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // GET /me/capabilities, shared with BackendWorkspace's nav via the same query cache.
+  const capabilitiesQuery = useSubmitterCapabilities(token);
+  const capabilities = capabilitiesQuery.isSuccess && isSubmitterCapabilities(capabilitiesQuery.data)
+    ? capabilitiesQuery.data
+    : null;
+
+  useEffect(() => {
+    if (capabilitiesQuery.error instanceof ApiError && capabilitiesQuery.error.status === 401) onUnauthorized();
+  }, [capabilitiesQuery.error, onUnauthorized]);
+
+  useEffect(() => {
+    if (capabilitiesQuery.isSuccess && !isSubmitterCapabilities(capabilitiesQuery.data)) {
+      setError('The account capabilities response is invalid. Refresh the page or contact support.');
+    }
+  }, [capabilitiesQuery.isSuccess, capabilitiesQuery.data]);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    void Promise.all([
-      backendApi.submitterSubmissions(token, page, 25, controller.signal),
-      backendApi.submitterCapabilities(token, controller.signal),
-    ]).then(([submissions, currentCapabilities]) => {
-      if (!isSubmitterCapabilities(currentCapabilities)) {
-        throw new Error('The account capabilities response is invalid. Refresh the page or contact support.');
-      }
-      setResult(submissions);
-      setCapabilities(currentCapabilities);
-    }).catch((reason) => {
-      if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
-      else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
-        setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
-      }
-    }).finally(() => setLoading(false));
+    backendApi.submitterSubmissions(token, { page, size: 25 }, controller.signal)
+      .then(setResult)
+      .catch((reason) => {
+        if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
+        else if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setError(reason instanceof Error ? reason.message : 'Could not load your submissions.');
+        }
+      }).finally(() => setLoading(false));
     return () => controller.abort();
   }, [token, page, onUnauthorized]);
 
@@ -77,63 +77,45 @@ export function MySubmissionsPage({
     return [item.title, item.code, item.id, item.category, item.stage]
       .some((value) => String(value ?? '').toLocaleLowerCase().includes(normalizedSearch));
   });
-  const activeTabDetails = TABS.find((tab) => tab.id === activeTab);
 
   return (
     <div className="live-page page-enter my-submissions-page">
       <div className="live-page-heading">
-        <div><p className="eyebrow">MY WORKSPACE · SUBMITTER HOME</p><h1>My submissions</h1><p>Track cases linked to your account. Your case records are read-only.</p></div>
-      </div>
-      {capabilities && <section className="live-panel submitter-capabilities my-submissions-capabilities" aria-label="Account capabilities">
         <div>
-          <p className="eyebrow">ACCOUNT ACCESS</p>
-          <p>{capabilities.message}</p>
-        </div>
-        {capabilities.modules.some((module) => module.availability === 'NOT_CONFIGURED') && (
-          <div className="locked-modules">
-            {capabilities.modules
-              .filter((module) => module.availability === 'NOT_CONFIGURED')
-              .map((module) => <span key={module.key}><LockKeyhole size={13} />{module.label}</span>)}
+          <p className="eyebrow">MY WORKSPACE · SUBMITTER HOME</p>
+          <div className="my-submissions-title-row">
+            <h1>My submissions</h1>
+            {capabilities && (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="my-submissions-access-trigger" aria-label="Account access details">
+                      <CircleHelp size={15} aria-hidden="true" />
+                      <span>Account access</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="my-submissions-access-tooltip" side="bottom" align="start" sideOffset={8}>
+                    <div>
+                      <p className="eyebrow">ACCOUNT ACCESS</p>
+                      <p>{capabilities.message}</p>
+                      {capabilities.modules.some((module) => module.availability === 'NOT_CONFIGURED') && (
+                        <div className="locked-modules">
+                          {capabilities.modules
+                            .filter((module) => module.availability === 'NOT_CONFIGURED')
+                            .map((module) => <span key={module.key}><LockKeyhole size={13} />{module.label}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-        )}
-      </section>}
-      {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
-      <div className="my-submissions-tabs" role="tablist" aria-label="My submissions sections">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`my-submissions-panel-${tab.id}`}
-            id={`my-submissions-tab-${tab.id}`}
-            className="my-submissions-tab"
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <tab.icon size={16} aria-hidden="true" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
+          <p>Track cases linked to your account. Your case records are read-only.</p>
+        </div>
       </div>
-      {activeTab !== 'briefs' ? (
-        <section
-          className="my-submissions-panel my-submissions-coming-soon"
-          role="tabpanel"
-          id={`my-submissions-panel-${activeTab}`}
-          aria-labelledby={`my-submissions-tab-${activeTab}`}
-        >
-          <span className="my-submissions-empty-icon"><LockKeyhole size={21} /></span>
-          <p className="eyebrow">COMING SOON</p>
-          <h2>{activeTabDetails?.label}</h2>
-          <p>{activeTabDetails?.reason}</p>
-        </section>
-      ) : (
-        <section
-          className="my-submissions-panel"
-          role="tabpanel"
-          id="my-submissions-panel-briefs"
-          aria-labelledby="my-submissions-tab-briefs"
-        >
+      {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
+      <section className="my-submissions-panel">
           <div className="my-submissions-toolbar">
             <div className="my-submissions-table-heading">
               <span className="my-submissions-heading-icon"><FileText size={17} /></span>
@@ -168,23 +150,25 @@ export function MySubmissionsPage({
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5}><div className="my-submissions-table-state"><LoaderCircle className="spin" size={20} />Loading your submissions…</div></td></tr>
+                  <tr><td colSpan={5}><LoadingSkeleton label="Loading your submissions…" variant="table" className="my-submissions-table-state" /></td></tr>
                 ) : visibleSubmissions.length ? visibleSubmissions.map((item) => {
                   const waitingOnYou = item.stage === 'REFINEMENT_REQUESTED';
+                  const isDraft = item.stage === 'DRAFT';
                   const stageClass = item.stage.toLowerCase().replaceAll('_', '-');
                   return (
                     <tr key={item.id}>
-                      <td>
-                        <Link className="case-title" to={`/submissions/${item.id}`}>
+                      <td data-label="Submission">
+                        <Link className="case-title" to={isDraft ? `/submissions/${item.id}/edit` : `/submissions/${item.id}`}>
                           <b>{item.title}</b>
                           <small>{item.code || 'Draft · no reference yet'}</small>
                         </Link>
+                        {isDraft && <Link to={`/submissions/${item.id}/edit`} className="decision-badge decision-pending my-submissions-response">Continue draft</Link>}
                         {waitingOnYou && <Link to={`/submissions/${item.id}/respond`} className="decision-badge decision-changes_needed my-submissions-response">Waiting on you — respond</Link>}
                       </td>
-                      <td><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
-                      <td><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
-                      <td>{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
-                      <td>{formatDate(item.updatedAt)}</td>
+                      <td data-label="Category"><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>
+                      <td data-label="Current stage"><span className={`my-submissions-stage my-submissions-stage--${stageClass}`}>{formatStage(item.stage)}</span></td>
+                      <td data-label="Received">{item.receivedAt ? formatDate(item.receivedAt) : 'Not received'}</td>
+                      <td data-label="Last updated">{formatDate(item.updatedAt)}</td>
                     </tr>
                   );
                 }) : (
@@ -220,8 +204,7 @@ export function MySubmissionsPage({
               )}
             </div>
           )}
-        </section>
-      )}
+      </section>
     </div>
   );
 }

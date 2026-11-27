@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { backendApi } from '@/services/backend-api';
+import * as passkeys from '@/lib/passkeys';
 import { LoginPage } from './LoginPage';
 
 afterEach(() => {
@@ -41,6 +42,33 @@ describe('LoginPage password visibility', () => {
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('person@example.test', 'valid-password'));
     expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'mock-token' }));
+  });
+
+  it('signs in with a passkey and creates the regular authenticated session', async () => {
+    const user = userEvent.setup();
+    const onLogin = vi.fn();
+    const challenge = vi.spyOn(backendApi, 'passkeyAuthenticationOptions').mockResolvedValue({
+      challengeId: 'challenge-id',
+      options: { publicKey: {} },
+    });
+    const assertion = vi.spyOn(passkeys, 'getPasskeyAssertion').mockResolvedValue({ id: 'credential-id' });
+    const verify = vi.spyOn(backendApi, 'finishPasskeyAuthentication').mockResolvedValue({
+      tokenType: 'Bearer',
+      accessToken: 'passkey-token',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      mustChangePassword: false,
+    });
+    render(<LoginPage onLogin={onLogin} onCreateAccount={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
+
+    await waitFor(() => expect(verify).toHaveBeenCalledWith({
+      challengeId: 'challenge-id',
+      credential: { id: 'credential-id' },
+    }));
+    expect(challenge).toHaveBeenCalledOnce();
+    expect(assertion).toHaveBeenCalledWith({ publicKey: {} });
+    expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'passkey-token' }));
   });
 
   it('requests a password reset and shows the same confirmation message', async () => {

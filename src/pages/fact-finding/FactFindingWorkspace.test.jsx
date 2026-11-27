@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FactFindingWorkspace } from './FactFindingWorkspace';
-import { factFindingCases, factFindingQueue } from '@/mocks/fixtures/fact-finding';
+import { submissions } from '@/mocks/fixtures/submissions';
+
+// Each mutating test below picks its own distinct case: the underlying
+// fixture is shared, mutable module state, and submitting a fact-finding
+// action for one case must not affect another test's selection.
+const queueItems = submissions.filter((item) => ['FORWARDED', 'FACT_FINDING'].includes(item.stage));
 
 function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -17,26 +22,42 @@ function renderWorkspace() {
   );
 }
 
+async function selectCase(user, item) {
+  await user.click(await screen.findByRole('button', { name: new RegExp(item.title) }));
+  await screen.findByRole('heading', { name: item.title });
+}
+
 describe('FactFindingWorkspace', () => {
-  it('renders the checklist and next-action recommendation for the first queued case', async () => {
+  it('renders the case summary and documents for the selected case', async () => {
+    const user = userEvent.setup();
+    const target = queueItems[0];
     renderWorkspace();
-    const firstCase = factFindingCases[factFindingQueue[0].id];
-    expect(await screen.findByRole('heading', { name: firstCase.title })).toBeInTheDocument();
-    for (const item of firstCase.checklist) {
-      expect(screen.getByText(item.label)).toBeInTheDocument();
-    }
-    expect(screen.getByText(new RegExp(firstCase.nextAction.recommendation))).toBeInTheDocument();
+    await selectCase(user, target);
+
+    expect(screen.getByText(target.purpose)).toBeInTheDocument();
+    expect(screen.getByText('Project brief')).toBeInTheDocument();
   });
 
-  it('saves an assessment and shows confirmation', async () => {
+  it('sends a case to review', async () => {
     const user = userEvent.setup();
+    const target = queueItems[1];
     renderWorkspace();
-    const firstCase = factFindingCases[factFindingQueue[0].id];
-    await screen.findByRole('heading', { name: firstCase.title });
+    await selectCase(user, target);
 
-    await user.selectOptions(screen.getByRole('combobox'), firstCase.nextAction.options[0]);
-    await user.click(screen.getByRole('button', { name: /save assessment/i }));
+    await user.click(screen.getByRole('button', { name: /send to review/i }));
 
-    expect(await screen.findByText(/assessment saved/i)).toBeInTheDocument();
+    expect(await screen.findByText(/recorded/i)).toBeInTheDocument();
+  });
+
+  it('requests improvement with a note', async () => {
+    const user = userEvent.setup();
+    const target = queueItems[2];
+    renderWorkspace();
+    await selectCase(user, target);
+
+    await user.type(screen.getByPlaceholderText(/optional note/i), 'Missing supporting evidence.');
+    await user.click(screen.getByRole('button', { name: /request improvement/i }));
+
+    expect(await screen.findByText(/recorded/i)).toBeInTheDocument();
   });
 });

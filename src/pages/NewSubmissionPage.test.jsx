@@ -1,19 +1,32 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { NewSubmissionPage } from './NewSubmissionPage';
+import { BriefSubmittedPage } from './BriefSubmittedPage';
 import { backendApi } from '@/services/backend-api';
 
-function renderPage({ isSubmitter = false } = {}) {
+function renderPage({ isSubmitter = false, initialEntry = '/submissions/new' } = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={['/submissions/new']}>
-      <Routes>
-        <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
-        <Route path="/submissions/new/confirmation" element={<div>confirmation screen</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
+          <Route path="/submissions/:id/edit" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
+          <Route path="/submissions/new/confirmation" element={<BriefSubmittedPage isSubmitter={isSubmitter} />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
+}
+
+async function acceptAllRules(user) {
+  for (const checkbox of await screen.findAllByRole('checkbox')) {
+    // eslint-disable-next-line no-await-in-loop
+    await user.click(checkbox);
+  }
 }
 
 describe('NewSubmissionPage wizard', () => {
@@ -56,10 +69,11 @@ describe('NewSubmissionPage wizard', () => {
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     expect(await screen.findByText(/step 04 of 05/i)).toBeInTheDocument();
+    expect(await screen.findByText(/originality and attribution/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/must accept the rules/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/step 05 of 05/i)).toBeInTheDocument();
   }, 15000);
@@ -83,7 +97,7 @@ describe('NewSubmissionPage wizard', () => {
       new File(['Brief contents'], 'brief.pdf', { type: 'application/pdf' }),
     );
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
 
     fireEvent.submit(container.querySelector('form'));
@@ -120,13 +134,14 @@ describe('NewSubmissionPage wizard', () => {
     const evidenceFile = new File(['A chart'], 'evidence.csv', { type: 'text/csv' });
     await user.upload(screen.getByLabelText('Upload Supporting evidence (data, photos, reports)'), evidenceFile);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
-    await user.click(screen.getByRole('checkbox'));
+    await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     await user.click(screen.getByRole('button', { name: /^submit brief$/i }));
 
-    expect(await screen.findByText('confirmation screen')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /thanks — your brief is in/i })).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
+    expect(createSubmission.mock.calls[0][1].acceptedRulesVersion).toBe('general-v1');
     expect(uploadDocument).toHaveBeenCalledTimes(2);
     expect(maxActiveUploads).toBe(1);
     expect(uploadDocument).toHaveBeenNthCalledWith(1, 'test-token', 'brief-1', expect.any(FormData));
@@ -140,6 +155,79 @@ describe('NewSubmissionPage wizard', () => {
     expect(evidenceData.get('file')).toBe(evidenceFile);
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'brief-1');
   }, 15000);
+
+  it('creates and submits a service request with the backend intake fields', async () => {
+    const user = userEvent.setup();
+    const preferredDate = new Date();
+    preferredDate.setDate(preferredDate.getDate() + 1);
+    const preferredAt = `${preferredDate.getFullYear()}-${String(preferredDate.getMonth() + 1).padStart(2, '0')}-${String(preferredDate.getDate()).padStart(2, '0')}T10:30`;
+    const created = {
+      id: 'service-request-1',
+      title: 'Prototype a solar dryer',
+      category: 'service_request',
+    };
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue(created);
+    const submitSubmission = vi.spyOn(backendApi, 'submitSubmission').mockResolvedValue(created);
+    renderPage({
+      isSubmitter: true,
+      initialEntry: '/submissions/new?category=service_request',
+    });
+
+    expect(screen.getByRole('heading', { name: 'Request a UniPod service.' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /service request/i })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.type(screen.getByLabelText(/request title/i), 'Prototype a solar dryer');
+    await user.type(screen.getByLabelText(/what support do you need/i), 'Help us build a working prototype.');
+    await user.type(screen.getByLabelText(/context or challenge/i), 'Local farmers need a low-cost way to dry crops.');
+    await user.type(screen.getByLabelText(/service needed/i), 'Prototyping and fabrication');
+    await user.click(screen.getByRole('combobox', { name: 'Who is requesting this service?' }));
+    await user.click(await screen.findByRole('option', { name: 'Student' }));
+    await user.type(screen.getByLabelText(/what result are you expecting/i), 'A tested prototype for field trials.');
+    await user.click(screen.getByRole('button', { name: 'Preferred date' }));
+    await user.click(screen.getByRole('button', {
+      name: new RegExp(`${preferredDate.getDate()}.*${preferredDate.getFullYear()}`),
+    }));
+    fireEvent.change(screen.getByLabelText('Preferred time'), { target: { value: '10:30' } });
+    await user.type(screen.getByLabelText(/phone number/i), '+256 700 123456');
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await acceptAllRules(user);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^submit service request$/i }));
+
+    expect(await screen.findByRole('heading', { name: /thanks — your request is in/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /track service requests/i })).toHaveAttribute(
+      'href',
+      '/my-submissions/service-requests',
+    );
+    expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({
+      category: 'service_request',
+      title: 'Prototype a solar dryer',
+      serviceRequested: 'Prototyping and fabrication',
+      serviceRequester: 'student',
+      purpose: 'Help us build a working prototype.',
+      problemAddressed: 'Local farmers need a low-cost way to dry crops.',
+      expectedResult: 'A tested prototype for field trials.',
+      preferredAt: new Date(preferredAt).toISOString(),
+      submitterPhone: '+256 700 123456',
+      acceptedRulesVersion: 'general-v1',
+    }));
+    expect(submitSubmission).toHaveBeenCalledWith('test-token', 'service-request-1');
+  }, 15000);
+
+  it('requires service-request details before advancing', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      isSubmitter: true,
+      initialEntry: '/submissions/new?category=service_request',
+    });
+
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+
+    expect(await screen.findByText(/fill in every required field/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 02 of 05/i)).toBeInTheDocument();
+  });
 
   it('previews and removes a selected document before continuing', async () => {
     const user = userEvent.setup();
@@ -181,5 +269,67 @@ describe('NewSubmissionPage wizard', () => {
       'One file',
       'Not required',
     ]);
+  });
+
+  it('saves an incomplete draft without submitting it', async () => {
+    const user = userEvent.setup();
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue({ id: 'draft-1', title: 'Untitled' });
+    const submitSubmission = vi.spyOn(backendApi, 'submitSubmission');
+    renderPage({ isSubmitter: true });
+
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+    await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Half-finished idea');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+
+    expect(await screen.findByText(/draft saved/i)).toBeInTheDocument();
+    expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Half-finished idea' }));
+    expect(submitSubmission).not.toHaveBeenCalled();
+  });
+
+  it('PUTs instead of POSTing when saving a draft a second time', async () => {
+    const user = userEvent.setup();
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue({ id: 'draft-2', title: 'Untitled' });
+    const updateSubmission = vi.spyOn(backendApi, 'updateSubmission').mockResolvedValue({ id: 'draft-2', title: 'Untitled' });
+    renderPage({ isSubmitter: true });
+
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+    await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Draft one');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+    await screen.findByText(/draft saved/i);
+
+    await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'More context now.');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+
+    expect(await screen.findAllByText(/draft saved/i)).toHaveLength(1);
+    expect(createSubmission).toHaveBeenCalledTimes(1);
+    expect(updateSubmission).toHaveBeenCalledWith('test-token', 'draft-2', expect.objectContaining({ purpose: 'More context now.' }));
+  });
+
+  it('resumes an existing draft, prefilling its fields from /me/submissions/{id}', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(backendApi, 'submitterSubmissionDetail').mockResolvedValue({
+      submission: {
+        id: 'draft-3',
+        category: 'student',
+        title: 'Resumed idea',
+        purpose: 'Resumed purpose.',
+        problemAddressed: 'Resumed problem.',
+        studentNumber: 'S24/0001',
+        programme: 'BSc Software Engineering',
+        supervisor: 'Dr. Resumed',
+        recommendationLetterStatus: 'not_required',
+        acceptedRulesVersion: null,
+      },
+      documents: [],
+    });
+    renderPage({ isSubmitter: true, initialEntry: '/submissions/draft-3/edit' });
+
+    expect(backendApi.submitterSubmissionDetail).toHaveBeenCalledWith('test-token', 'draft-3', expect.any(AbortSignal));
+    await screen.findByRole('radio', { name: /student project/i, checked: true });
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+
+    expect(await screen.findByDisplayValue('Resumed idea')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Resumed purpose.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('S24/0001')).toBeInTheDocument();
   });
 });

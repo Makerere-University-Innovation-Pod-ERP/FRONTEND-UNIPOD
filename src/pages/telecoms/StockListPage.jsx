@@ -29,7 +29,7 @@ export function StockListPage({ token, onUnauthorized }) {
       <ErrorBanner error={stock.error} fallback="Could not load telecoms inventory." />
 
       {stock.isLoading ? (
-        <Loading label="Loading stock items…" />
+        <Loading label="Loading stock items…" variant="table" />
       ) : (
         <>
           <section className="tx-metrics" aria-label="Stock summary">
@@ -63,15 +63,15 @@ export function StockListPage({ token, onUnauthorized }) {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id}>
-                      <td><b style={{ fontSize: '14.5px', color: '#0f172a' }}>{item.name}</b></td>
+                      <td><b style={{ fontSize: '14.5px', color: 'var(--ink)' }}>{item.name}</b></td>
                       <td className="tx-mono">
-                        <b style={{ fontSize: '14px', color: '#0f172a' }}>{item.quantity}</b>{' '}
-                        <span style={{ color: '#475569', fontSize: '13px' }}>{item.unit}</span>
+                        <b style={{ fontSize: '14px', color: 'var(--ink)' }}>{item.quantity}</b>{' '}
+                        <span style={{ color: 'var(--ink-soft)', fontSize: '13px' }}>{item.unit}</span>
                       </td>
                       <td>
                         <MinimumCell token={token} item={item} onUnauthorized={onUnauthorized} />
                       </td>
-                      <td style={{ fontSize: '13.5px', color: '#334155' }}>{item.location}</td>
+                      <td style={{ fontSize: '13.5px', color: 'var(--ink-soft)' }}>{item.location}</td>
                       <td>
                         {isLowStock(item) ? (
                           <StatusDot tone="danger">Low Stock</StatusDot>
@@ -97,7 +97,7 @@ export function StockListPage({ token, onUnauthorized }) {
         </div>
         <ErrorBanner error={movements.error} fallback="Could not load stock movements." />
         {movements.isLoading ? (
-          <Loading label="Loading movements…" />
+          <Loading label="Loading movements…" variant="table" />
         ) : (
           <MovementTable movements={movements.data ?? []} />
         )}
@@ -176,16 +176,16 @@ export function MovementTable({ movements }) {
             const positive = delta > 0;
             return (
               <tr key={mov.id}>
-                <td style={{ fontSize: '12.5px', color: '#334155', whiteSpace: 'nowrap' }}>{formatDateTime(mov.at)}</td>
-                <td><b style={{ fontSize: '14px', color: '#0f172a' }}>{mov.itemName}</b></td>
+                <td style={{ fontSize: '12.5px', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>{formatDateTime(mov.at)}</td>
+                <td><b style={{ fontSize: '14px', color: 'var(--ink)' }}>{mov.itemName}</b></td>
                 <td><StatusDot tone="neutral">{MOVEMENT_TYPE_LABELS[mov.type] ?? mov.type}</StatusDot></td>
                 <td className={`tx-mono ${positive ? 'tx-positive' : 'tx-negative'}`}>
                   <b>{positive ? `+${delta}` : delta}</b>
                 </td>
                 <td className="tx-mono"><b>{mov.balance}</b></td>
-                <td style={{ fontSize: '13px', color: '#1e293b' }}>{mov.by}</td>
-                <td style={{ fontSize: '13px', color: '#475569' }}>
-                  {mov.requestId && <span className="tx-mono" style={{ marginRight: 6, color: '#176b52' }}>{mov.requestId}</span>}
+                <td style={{ fontSize: '13px', color: 'var(--ink)' }}>{mov.by}</td>
+                <td style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>
+                  {mov.requestId && <span className="tx-mono" style={{ marginRight: 6, color: 'var(--green)' }}>{mov.requestId}</span>}
                   {mov.note || '—'}
                 </td>
               </tr>

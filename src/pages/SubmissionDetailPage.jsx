@@ -3,6 +3,8 @@ import { ArrowDownToLine, ArrowLeft, CircleAlert, Copy, LoaderCircle, RefreshCw,
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { formatDate, formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const INTAKE_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR', 'ROLE_RECEPTIONIST', 'ROLE_FACT_FINDING_OFFICER'];
 const TRANSITION_ROLES = ['ROLE_ADMINISTRATOR', 'ROLE_INNOVATION_COORDINATOR'];
@@ -30,14 +32,19 @@ export function SubmissionDetailPage({
   const canIntake = session.roles.some((role) => INTAKE_ROLES.includes(role));
   const canTransition = session.roles.some((role) => TRANSITION_ROLES.includes(role));
   const isReceptionist = session.roles.includes('ROLE_RECEPTIONIST');
-  const backHref = session.roles.includes('ROLE_SUBMITTER') ? '/my-submissions' : '/submissions';
-  const backLabel = session.roles.includes('ROLE_SUBMITTER') ? 'Back to my submissions' : 'Back to submissions';
+  const isSubmitterViewer = session.roles.includes('ROLE_SUBMITTER');
+  const backHref = isSubmitterViewer ? '/my-submissions' : '/submissions';
+  const backLabel = isSubmitterViewer ? 'Back to my submissions' : 'Back to submissions';
 
   const load = useCallback(async (signal) => {
     try {
+      // A submitter's own brief page is a dedicated endpoint (§5.4), not the
+      // shared staff case-file aggregate every other role here reads.
       const current = isReceptionist
         ? asIntakeCaseFile(await backendApi.submissionCaseFile(session.accessToken, id, signal))
-        : await backendApi.caseFile(session.accessToken, id, signal);
+        : isSubmitterViewer
+          ? await backendApi.submitterSubmissionDetail(session.accessToken, id, signal)
+          : await backendApi.caseFile(session.accessToken, id, signal);
       setCaseFile(current);
       setReviewerSubject(current.submission.assignedReviewerSubject || '');
       setOutcomeDecision(current.outcome?.decision || '');
@@ -61,7 +68,7 @@ export function SubmissionDetailPage({
     } finally {
       setLoading(false);
     }
-  }, [session.accessToken, id, canIntake, canTransition, isReceptionist, onUnauthorized]);
+  }, [session.accessToken, id, canIntake, canTransition, isReceptionist, isSubmitterViewer, onUnauthorized]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -149,7 +156,7 @@ export function SubmissionDetailPage({
     }
   }
 
-  if (loading && !caseFile) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
+  if (loading && !caseFile) return <div className="live-page"><LoadingSkeleton label="Loading case file…" variant="detail" /></div>;
   if (!caseFile) return <div className="live-page"><Link to={backHref} className="back-link"><ArrowLeft size={15} />{backLabel}</Link>{error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}</div>;
 
   const submission = caseFile.submission;
@@ -196,7 +203,7 @@ export function SubmissionDetailPage({
         <span className="case-hero-decoration" aria-hidden="true" />
       </header>
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
-      {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
+      {submission.stage === 'REFINEMENT_REQUESTED' && isSubmitterViewer && (
         <section className="live-panel capability-notice" aria-label="Open request">
           <p className="eyebrow">OPEN REQUEST</p>
           <p className="capability-summary">The reviewer has asked for changes before this brief can continue.</p>
@@ -283,7 +290,17 @@ export function SubmissionDetailPage({
           </div>}
           {canIntake && submission.stage === 'RECEIVED' && <form className="case-action" onSubmit={(event) => { event.preventDefault(); if (sectorId) void act(() => backendApi.forward(session.accessToken, id, sectorId)); }}>
             <p className="form-section-title">Assign to a sector</p>
-            <div className="action-row"><select value={sectorId} onChange={(event) => setSectorId(event.target.value)} required><option value="">Select an active sector</option>{sectors.map((sector) => <option value={sector.id} key={sector.id}>{sector.name}</option>)}</select><button className="btn btn-primary" disabled={busy || !sectors.length}><Send size={14} />Forward</button></div>
+            <div className="action-row">
+              <Select value={sectorId} onValueChange={setSectorId} required>
+                <SelectTrigger aria-label="Select an active sector" className="submission-detail-select-trigger action-row-select-trigger">
+                  <SelectValue placeholder="Select an active sector" />
+                </SelectTrigger>
+                <SelectContent className="submission-select-content submission-detail-select-content" sideOffset={6}>
+                  {sectors.map((sector) => <SelectItem value={sector.id} key={sector.id}>{sector.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <button className="btn btn-primary" disabled={busy || !sectors.length}><Send size={14} />Forward</button>
+            </div>
           </form>}
           {session.roles.includes('ROLE_ADMINISTRATOR') && <form className="case-action" onSubmit={(event) => { event.preventDefault(); void act(() => backendApi.assignReviewer(session.accessToken, id, reviewerSubject.trim() || null)); }}>
             <p className="form-section-title">Reviewer assignment</p>
@@ -294,7 +311,15 @@ export function SubmissionDetailPage({
             <p className="form-section-title">Add document record</p>
             <label className="form-field">Document name<input required maxLength={255} value={documentName} onChange={(event) => setDocumentName(event.target.value)} /></label>
             <div className="form-grid">
-              <label className="form-field">Status<select value={documentStatus} onChange={(event) => setDocumentStatus(event.target.value)}>{['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <option value={value} key={value}>{formatStage(value)}</option>)}</select></label>
+              <div className="form-field">
+                <span>Status</span>
+                <Select value={documentStatus} onValueChange={setDocumentStatus}>
+                  <SelectTrigger aria-label="Status" className="submission-detail-select-trigger"><SelectValue /></SelectTrigger>
+                  <SelectContent className="submission-select-content submission-detail-select-content" sideOffset={6}>
+                    {['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <SelectItem value={value} key={value}>{formatStage(value)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <label className="form-field">Storage reference <span className="field-note">Optional opaque reference</span><input maxLength={256} pattern="[A-Za-z0-9_-]+" value={fileReference} onChange={(event) => setFileReference(event.target.value)} /></label>
             </div>
             <button className="btn btn-outline" type="submit" disabled={busy}><Send size={14} />Add document</button>
@@ -302,7 +327,15 @@ export function SubmissionDetailPage({
           {canIntake && <form className="case-action document-action" onSubmit={(event) => void uploadDocument(event)}>
             <p className="form-section-title">Upload a supporting file</p>
             <label className="form-field">Document name<input name="name" required maxLength={255} /></label>
-            <label className="form-field">Status<select name="status" defaultValue="SUBMITTED">{['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <option value={value} key={value}>{formatStage(value)}</option>)}</select></label>
+            <div className="form-field">
+              <span>Status</span>
+              <Select name="status" defaultValue="SUBMITTED">
+                <SelectTrigger aria-label="Status" className="submission-detail-select-trigger"><SelectValue /></SelectTrigger>
+                <SelectContent className="submission-select-content submission-detail-select-content" sideOffset={6}>
+                  {['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <SelectItem value={value} key={value}>{formatStage(value)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <label className="form-field">File<input name="file" type="file" required /></label>
             <p className="field-note">Upload is available when backend object storage is configured.</p>
             <button className="btn btn-outline" type="submit" disabled={busy}><ArrowDownToLine size={14} />Upload file</button>
@@ -311,7 +344,15 @@ export function SubmissionDetailPage({
         <aside className="detail-side">
           {canTransition && allowedStages.length > 0 && <form className="live-panel case-transition" onSubmit={transition}>
             <div className="live-panel-heading"><div><p className="eyebrow">WORKFLOW</p><h2>Next stage</h2></div></div>
-            <label className="form-field">Move case to<select value={nextStage} onChange={(event) => setNextStage(event.target.value)}>{allowedStages.map((stage) => <option key={stage} value={stage}>{formatStage(stage)}</option>)}</select></label>
+            <div className="form-field">
+              <span>Move case to</span>
+              <Select value={nextStage} onValueChange={setNextStage}>
+                <SelectTrigger aria-label="Move case to" className="submission-detail-select-trigger"><SelectValue /></SelectTrigger>
+                <SelectContent className="submission-select-content submission-detail-select-content" sideOffset={6}>
+                  {allowedStages.map((stage) => <SelectItem key={stage} value={stage}>{formatStage(stage)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <label className="form-field">Note <span className="field-note">Optional</span><textarea rows={3} maxLength={2000} value={note} onChange={(event) => setNote(event.target.value)} /></label>
             <button className="btn btn-primary" type="submit" disabled={busy || !nextStage}>{busy ? <LoaderCircle size={14} className="spin" /> : <Workflow size={14} />}Update case stage</button>
           </form>}
@@ -353,7 +394,18 @@ export function SubmissionDetailPage({
             {caseFile.documents.length ? <ul className="document-list">{caseFile.documents.map((document) => <li key={document.id}><span><b>{document.name}</b><small>{formatStage(document.status)} · {formatDate(document.createdAt)}</small></span>
               <div className="document-actions">
                 {canIntake && document.fileReference && <button className="icon-button" disabled={busy} onClick={() => void downloadDocument(document.id, document.originalFilename || document.name)} aria-label={`Download ${document.name}`}><ArrowDownToLine size={15} /></button>}
-                {canTransition && caseFile.capabilities.updateDocumentStatus.enabled && <select aria-label={`Update ${document.name} status`} value={document.status} disabled={busy} onChange={(event) => void act(() => backendApi.updateDocumentStatus(session.accessToken, id, document.id, { status: event.target.value, version: submission.version }))}>{['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <option key={value} value={value}>{formatStage(value)}</option>)}</select>}
+                {canTransition && caseFile.capabilities.updateDocumentStatus.enabled && (
+                  <Select
+                    value={document.status}
+                    disabled={busy}
+                    onValueChange={(value) => void act(() => backendApi.updateDocumentStatus(session.accessToken, id, document.id, { status: value, version: submission.version }))}
+                  >
+                    <SelectTrigger aria-label={`Update ${document.name} status`} className="submission-detail-select-trigger"><SelectValue /></SelectTrigger>
+                    <SelectContent className="submission-select-content submission-detail-select-content" sideOffset={6}>
+                      {['SUBMITTED', 'VERIFIED', 'ONE_FILE', 'NOT_REQUIRED'].map((value) => <SelectItem key={value} value={value}>{formatStage(value)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </li>)}</ul> : <p className="live-empty">No documents have been added to this case.</p>}
           </section>

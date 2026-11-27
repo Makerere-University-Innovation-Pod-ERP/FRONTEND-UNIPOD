@@ -15,7 +15,12 @@ import {
   Wrench,
 } from 'lucide-react';
 import { CUSTOMER_TYPES, TELECOMS_RULES, todayIso } from '@/lib/telecoms';
-import { useCreateTelecomsRequest, useTelecomsRequest } from '@/hooks/useTelecoms';
+import {
+  useCreateTelecomsRequest,
+  useSubmitTelecomsRequestDraft,
+  useTelecomsRequest,
+  useUpdateTelecomsRequestDraft,
+} from '@/hooks/useTelecoms';
 import { CurvedSelect } from '@/components/CurvedSelect';
 import { ErrorBanner, Loading, PageHeading } from './shared';
 import { useUnauthorizedRedirect } from './helpers';
@@ -35,7 +40,7 @@ export function NewRequestPage({ token, onUnauthorized }) {
   const requestQuery = useTelecomsRequest(token, draftId);
   useUnauthorizedRedirect(onUnauthorized, requestQuery.error);
 
-  if (draftId && requestQuery.isLoading) return <Loading label="Loading draft…" />;
+  if (draftId && requestQuery.isLoading) return <Loading label="Loading draft…" variant="form" />;
   if (draftId && requestQuery.data && requestQuery.data.status !== 'DRAFT') {
     return (
       <div className="live-page page-enter">
@@ -75,7 +80,11 @@ function NewRequestForm({ token, draft, loadError, onUnauthorized }) {
 
   const [notice, setNotice] = useState('');
   const createMutation = useCreateTelecomsRequest(token);
-  useUnauthorizedRedirect(onUnauthorized, createMutation.error);
+  const updateDraftMutation = useUpdateTelecomsRequestDraft(token, draft?.id ?? '');
+  const submitDraftMutation = useSubmitTelecomsRequestDraft(token, draft?.id ?? '');
+  const mutationError = createMutation.error || updateDraftMutation.error || submitDraftMutation.error;
+  const isPending = createMutation.isPending || updateDraftMutation.isPending || submitDraftMutation.isPending;
+  useUnauthorizedRedirect(onUnauthorized, mutationError);
 
   const set = (field) => (event) => {
     const val = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -94,10 +103,21 @@ function NewRequestForm({ token, draft, loadError, onUnauthorized }) {
       rulesAccepted: values.rulesAccepted,
     };
     try {
-      const saved = await createMutation.mutateAsync(payload);
+      let saved;
+      if (draft) {
+        saved = await updateDraftMutation.mutateAsync({ ...payload, draft: true });
+        if (submit) {
+          saved = await submitDraftMutation.mutateAsync();
+        }
+      } else {
+        saved = await createMutation.mutateAsync({ ...payload, draft: !submit });
+      }
       if (submit) {
         navigate(`/telecoms/review?request=${encodeURIComponent(saved.id)}`);
       } else {
+        if (!draft) {
+          navigate(`/telecoms/requests/new?draft=${encodeURIComponent(saved.id)}`, { replace: true });
+        }
         setNotice('Request draft saved. You can continue anytime from the Review & Quote queue.');
       }
     } catch {
@@ -117,7 +137,7 @@ function NewRequestForm({ token, draft, loadError, onUnauthorized }) {
         title="New Telecoms Service Request"
         intro="Intake submission for RF spectrum analysis, IoT firmware bench testing, PCB rework, sensor calibration, or antenna tuning."
       />
-      <ErrorBanner error={loadError || createMutation.error} fallback="Could not save service request." />
+      <ErrorBanner error={loadError || mutationError} fallback="Could not save service request." />
       {notice && <p className="tx-success" role="status">{notice}</p>}
 
       <div className="telecoms-request-layout">
@@ -191,16 +211,16 @@ function NewRequestForm({ token, draft, loadError, onUnauthorized }) {
               <button
                 className="btn btn-primary"
                 type="submit"
-                disabled={createMutation.isPending || !values.rulesAccepted}
+                disabled={isPending || !values.rulesAccepted}
               >
-                {createMutation.isPending ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}
+                {isPending ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}
                 Send request
               </button>
               <button
                 className="btn btn-outline"
                 type="button"
                 onClick={() => save(false)}
-                disabled={createMutation.isPending || !values.customerName.trim()}
+                disabled={isPending || !values.customerName.trim()}
               >
                 <Save size={15} />
                 Save draft

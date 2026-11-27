@@ -2,9 +2,9 @@
  * Coordinator pipeline fixtures (Assignment 2).
  *
  * Case ids, codes and titles are kept identical to src/mocks/fixtures/
- * submissions.js and fixtures/reviewer.js so the coordinator screens and
- * Assignment 5's reviewer screens describe the same cases rather than two
- * parallel universes.
+ * submissions.js, which Assignment 5's fact-finding and reviewer screens
+ * now read from directly, so the coordinator screens and Assignment 5's
+ * screens describe the same cases rather than two parallel universes.
  *
  * Every person named here is fictional and comes from the Figma prototype or
  * the existing fixtures. No real UniPod department head appears in mock data.

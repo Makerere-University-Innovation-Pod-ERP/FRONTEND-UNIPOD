@@ -3,11 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, CalendarCheck, LoaderCircle, MessageSquareText, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import {
   REVIEW_STATUSES, SCHEDULE_BLOCKED_REASON, addDays, assessMaterials, canScheduleOrder,
-  describeMaterialLine, formatUgx, todayIso,
+  describeMaterialLine, formatUgx, matchesOrderSearch, todayIso,
 } from '@/lib/textile';
 import { formatDate } from '@/lib/presentation';
 import {
-  useOrderTransition, usePriceList, useRequestDetails, useSendBack, useSendQuote, useStock, useTextileOrder, useTextileOrders,
+  useDiscardDraft, useOrderTransition, usePriceList, useRequestDetails, useSendBack, useSendQuote, useStock, useTextileOrder, useTextileOrders,
 } from '@/hooks/useTextile';
 import { ErrorBanner, Loading, OrderStatus, PageHeading, PaymentStatus, PhotoView } from './shared';
 import { DemoPaymentButton } from './DemoPaymentButton';
@@ -18,8 +18,10 @@ export function OrderReviewPage({ token, onUnauthorized }) {
   const [searchParams, setSearchParams] = useSearchParams();
   useUnauthorizedRedirect(onUnauthorized, orders.error);
 
+  const [query, setQuery] = useState('');
   const queue = useMemo(() => (orders.data ?? []).filter((order) => REVIEW_STATUSES.includes(order.status)), [orders.data]);
   const drafts = useMemo(() => (orders.data ?? []).filter((order) => order.status === 'DRAFT'), [orders.data]);
+  const visibleQueue = queue.filter((order) => matchesOrderSearch(order, query));
   const selectedId = searchParams.get('order') || queue[0]?.id || '';
 
   return (
@@ -30,11 +32,17 @@ export function OrderReviewPage({ token, onUnauthorized }) {
         intro="Confirm feasibility against stock and send a price before any work begins."
       />
       <ErrorBanner error={orders.error} fallback="Could not load orders." />
-      {orders.isLoading ? <Loading label="Loading orders…" /> : (
+      {orders.isLoading ? <Loading label="Loading orders…" variant="table" /> : (
         <div className="queue-grid">
           <nav className="queue-list" aria-label="Orders to review">
+            {queue.length > 1 && (
+              <div className="tx-filters">
+                <input type="search" aria-label="Search orders to review" placeholder="Search by customer, code or item" value={query} onChange={(event) => setQuery(event.target.value)} />
+              </div>
+            )}
             {queue.length === 0 && <p className="live-empty">No orders are waiting for review.</p>}
-            {queue.map((order) => (
+            {queue.length > 0 && visibleQueue.length === 0 && <p className="live-empty">No orders match “{query.trim()}”.</p>}
+            {visibleQueue.map((order) => (
               <button
                 key={order.id}
                 type="button"
@@ -50,11 +58,7 @@ export function OrderReviewPage({ token, onUnauthorized }) {
             {drafts.length > 0 && (
               <div className="tx-drafts">
                 <p className="eyebrow">DRAFTS</p>
-                {drafts.map((order) => (
-                  <Link key={order.id} className="tx-draft-link" to={`/textile/orders/new?draft=${encodeURIComponent(order.id)}`}>
-                    <b>{order.whatIsWanted || 'Untitled order'}</b><small>{order.customerName} · continue editing</small>
-                  </Link>
-                ))}
+                {drafts.map((order) => <DraftRow key={order.id} token={token} order={order} onUnauthorized={onUnauthorized} />)}
               </div>
             )}
           </nav>
@@ -67,13 +71,42 @@ export function OrderReviewPage({ token, onUnauthorized }) {
   );
 }
 
+/** A saved draft: continue editing it, or discard it after confirming. */
+function DraftRow({ token, order, onUnauthorized }) {
+  const [confirming, setConfirming] = useState(false);
+  const discard = useDiscardDraft(token);
+  useUnauthorizedRedirect(onUnauthorized, discard.error);
+  const title = order.whatIsWanted || 'Untitled order';
+  return (
+    <div className="tx-draft-row">
+      <Link className="tx-draft-link" to={`/textile/orders/new?draft=${encodeURIComponent(order.id)}`}>
+        <b>{title}</b><small>{order.customerName} · continue editing</small>
+      </Link>
+      {confirming ? (
+        <div className="tx-draft-confirm" role="group" aria-label={`Discard ${title}?`}>
+          <span>Discard this draft?</span>
+          <button type="button" className="btn btn-primary" disabled={discard.isPending} onClick={() => discard.mutateAsync(order.id).catch(() => {})}>
+            {discard.isPending ? <LoaderCircle size={13} className="spin" /> : <Trash2 size={13} />}Discard
+          </button>
+          <button type="button" className="btn tx-ghost" disabled={discard.isPending} onClick={() => setConfirming(false)}>Keep</button>
+        </div>
+      ) : (
+        <button type="button" className="tx-link-button" onClick={() => setConfirming(true)} aria-label={`Discard draft: ${title}`}>
+          <Trash2 size={12} />Discard
+        </button>
+      )}
+      <ErrorBanner error={discard.error} fallback="Could not discard the draft." />
+    </div>
+  );
+}
+
 function ReviewPanel({ token, id, onUnauthorized }) {
   const order = useTextileOrder(token, id);
   const stock = useStock(token);
   const priceList = usePriceList(token);
   useUnauthorizedRedirect(onUnauthorized, order.error, stock.error, priceList.error);
 
-  if (order.isLoading || stock.isLoading || priceList.isLoading) return <section className="live-panel"><Loading label="Loading order…" /></section>;
+  if (order.isLoading || stock.isLoading || priceList.isLoading) return <section className="live-panel"><Loading label="Loading order…" variant="detail" /></section>;
   if (!order.data) return <section className="live-panel"><ErrorBanner error={order.error} fallback="This order could not be loaded." /></section>;
 
   return (
@@ -150,7 +183,7 @@ function ReviewForm({ token, order, stockItems, priceList, onUnauthorized }) {
           <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
           <div><dt>Size / design</dt><dd>{order.sizeDesign}</dd></div>
           <div><dt>Date needed</dt><dd>{formatDate(order.dateNeeded)}</dd></div>
-          <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} /></dd></div>
+          <div><dt>Reference photo</dt><dd><PhotoView photo={order.photo} token={token} /></dd></div>
         </dl>
         {order.status === 'AWAITING_DETAILS' && (
           <p className="tx-inline-note">Waiting for the customer: {order.history.at(-1)?.note}</p>

@@ -2,11 +2,8 @@ import { z } from 'zod';
 import { request } from './api-client';
 
 /**
- * Textile Operations API (/textile/*). These endpoints are not yet part of
- * the deployed backend contract. They follow the existing backend's path and
- * response conventions (see services/backend-api.js and fact-finding.js) and
- * are served by the MSW handlers in src/mocks until the backend team ships
- * them — confirm the shapes with them before treating this as final.
+ * Textile Operations API (/textile/*). These methods use the deployed backend
+ * contract and retain the mock handlers for local/offline development.
  *
  * Payment is owned by the shared Finance screens (Assignment 6): this module
  * only reads `order.payment`. The backend must refuse to schedule an order
@@ -191,6 +188,10 @@ export const textileApi = {
     orderSchema.parse(await request('/textile/orders', { token, body: multipart('order', order, photo) })),
   updateDraft: async (token, id, { order, photo }) =>
     orderSchema.parse(await request(`/textile/orders/${path(id)}`, { token, method: 'PUT', body: multipart('order', order, photo) })),
+  /** Proposed endpoint: DELETE /textile/orders/:id → 204. Only a DRAFT can be discarded (409 otherwise). */
+  discardDraft: async (token, id) => {
+    await request(`/textile/orders/${path(id)}`, { token, method: 'DELETE' });
+  },
   sendQuote: async (token, id, body) =>
     orderSchema.parse(await request(`/textile/orders/${path(id)}/quote`, { token, body })),
   requestDetails: async (token, id, message) =>

@@ -336,3 +336,30 @@ export function addDays(isoDate, days) {
 export function startOfWeek(isoDate) {
   return addDays(isoDate, 1 - isoWeekday(isoDate));
 }
+
+/* -------------------------------------------------------------- Finding */
+
+/** True when an order's code, customer or item contains the search text (case-insensitive). */
+export function matchesOrderSearch(order, query) {
+  const needle = String(query ?? '').trim().toLowerCase();
+  if (!needle) return true;
+  return [order.code, order.customerName, order.customerType, order.whatIsWanted]
+    .some((field) => String(field ?? '').toLowerCase().includes(needle));
+}
+
+/** A quoted order whose payment Finance has confirmed: it only needs moving to Scheduled. */
+export function isReadyToSchedule(order) {
+  return canScheduleOrder(order);
+}
+
+/**
+ * Board attention counts: unfinished orders past their date needed, Ready orders
+ * near or past the collection limit, and paid quotes waiting to be scheduled.
+ */
+export function summarizeBoard(orders, today) {
+  return {
+    overdue: orders.filter((order) => isOrderOverdue(order, today)).length,
+    collectSoon: orders.filter((order) => collectionDeadline(order, today)?.warn).length,
+    readyToSchedule: orders.filter(isReadyToSchedule).length,
+  };
+}

@@ -37,7 +37,7 @@ export function MissingDocumentsPage({ token, onUnauthorized }) {
           />
         </label>
         {isLoading ? (
-          <Loading label="Loading missing documents…" />
+          <Loading label="Loading missing documents…" variant="table" />
         ) : data?.length ? (
           <BriefTable items={data} showDueDate />
         ) : data ? (

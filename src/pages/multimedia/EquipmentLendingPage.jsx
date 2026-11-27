@@ -255,7 +255,7 @@ export function EquipmentLendingPage({ token }) {
       <section className="live-panel tx-table-panel">
         <h3 className="tx-panel-title">Active & historical loans</h3>
         {bookingsQuery.isPending ? (
-          <Loading label="Loading equipment loans…" />
+          <Loading label="Loading equipment loans…" variant="table" />
         ) : (
           <div className="live-table-wrap">
             <table className="live-table">

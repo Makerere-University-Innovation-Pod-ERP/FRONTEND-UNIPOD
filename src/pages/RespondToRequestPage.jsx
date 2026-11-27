@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, CircleAlert, LoaderCircle, Send } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function RespondToRequestPage({ token, onUnauthorized }) {
   const { id = '' } = useParams();
@@ -64,7 +65,7 @@ export function RespondToRequestPage({ token, onUnauthorized }) {
     }
   }
 
-  if (loading) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case…</div>;
+  if (loading) return <div className="live-page"><LoadingSkeleton label="Loading case…" variant="detail" /></div>;
   if (!caseFile) {
     return (
       <div className="live-page">

@@ -1,23 +1,37 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE_URL } from '@/services/api-client';
 import { makeMockToken } from './jwt';
-import { factFindingCases, factFindingQueue } from './fixtures/fact-finding';
-import { reviewerAssigned, reviewerCases } from './fixtures/reviewer';
 import { notifications } from './fixtures/notifications';
-import { documentsBySubmission, sectors, submissions, toCaseFile } from './fixtures/submissions';
+import {
+  documentsBySubmission,
+  sectors,
+  submissions,
+  toCaseFile,
+} from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
 import { coordinatorHandlers, coordinatorMockUsers } from './coordinator-handlers';
-import { initialMentorshipFollowUps, initialTrainingSessions, trainingDepartments } from './fixtures/training';
+import { initialMentorshipFollowUps, initialTrainingSessions } from './fixtures/training';
 import { initialMediaRequests } from './fixtures/media';
 import { initialEquipment } from './fixtures/equipment';
-import { initialBookings, initialFacilities, initialTimetableBlocks } from './fixtures/bookings';
+import {
+  initialBookings,
+  initialFacilities,
+  initialSubmitterBookings,
+  initialTimetableBlocks,
+} from './fixtures/bookings';
 import { initialCncJobs, initialCncPrices } from './fixtures/cnc';
 import { initialContracts } from './fixtures/contracts';
 import { initialPartners } from './fixtures/partners';
 import { initialFinanceOverview } from './fixtures/overview';
-import { initialInvoices, initialPriceList, initialInvoicesOverview } from './fixtures/invoices';
+import {
+  initialInvoices,
+  initialPriceList,
+  initialInvoicesOverview,
+  initialSubmitterInvoices,
+} from './fixtures/invoices';
 import { textileHandlers } from './textile-handlers';
 import { telecomsHandlers } from './telecoms-handlers';
+import { cncStockHandlers } from './cnc-handlers';
 
 const mockUsers = {
   'admin@unipod.test': { subject: 'Demo Administrator', roles: ['ROLE_ADMINISTRATOR'] },
@@ -89,15 +103,132 @@ function bookingProblem(status, detail) {
 function updateBooking(id, change) {
   const index = bookings.findIndex((b) => b.id === id);
   if (index === -1) return bookingProblem(404, 'Booking not found.');
-  const result = change(bookings[index]);
+  const previous = bookings[index];
+  const result = change(previous);
   if (result.error) return bookingProblem(...result.error);
   const updated = { ...result, decidedAt: result.decidedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
   bookings = bookings.map((b, i) => (i === index ? updated : b));
+  const statusNotifications = {
+    APPROVED: ['BOOKING_APPROVED', `Booking approved: ${updated.reference}`, `Your booking for ${updated.facilityName} has been approved.`],
+    REJECTED: ['BOOKING_REJECTED', `Booking rejected: ${updated.reference}`, `Your booking for ${updated.facilityName} was rejected.`],
+  };
+  const notification = statusNotifications[updated.status];
+  if (updated.status !== previous.status && notification) {
+    publishMockNotification(updated, ...notification);
+  }
   return HttpResponse.json(updated);
+}
+
+function publishMockNotification(booking, type, title, body) {
+  notificationRecords.unshift({
+    id: `00000000-0000-4000-8000-${String(nextNotificationNumber++).padStart(12, '0')}`,
+    type,
+    title,
+    body,
+    entityType: 'booking',
+    entityId: booking.id,
+    createdAt: new Date().toISOString(),
+    readAt: null,
+    read: false,
+    recipient: booking.requesterId?.toLocaleLowerCase(),
+  });
+}
+
+function notificationsForRequest(request) {
+  const email = mockSubmitterEmail(request);
+  return notificationRecords.filter((item) => !item.recipient || item.recipient === email);
 }
 let eventContracts = [...initialContracts];
 let partners = [...initialPartners];
 let invoices = [...initialInvoices];
+let notificationRecords = notifications.map((item) => ({ ...item }));
+let nextNotificationNumber = 704;
+let pushSubscriptions = new Map();
+const createSubmitterInvoiceMocks = () => initialSubmitterInvoices.map((invoice) => ({
+  ...invoice,
+  paymentProof: invoice.paymentProof ? { ...invoice.paymentProof } : null,
+  receipt: invoice.receipt ? { ...invoice.receipt } : null,
+}));
+let submitterInvoices = createSubmitterInvoiceMocks();
+const createSubmitterBookingMocks = () => initialSubmitterBookings.map((booking) => ({ ...booking }));
+let submitterBookings = createSubmitterBookingMocks();
+let nextSubmitterBookingNumber = 1202;
+
+// Reviewer decisions, keyed by submission id — GET /cases/:id/my-review
+// reads these back; a submitted decision is immutable, matching the real
+// POST /cases/{id}/reviews contract ("cannot be edited afterward").
+const myReviewBySubmission = {
+  'IH-26029': {
+    decision: 'CHANGES_NEEDED',
+    comment: 'The follow-up workflow needs a clearer description of how missed appointments are detected before this can move forward.',
+    decidedAt: '2026-10-02',
+  },
+};
+
+export function resetSubmitterInvoiceMocks() {
+  submitterInvoices = createSubmitterInvoiceMocks();
+}
+
+export function resetSubmitterBookingMocks() {
+  submitterBookings = createSubmitterBookingMocks();
+  nextSubmitterBookingNumber = 1202;
+}
+
+export function resetNotificationMocks() {
+  notificationRecords = notifications.map((item) => ({ ...item }));
+  nextNotificationNumber = 704;
+  pushSubscriptions = new Map();
+}
+
+function mockSubmitterEmail(request) {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const encodedPayload = token?.split('.')[1];
+  if (!encodedPayload) return null;
+  try {
+    const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.email === 'string'
+      ? payload.email.toLocaleLowerCase()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// submissions[].submitterId holds the short subject ("brian.s"), not the
+// login email mockSubmitterEmail() above returns — this mirrors that helper
+// but reads the token's `sub` claim, so a submitter's own self-created brief
+// gets an owner id the /me/submissions "mine" filter actually recognizes.
+function mockSubmitterSubject(request) {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const encodedPayload = token?.split('.')[1];
+  if (!encodedPayload) return null;
+  try {
+    const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.sub === 'string'
+      ? payload.sub
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function findSubmitterInvoice(request, id) {
+  const email = mockSubmitterEmail(request);
+  if (!email) return { status: 401, invoice: null };
+  const invoice = submitterInvoices.find((item) => (
+    item.id === id && item.customerEmail.toLocaleLowerCase() === email
+  ));
+  return { status: invoice ? 200 : 404, invoice: invoice ?? null };
+}
+
+function findSubmitterBooking(request, id) {
+  const email = mockSubmitterEmail(request);
+  if (!email) return { status: 401, booking: null };
+  const booking = submitterBookings.find((item) => (
+    item.id === id && item.requesterId.toLocaleLowerCase() === email
+  ));
+  return { status: booking ? 200 : 404, booking: booking ?? null };
+}
 
 const invoiceStatusMap = {
   'Pending evidence': 'WAITING_FOR_PROOF',
@@ -161,9 +292,11 @@ const toApiInvoice = (invoice) => {
 // submissions fixture — mock-only state, reset on page reload.
 const sectorMembersStore = {};
 const departments = [
-  { id: 'dept-1', name: 'Innovation & Research', active: true, version: 1 },
-  { id: 'dept-2', name: 'Finance & Administration', active: true, version: 1 },
-  { id: 'dept-3', name: 'Textile Operations', active: true, version: 1 },
+  { id: 'dept-1', name: 'Innovation & Research', notificationEmail: 'innovation@example.test', active: true, version: 1 },
+  { id: 'dept-2', name: 'Finance & Administration', notificationEmail: 'finance@example.test', active: true, version: 1 },
+  { id: 'dept-3', name: 'Textile Operations', notificationEmail: 'textile@example.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000001', name: 'Multimedia', notificationEmail: 'multimedia@unipod.test', active: true, version: 1 },
+  { id: 'd1a7c6f0-0000-4000-8000-000000000002', name: 'CNC & Carpentry', notificationEmail: 'cnc@unipod.test', active: true, version: 1 },
 ];
 let adminUsers = [
   { id: 'staff-admin', fullName: 'Demo Administrator', email: 'admin@unipod.test', role: 'ADMINISTRATOR', departmentId: '', active: true, version: 1, createdAt: '2026-08-20' },
@@ -172,30 +305,55 @@ let adminUsers = [
   { id: 'staff-3', fullName: 'Daniel Kato', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentId: 'dept-2', active: true, version: 1, createdAt: '2026-09-10' },
   { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
 ];
-const adminPermissions = [
-  { id: 'USERS_MANAGE', name: 'Manage user accounts', description: 'Create, update, and deactivate staff accounts.' },
-  { id: 'ROLES_MANAGE', name: 'Manage roles and permissions', description: 'Configure role access to system capabilities.' },
-  { id: 'DEPARTMENTS_MANAGE', name: 'Manage departments', description: 'Create and maintain departments.' },
-  { id: 'SUBMISSIONS_VIEW', name: 'View submissions', description: 'View submitted innovation briefs.' },
-  { id: 'SUBMISSIONS_REGISTER', name: 'Register submissions', description: 'Register and route submissions.' },
-  { id: 'FACT_FINDING_MANAGE', name: 'Fact-finding', description: 'Perform fact-finding on assigned submissions.' },
-  { id: 'REVIEWS_MANAGE', name: 'Review submissions', description: 'Review assigned submissions.' },
-  { id: 'FINANCE_MANAGE', name: 'Manage finance', description: 'Access finance and invoice workflows.' },
+const auditLogs = [
+  { id: 'audit-1', occurredAt: '2026-11-23T15:42:18.000Z', actor: 'admin@unipod.test', action: 'USER_UPDATED', summary: 'Updated Martha Akello’s role to Receptionist', resourceType: 'USER', resourceId: 'staff-1', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
+  { id: 'audit-2', occurredAt: '2026-11-23T14:18:03.000Z', actor: 'martha.akello@unipod.test', action: 'SUBMISSION_REGISTERED', summary: 'Registered submission IH-26026', resourceType: 'SUBMISSION', resourceId: 'IH-26026', outcome: 'SUCCESS', ipAddress: '10.20.4.25' },
+  { id: 'audit-3', occurredAt: '2026-11-23T13:05:41.000Z', actor: 'admin@unipod.test', action: 'PERMISSIONS_UPDATED', summary: 'Updated permissions for Reviewer', resourceType: 'ROLE', resourceId: 'REVIEWER', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
+  { id: 'audit-4', occurredAt: '2026-11-23T11:32:09.000Z', actor: 'daniel.kato@unipod.test', action: 'LOGIN_FAILED', summary: 'Failed sign-in attempt', resourceType: 'SESSION', resourceId: null, outcome: 'FAILURE', ipAddress: '10.20.8.12' },
+  { id: 'audit-5', occurredAt: '2026-11-22T16:47:22.000Z', actor: 'admin@unipod.test', action: 'DEPARTMENT_UPDATED', summary: 'Activated Finance & Administration', resourceType: 'DEPARTMENT', resourceId: 'dept-2', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
+  { id: 'audit-6', occurredAt: '2026-11-22T10:14:55.000Z', actor: 'grace.namuli@unipod.test', action: 'RULE_PUBLISHED', summary: 'Published Technical Assessment Turnaround', resourceType: 'RULE', resourceId: 'rule-2', outcome: 'SUCCESS', ipAddress: '10.20.5.31' },
+  { id: 'audit-7', occurredAt: '2026-11-21T09:28:16.000Z', actor: 'admin@unipod.test', action: 'SECTOR_CREATED', summary: 'Created sector Applied Research', resourceType: 'SECTOR', resourceId: 'sec-4', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
+  { id: 'audit-8', occurredAt: '2026-11-20T08:51:04.000Z', actor: 'miriam.nsubuga@unipod.test', action: 'CASE_REVIEWED', summary: 'Submitted review for Smart Irrigation Monitoring System', resourceType: 'SUBMISSION', resourceId: 'IH-26022', outcome: 'SUCCESS', ipAddress: '10.20.7.44' },
 ];
-let adminRoles = [
+const adminPermissions = [
+  { id: 'CASE_VIEW', name: 'View submissions', description: "View submissions within the role's assigned scope." },
+  { id: 'CASE_EDIT', name: 'Edit submissions', description: "Edit submissions within the role's assigned scope." },
+  { id: 'CASE_FORWARD', name: 'Route submissions', description: 'Forward submissions to the next workflow stage.' },
+  { id: 'CASE_ASSIGN_REVIEWER', name: 'Assign reviewers', description: 'Assign reviewers to submissions.' },
+  { id: 'CASE_REVIEW', name: 'Review submissions', description: 'Submit reviews for assigned submissions.' },
+  { id: 'CASE_DECIDE', name: 'Decide submissions', description: 'Make workflow decisions on submissions.' },
+  { id: 'AUDIT_VIEW', name: 'View audit log', description: 'View recorded system activity.' },
+  { id: 'USER_MANAGE', name: 'Manage user accounts', description: 'Create and manage user accounts.' },
+  { id: 'PRICE_LIST_MANAGE', name: 'Manage finance', description: 'Manage price lists and finance operations.' },
+  { id: 'PRICE_LIST_PROPOSE', name: 'Propose price list updates', description: 'Propose price-list updates within the assigned scope.' },
+  { id: 'REPORT_VIEW', name: 'View reports', description: 'View system reports.' },
+];
+const adminRoles = [
+  { role: 'ADMINISTRATOR', staff: true },
+  { role: 'INNOVATION_COORDINATOR', staff: true },
+  { role: 'DEPARTMENT_COORDINATOR', staff: true },
+  { role: 'DEPARTMENT_HEAD', staff: true },
+  { role: 'RECEPTIONIST', staff: true },
+  { role: 'FACT_FINDING_OFFICER', staff: true },
+  { role: 'REVIEWER', staff: true },
+  { role: 'SECTOR_OFFICER', staff: true },
+  { role: 'IP_LIAISON', staff: true },
+  { role: 'SUBMITTER', staff: false },
+  { role: 'FINANCE_OFFICER', staff: true },
+  { role: 'OBSERVER', staff: true },
+];
+let configurableRoles = [
   { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
-  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['FINANCE_MANAGE'], version: 1, editable: true },
-  { id: 'REVIEWER', name: 'Reviewer', permissions: ['SUBMISSIONS_VIEW', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER'], version: 1, editable: true },
-  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['SUBMISSIONS_VIEW', 'SUBMISSIONS_REGISTER', 'REVIEWS_MANAGE'], version: 1, editable: true },
-  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['SUBMISSIONS_VIEW', 'FACT_FINDING_MANAGE'], version: 1, editable: true },
-  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
-  { id: 'TEXTILE_DOMAIN_OWNER', name: 'Textile Domain Owner', permissions: [], version: 1, editable: true },
+  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
+  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['PRICE_LIST_MANAGE'], version: 1, editable: true },
+  { id: 'REVIEWER', name: 'Reviewer', permissions: ['CASE_VIEW', 'CASE_REVIEW'], version: 1, editable: true },
+  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['CASE_VIEW', 'CASE_DECIDE'], version: 1, editable: true },
+  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
+  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['CASE_VIEW', 'CASE_FORWARD', 'CASE_REVIEW'], version: 1, editable: true },
+  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['CASE_VIEW'], version: 1, editable: true },
+  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
+  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['CASE_VIEW'], version: 1, editable: true },
   { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
-  { id: 'OBSERVER', name: 'Observer', permissions: ['SUBMISSIONS_VIEW'], version: 1, editable: true },
 ];
 
 export const handlers = [
@@ -209,7 +367,7 @@ export const handlers = [
       || mockUsers['factfinding@unipod.test'];
     return HttpResponse.json({
       tokenType: 'Bearer',
-      accessToken: makeMockToken(account.roles, account.subject),
+      accessToken: makeMockToken(account.roles, account.subject, rawEmail),
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
     });
   }),
@@ -301,13 +459,23 @@ export const handlers = [
       purpose: String(body.purpose ?? ''),
       problemAddressed: String(body.problemAddressed ?? ''),
       registeredBy: 'Mock account',
-      submitterId: body.submitterId ?? null,
+      // A submitter self-creates without passing submitterId (the backend
+      // derives ownership from the bearer token); staff pass it explicitly
+      // when creating on behalf of someone (Reception's assisted flow).
+      submitterId: body.submitterId ?? mockSubmitterSubject(request),
       receivingOfficer: null,
       assignedReviewerSubject: null,
       studentNumber: body.studentNumber ?? null,
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
+      serviceRequested: body.serviceRequested ?? null,
+      serviceRequester: body.serviceRequester ?? null,
+      department: body.department ?? null,
+      expectedResult: body.expectedResult ?? null,
+      preferredAt: body.preferredAt ?? null,
+      submitterPhone: body.submitterPhone ?? null,
+      acceptedRulesVersion: body.acceptedRulesVersion ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
       stage: 'DRAFT',
@@ -319,6 +487,25 @@ export const handlers = [
     };
     submissions.unshift(created);
     return HttpResponse.json(created);
+  }),
+
+  // PUT /submissions/{id} — edits a DRAFT (or a RETURNED/AWAITING_DETAILS
+  // one being resubmitted) before POST .../submit is called; only the
+  // owner's own in-progress fields are expected to change here.
+  http.put(`${API_BASE_URL}/submissions/:id`, async ({ params, request }) => {
+    const index = submissions.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    const now = new Date().toISOString().slice(0, 10);
+    submissions[index] = {
+      ...submissions[index],
+      ...body,
+      id: submissions[index].id,
+      stage: submissions[index].stage,
+      updatedAt: now,
+      version: submissions[index].version + 1,
+    };
+    return HttpResponse.json(submissions[index]);
   }),
 
   http.get(`${API_BASE_URL}/sectors`, () => HttpResponse.json(sectors)),
@@ -367,88 +554,130 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  http.get(`${API_BASE_URL}/users`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const items = adminUsers.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: adminUsers.length,
+      totalPages: Math.ceil(adminUsers.length / size),
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/admin/audit-logs`, ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams.get('q')?.toLowerCase() ?? '';
+    const actor = url.searchParams.get('actor')?.toLowerCase() ?? '';
+    const action = url.searchParams.get('action') ?? '';
+    const outcome = url.searchParams.get('outcome') ?? '';
+    const from = url.searchParams.get('from') ?? '';
+    const to = url.searchParams.get('to') ?? '';
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const filtered = auditLogs.filter((item) => {
+      const occurredDate = item.occurredAt.slice(0, 10);
+      return (
+        (!q || `${item.actor} ${item.action} ${item.summary} ${item.resourceType} ${item.resourceId ?? ''}`.toLowerCase().includes(q)) &&
+        (!actor || item.actor.toLowerCase().includes(actor)) &&
+        (!action || item.action === action) &&
+        (!outcome || item.outcome === outcome) &&
+        (!from || occurredDate >= from) &&
+        (!to || occurredDate <= to)
+      );
+    });
+    const items = filtered.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    });
+  }),
+
   http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
 
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
     const email = String(body.email ?? '').trim().toLowerCase();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
-    }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
-      return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
     }
     if (adminUsers.some((user) => user.email.toLowerCase() === email)) {
       return HttpResponse.json({ message: 'A staff account with this email already exists.' }, { status: 409 });
     }
-    const createdAt = new Date().toISOString().slice(0, 10);
     const created = {
       id: `staff-${Date.now()}`,
-      fullName: String(body.fullName ?? email.split('@')[0]),
+      fullName: String(body.fullName ?? '').trim(),
       email,
       role: body.role,
-      departmentId: body.departmentId ?? '',
+      departmentIds: body.departmentIds ?? [],
+      departmentId: body.departmentIds?.[0] ?? '',
+      profile: { fullName: String(body.fullName ?? '').trim() },
       active: true,
-      version: 1,
-      createdAt,
+      createdAt: new Date().toISOString(),
     };
     adminUsers = [created, ...adminUsers];
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
     if (user.role === 'ADMINISTRATOR') {
       return HttpResponse.json({ message: 'Administrator role assignments are protected.' }, { status: 409 });
     }
     const body = await request.json();
-    if (!adminRoles.some((item) => item.id === body.role && item.id !== 'ADMINISTRATOR')) {
+    if (!adminRoles.some((item) => item.role === body.role && item.role !== 'ADMINISTRATOR')) {
       return HttpResponse.json({ message: 'Select a valid non-administrator role.' }, { status: 400 });
     }
-    if (body.departmentId && !departments.some((department) => department.id === body.departmentId && department.active)) {
+    if (!Array.isArray(body.departmentIds)
+      || body.departmentIds.some((id) => !departments.some((department) => department.id === id && department.active))) {
       return HttpResponse.json({ message: 'Select an active department.' }, { status: 400 });
-    }
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
     }
     Object.assign(user, {
       role: body.role,
-      departmentId: body.departmentId ?? '',
-      version: user.version + 1,
+      departmentIds: body.departmentIds,
+      departmentId: body.departmentIds[0] ?? '',
     });
     return HttpResponse.json(user);
   }),
 
-  http.patch(`${API_BASE_URL}/admin/users/:id/status`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/users/:id/deactivate`, ({ params }) => {
     const user = adminUsers.find((candidate) => candidate.id === params.id);
     if (!user) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    if (body.version !== user.version) {
-      return HttpResponse.json({ message: 'This account changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    if (user.role === 'ADMINISTRATOR' && !body.active
+    if (user.role === 'ADMINISTRATOR'
       && adminUsers.filter((candidate) => candidate.role === 'ADMINISTRATOR' && candidate.active).length <= 1) {
       return HttpResponse.json({ message: 'The last active administrator cannot be deactivated.' }, { status: 409 });
     }
-    Object.assign(user, { active: Boolean(body.active), version: user.version + 1 });
+    user.active = false;
     return HttpResponse.json(user);
   }),
 
-  http.get(`${API_BASE_URL}/admin/departments`, () => HttpResponse.json(departments)),
+  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(departments)),
 
-  http.post(`${API_BASE_URL}/admin/departments`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/departments`, async ({ request }) => {
     const body = await request.json();
     const name = String(body.name ?? '').trim();
     if (departments.some((department) => department.name.toLowerCase() === name.toLowerCase())) {
       return HttpResponse.json({ message: 'A department with this name already exists.' }, { status: 409 });
     }
-    const created = { id: `dept-${Date.now()}`, name, active: body.active ?? true, version: 1 };
+    const created = {
+      id: `dept-${Date.now()}`,
+      name,
+      notificationEmail: String(body.notificationEmail ?? '').trim(),
+      active: body.active ?? true,
+      version: 1,
+    };
     departments.push(created);
     return HttpResponse.json(created, { status: 201 });
   }),
 
-  http.put(`${API_BASE_URL}/admin/departments/:id`, async ({ params, request }) => {
+  http.put(`${API_BASE_URL}/departments/:id`, async ({ params, request }) => {
     const department = departments.find((candidate) => candidate.id === params.id);
     if (!department) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -457,17 +686,25 @@ export const handlers = [
     }
     Object.assign(department, {
       name: String(body.name ?? department.name).trim(),
+      notificationEmail: String(body.notificationEmail ?? department.notificationEmail).trim(),
       active: Boolean(body.active),
       version: department.version + 1,
     });
     return HttpResponse.json(department);
   }),
 
-  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(adminRoles)),
-  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
+  http.post(`${API_BASE_URL}/users/:id/reactivate`, ({ params }) => {
+    const user = adminUsers.find((candidate) => candidate.id === params.id);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    user.active = true;
+    return HttpResponse.json(user);
+  }),
 
+  http.get(`${API_BASE_URL}/roles`, () => HttpResponse.json(adminRoles)),
+  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(configurableRoles)),
+  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
   http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
-    const role = adminRoles.find((candidate) => candidate.id === params.id);
+    const role = configurableRoles.find((candidate) => candidate.id === params.id);
     if (!role) return new HttpResponse(null, { status: 404 });
     if (!role.editable) {
       return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
@@ -497,9 +734,21 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
-    const mine = submissions.filter((item) => item.submitterId);
+    // Service requests are the same /submissions resource as briefs — the
+    // tab just filters by category, not a different table (§5.4).
+    const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
+      ? submissions.filter((item) => item.submitterId && item.category === 'service_request')
+      : submissions.filter((item) => item.submitterId && item.category !== 'service_request');
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
+  }),
+
+  // GET /me/submissions/{id} — the submitter's own "My brief page" view,
+  // distinct from the shared staff GET /cases/{id} aggregate (§5.4).
+  http.get(`${API_BASE_URL}/me/submissions/:id`, ({ params }) => {
+    const item = submissions.find((submission) => submission.id === params.id && submission.submitterId);
+    if (!item) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(toCaseFile(item));
   }),
 
   http.get(`${API_BASE_URL}/me/capabilities`, () => HttpResponse.json({
@@ -622,7 +871,7 @@ export const handlers = [
     return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/submissions/:id/respond`, async ({ params, request }) => {
+  http.post(`${API_BASE_URL}/submissions/:id/reply`, async ({ params, request }) => {
     const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     const body = await request.json();
@@ -656,74 +905,119 @@ export const handlers = [
     return HttpResponse.json(item);
   }),
 
-  http.get(`${API_BASE_URL}/fact-finding/queue`, () => HttpResponse.json({ items: factFindingQueue })),
-
-  http.get(`${API_BASE_URL}/fact-finding/cases/:id`, ({ params }) => {
-    const item = factFindingCases[params.id];
+  // POST /cases/:id/fact-finding/complete — advances a case specifically out
+  // of fact-finding into review. The real backend's target stage is
+  // READY_FOR_REVIEW; this mock instead reuses the local fixture's existing
+  // UNDER_REVIEW value so the case lands exactly where GET /queues/reviews
+  // (below) already looks for it, without rewriting the shared stage
+  // vocabulary used across the rest of the app (that migration belongs to
+  // Assignment 2's case-file stepper rebuild, not this one).
+  http.post(`${API_BASE_URL}/cases/:id/fact-finding/complete`, async ({ params, request }) => {
+    const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
+    const body = await request.json().catch(() => ({}));
+    if (typeof body.version === 'number' && body.version !== item.version) {
+      return HttpResponse.json({ code: 'STALE_VERSION', detail: 'This case was updated elsewhere. Reload and try again.' }, { status: 409 });
+    }
+    item.stage = 'UNDER_REVIEW';
+    item.updatedAt = new Date().toISOString().slice(0, 10);
+    item.version += 1;
+    return HttpResponse.json(toCaseFile(item));
   }),
 
-  http.post(`${API_BASE_URL}/fact-finding/cases/:id/assessment`, async ({ params, request }) => {
+  http.get(`${API_BASE_URL}/queues/reviews`, () => HttpResponse.json({
+    items: submissions
+      .filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage))
+      .map((item) => ({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        category: item.category,
+        stage: item.stage,
+        assignedAt: item.forwardedAt ?? item.updatedAt,
+      })),
+  })),
+
+  http.post(`${API_BASE_URL}/cases/:id/reviews`, async ({ params, request }) => {
     const id = params.id;
-    const existing = factFindingCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    const body = await request.json();
-    const updated = {
-      ...existing,
-      checklist: body.checklist,
-      assessment: body.assessment,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      nextAction: { ...existing.nextAction, recommendation: body.nextAction || existing.nextAction.recommendation },
-    };
-    factFindingCases[id] = updated;
-    return HttpResponse.json(updated);
-  }),
-
-  http.get(`${API_BASE_URL}/reviewer/assigned`, () => HttpResponse.json({ items: reviewerAssigned })),
-
-  http.get(`${API_BASE_URL}/reviewer/cases/:id`, ({ params }) => {
-    const item = reviewerCases[params.id];
+    const item = submissions.find((submission) => submission.id === id);
     if (!item) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(item);
-  }),
-
-  http.post(`${API_BASE_URL}/reviewer/cases/:id/decision`, async ({ params, request }) => {
-    const id = params.id;
-    const existing = reviewerCases[id];
-    if (!existing) return new HttpResponse(null, { status: 404 });
-    if (existing.decisionStatus !== 'pending') {
-      return HttpResponse.json({ message: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 400 });
+    if (myReviewBySubmission[id]) {
+      return HttpResponse.json({ code: 'ALREADY_REVIEWED', detail: 'A decision has already been submitted for this case and cannot be edited.' }, { status: 409 });
     }
     const body = await request.json();
-    const updated = {
-      ...existing,
-      decisionStatus: body.decision,
-      comment: body.comment,
-      decidedAt: new Date().toISOString().slice(0, 10),
-      pendingAction: body.decision === 'recommended' ? 'Decision recorded — no further action needed' : 'Decision recorded — awaiting coordinator follow-up',
-    };
-    reviewerCases[id] = updated;
-    const assignedEntry = reviewerAssigned.find((entry) => entry.id === id);
-    if (assignedEntry) {
-      assignedEntry.decisionStatus = updated.decisionStatus;
-      assignedEntry.pendingAction = updated.pendingAction;
-    }
-    return HttpResponse.json(updated);
+    const review = { decision: body.decision, comment: body.comment, decidedAt: new Date().toISOString().slice(0, 10) };
+    myReviewBySubmission[id] = review;
+    return HttpResponse.json(review);
   }),
 
-  http.get(`${API_BASE_URL}/notifications`, () => HttpResponse.json({ items: notifications })),
+  http.get(`${API_BASE_URL}/cases/:id/my-review`, ({ params }) => {
+    const review = myReviewBySubmission[params.id];
+    if (!review) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(review);
+  }),
 
-  http.post(`${API_BASE_URL}/notifications/read-all`, () => {
-    for (const item of notifications) item.read = true;
+  http.get(`${API_BASE_URL}/notifications`, ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    const page = Number(params.get('page') ?? 0);
+    const size = Number(params.get('size') ?? 25);
+    const unreadOnly = params.get('unread') === 'true';
+    const all = notificationsForRequest(request);
+    const filtered = unreadOnly ? all.filter((item) => !item.read) : all;
+    const items = filtered.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/notifications/unread-count`, ({ request }) => (
+    HttpResponse.json({ unread: notificationsForRequest(request).filter((item) => !item.read).length })
+  )),
+
+  http.get(`${API_BASE_URL}/notifications/push/config`, () => (
+    HttpResponse.json({ enabled: true, publicKey: 'B'.repeat(87) })
+  )),
+
+  http.put(`${API_BASE_URL}/notifications/push/subscriptions`, async ({ request }) => {
+    const body = await request.json();
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.set(`${email}:${body.endpoint}`, body);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete(`${API_BASE_URL}/notifications/push/subscriptions`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    pushSubscriptions.delete(`${email}:${new URL(request.url).searchParams.get('endpoint')}`);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/:id/read`, ({ params, request }) => {
+    const notification = notificationsForRequest(request).find((item) => item.id === params.id);
+    if (!notification) return new HttpResponse(null, { status: 404 });
+    const updated = { ...notification, read: true, readAt: notification.readAt ?? new Date().toISOString() };
+    notificationRecords = notificationRecords.map((item) => item.id === params.id ? updated : item);
+    return HttpResponse.json(updated);
+  }),
+
+  http.post(`${API_BASE_URL}/notifications/read-all`, ({ request }) => {
+    const current = notificationsForRequest(request);
+    const unreadIds = new Set(current.filter((item) => !item.read).map((item) => item.id));
+    const readAt = new Date().toISOString();
+    notificationRecords = notificationRecords.map((item) => unreadIds.has(item.id)
+      ? { ...item, read: true, readAt }
+      : item);
+    return HttpResponse.json({ marked: unreadIds.size });
   }),
 
   ...receptionHandlers,
   ...coordinatorHandlers,
   // Operations / Multimedia - Training & Mentorship
-  http.get(`${API_BASE_URL}/departments`, () => HttpResponse.json(trainingDepartments)),
-
   http.get(`${API_BASE_URL}/operations/training/overview`, () => {
     const live = trainingSessions.filter((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS');
     return HttpResponse.json({
@@ -876,6 +1170,121 @@ export const handlers = [
   // Facilities, bookings, equipment allocations and timetable
   http.get(`${API_BASE_URL}/facilities`, () => HttpResponse.json(facilities)),
 
+  http.get(`${API_BASE_URL}/me/bookings`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100) {
+      return HttpResponse.json({ detail: 'The booking query parameters are invalid.' }, { status: 400 });
+    }
+    const mine = submitterBookings
+      .filter((booking) => booking.requesterId.toLocaleLowerCase() === email)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const items = mine.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: mine.length,
+      totalPages: Math.ceil(mine.length / size),
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/me/bookings`, async ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const body = await request.json();
+    const facility = facilities.find((item) => item.id === body.facilityId);
+    if (!facility) return bookingProblem(404, 'Facility not found.');
+    const startsAt = Date.parse(body.startsAt);
+    const endsAt = Date.parse(body.endsAt);
+    if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt) {
+      return bookingProblem(400, 'The booking end time must be after the start time.');
+    }
+    if (!body.purpose?.trim() || body.purpose.length > 1000) {
+      return bookingProblem(400, 'A purpose of up to 1000 characters is required.');
+    }
+    if (!Number.isInteger(body.attendees) || body.attendees < 1) {
+      return bookingProblem(400, 'At least one attendee is required.');
+    }
+    if (facility.status === 'MAINTENANCE') {
+      return bookingProblem(409, 'The facility is under maintenance and cannot be booked.');
+    }
+    if (body.attendees > facility.capacity) {
+      return bookingProblem(400, 'The group size exceeds the facility capacity.');
+    }
+    const conflicts = [...bookings, ...submitterBookings].some((booking) => (
+      booking.facilityId === facility.id
+      && BLOCKING.includes(booking.status)
+      && overlaps(booking.startsAt, booking.endsAt, body.startsAt, body.endsAt)
+    ));
+    if (conflicts) return bookingProblem(409, 'The facility is already booked for that time.');
+
+    const now = new Date().toISOString();
+    const sequence = nextSubmitterBookingNumber++;
+    const created = {
+      id: `00000000-0000-4000-8000-${String(sequence).padStart(12, '0')}`,
+      reference: `BKG-2026-${String(sequence).padStart(6, '0')}`,
+      facilityId: facility.id,
+      facilityName: facility.name,
+      facilityLocation: facility.location,
+      requesterId: email,
+      purpose: body.purpose.trim(),
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+      attendees: body.attendees,
+      operator: body.operator?.trim() || null,
+      status: 'PENDING',
+      rejectionReason: null,
+      requestType: 'FACILITY',
+      isEquipmentRequest: false,
+      equipmentName: null,
+      purposeDetail: null,
+      decisionNote: null,
+      decidedAt: null,
+      conditionOut: null,
+      conditionReturned: null,
+      returnedAt: null,
+      returnNotes: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    submitterBookings = [created, ...submitterBookings];
+    publishMockNotification(
+      created,
+      'BOOKING_REQUESTED',
+      `Booking request received: ${created.reference}`,
+      `Your request for ${created.facilityName} has been submitted and is awaiting review.`,
+    );
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/bookings/:id`, ({ params, request }) => {
+    const result = findSubmitterBooking(request, params.id);
+    return result.booking
+      ? HttpResponse.json(result.booking)
+      : new HttpResponse(null, { status: result.status });
+  }),
+
+  http.post(`${API_BASE_URL}/me/bookings/:id/cancel`, ({ params, request }) => {
+    const result = findSubmitterBooking(request, params.id);
+    if (!result.booking) return new HttpResponse(null, { status: result.status });
+    if (!['PENDING', 'APPROVED'].includes(result.booking.status)) {
+      return bookingProblem(409, 'Only pending or approved bookings can be cancelled.');
+    }
+    const updated = { ...result.booking, status: 'CANCELLED', updatedAt: new Date().toISOString() };
+    submitterBookings = submitterBookings.map((item) => item.id === params.id ? updated : item);
+    publishMockNotification(
+      updated,
+      'BOOKING_CANCELLED',
+      `Booking cancelled: ${updated.reference}`,
+      `Your booking for ${updated.facilityName} has been cancelled.`,
+    );
+    return HttpResponse.json(updated);
+  }),
+
   http.get(`${API_BASE_URL}/bookings`, ({ request }) => {
     const url = new URL(request.url);
     const date = url.searchParams.get('date');
@@ -971,8 +1380,25 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/price-list-items`, ({ request }) => {
-    const departmentId = new URL(request.url).searchParams.get('departmentId');
-    return HttpResponse.json(initialCncPrices.filter((p) => !departmentId || p.departmentId === departmentId));
+    const params = new URL(request.url).searchParams;
+    const departmentId = params.get('departmentId');
+    const status = params.get('status');
+    const financePrices = initialPriceList.map((item, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 501).padStart(12, '0')}`,
+      departmentId: '00000000-0000-4000-8000-000000000900',
+      service: item.service,
+      unit: ['PER_SESSION', 'PER_HOUR', 'PER_ITEM', 'PER_SESSION'][index],
+      priceUgx: item.rateNumeric,
+      effectiveFrom: '2026-10-01',
+      status: 'ACTIVE',
+      proposedBy: 'finance@unipod.test',
+      updatedAt: '2026-10-01T08:00:00Z',
+    }));
+    const prices = departmentId ? initialCncPrices : financePrices;
+    return HttpResponse.json(prices.filter((item) => (
+      (!departmentId || item.departmentId === departmentId)
+      && (!status || item.status === status)
+    )));
   }),
 
   // CNC & Carpentry orders
@@ -1102,6 +1528,10 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
+  // Department Rules Manager (Assignment 12) has no real /rules* endpoint
+  // family on the backend — see src/services/rules.js for why this is now a
+  // browser-persisted, backend-free module instead of MSW handlers.
+
   // Operations / Multimedia - Partners & MOUs
   http.get(`${API_BASE_URL}/operations/partners/overview`, () => {
     return HttpResponse.json({
@@ -1139,6 +1569,108 @@ export const handlers = [
     return HttpResponse.json(partners[index]);
   }),
 
+  http.get(`${API_BASE_URL}/me/invoices`, ({ request }) => {
+    const email = mockSubmitterEmail(request);
+    if (!email) return new HttpResponse(null, { status: 401 });
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 25);
+    const status = url.searchParams.get('status');
+    const statuses = ['WAITING_FOR_PROOF', 'WAITING_FOR_CHECK', 'PAID', 'RECEIPTED'];
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100
+      || (status && !statuses.includes(status))) {
+      return HttpResponse.json({ detail: 'The invoice query parameters are invalid.' }, { status: 400 });
+    }
+
+    const mine = submitterInvoices.filter((invoice) => invoice.customerEmail.toLocaleLowerCase() === email);
+    const filtered = status ? mine.filter((invoice) => invoice.status === status) : mine;
+    const items = filtered.slice(page * size, (page + 1) * size);
+    return HttpResponse.json({
+      items,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    return result.invoice
+      ? HttpResponse.json(result.invoice)
+      : new HttpResponse(null, { status: result.status });
+  }),
+
+  http.post(`${API_BASE_URL}/me/invoices/:id/proof`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    const index = submitterInvoices.findIndex((invoice) => invoice.id === params.id);
+    const invoice = result.invoice;
+    if (invoice.status !== 'WAITING_FOR_PROOF') {
+      return HttpResponse.json({ detail: 'Payment proof is no longer accepted for this invoice.' }, { status: 409 });
+    }
+
+    const updated = {
+      ...invoice,
+      status: 'WAITING_FOR_CHECK',
+      statusLabel: 'Payment evidence under review',
+      updatedAt: new Date().toISOString(),
+      paymentProof: {
+        id: '00000000-0000-4000-8000-000000000304',
+        reference: 'DEMO-PAYMENT-REFERENCE',
+        amount: invoice.amount,
+        paidOn: '2026-11-18',
+        contentType: 'application/pdf',
+        fileSize: 1024,
+        originalFilename: 'payment-proof.pdf',
+        status: 'PENDING',
+        rejectionReason: null,
+        uploadedBy: invoice.customerEmail,
+        uploadedAt: new Date().toISOString(),
+        verifiedBy: null,
+        verifiedAt: null,
+      },
+    };
+    submitterInvoices[index] = updated;
+    return HttpResponse.json(updated, { status: 201 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/proof/file`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.paymentProof) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(new Blob([`Mock payment proof for ${result.invoice.number}`]), {
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    return result.invoice.receipt
+      ? HttpResponse.json(result.invoice.receipt)
+      : new HttpResponse(null, { status: 404 });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt/download`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.receipt) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(`Receipt ${result.invoice.receipt.receiptNumber}`, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/pdf`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice) return new HttpResponse(null, { status: result.status });
+    return new HttpResponse(new Blob([`Mock invoice PDF for ${result.invoice.number}`], { type: 'application/pdf' }));
+  }),
+
+  http.get(`${API_BASE_URL}/me/invoices/:id/receipt/pdf`, ({ params, request }) => {
+    const result = findSubmitterInvoice(request, params.id);
+    if (!result.invoice?.receipt) return new HttpResponse(null, { status: result.status === 200 ? 404 : result.status });
+    return new HttpResponse(new Blob([`Mock receipt PDF for ${result.invoice.receipt.receiptNumber}`], { type: 'application/pdf' }));
+  }),
+
   // Finance / Overview (Daniel Kato, Finance Officer)
   http.get(`${API_BASE_URL}/finance/overview`, () => {
     return HttpResponse.json(initialFinanceOverview);
@@ -1159,10 +1691,6 @@ export const handlers = [
       outstandingUgx: 340000,
       collectedUgx: 1620000,
     });
-  }),
-
-  http.get(`${API_BASE_URL}/finance/price-list`, () => {
-    return HttpResponse.json({ items: initialPriceList });
   }),
 
   http.get(`${API_BASE_URL}/invoices`, ({ request }) => {
@@ -1346,4 +1874,5 @@ export const handlers = [
   }),
   ...textileHandlers,
   ...telecomsHandlers,
+  ...cncStockHandlers,
 ];

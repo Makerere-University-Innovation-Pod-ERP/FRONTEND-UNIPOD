@@ -1,43 +1,45 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Handshake, AlertTriangle, X, Calendar as CalendarIcon, Mail, User, FileText, CheckCircle2, Search, Plus } from 'lucide-react';
 import { Calendar as DateCalendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreatePartner, usePartnersOverview, useRenewPartnerMOU } from '@/hooks/usePartners';
 import { normalizePartnerStatus } from '@/services/partners';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 function getStatusStyle(rawStatus) {
   const status = normalizePartnerStatus(rawStatus);
   switch (status) {
     case 'Active':
       return {
-        bg: '#e3f0e6',
-        color: '#215f43',
-        dotColor: '#215f43',
+        bg: 'var(--green-bg)',
+        color: 'var(--green)',
+        dotColor: 'var(--green)',
       };
     case 'Renewal due':
       return {
-        bg: '#fff4da',
-        color: '#b46a24',
-        dotColor: '#b46a24',
+        bg: 'var(--amber-bg)',
+        color: 'var(--amber)',
+        dotColor: 'var(--amber)',
       };
     case 'Expiring soon':
       return {
-        bg: '#fcedce',
-        color: '#b45d22',
-        dotColor: '#b45d22',
+        bg: 'var(--amber-bg)',
+        color: 'var(--amber)',
+        dotColor: 'var(--amber)',
       };
     case 'Expired':
       return {
-        bg: '#fee2e2',
-        color: '#991b1b',
-        dotColor: '#991b1b',
+        bg: 'var(--rose-bg)',
+        color: 'var(--rose)',
+        dotColor: 'var(--rose)',
       };
     default:
       return {
-        bg: '#eff0eb',
-        color: '#555e56',
-        dotColor: '#7a847b',
+        bg: 'var(--surface-raised)',
+        color: 'var(--ink-soft)',
+        dotColor: 'var(--muted)',
       };
   }
 }
@@ -81,9 +83,9 @@ function PartnerDatePicker({ id, label, value, onChange, open, onOpenChange, req
             zIndex: 10001,
             width: 'auto',
             padding: '8px',
-            border: '1px solid #d5dad3',
+            border: '1px solid var(--border)',
             borderRadius: '16px',
-            background: '#ffffff',
+            background: 'var(--surface)',
             boxShadow: '0 12px 30px rgba(20, 32, 24, 0.16)',
           }}
         >
@@ -104,6 +106,7 @@ function PartnerDatePicker({ id, label, value, onChange, open, onOpenChange, req
 
 export function PartnersMousPage({ token, roles = [] }) {
   const { data: overview, isPending, isError, error, refetch } = usePartnersOverview(token);
+  const [searchParams] = useSearchParams();
   const createPartnerMutation = useCreatePartner(token);
   const renewMutation = useRenewPartnerMOU(token);
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -122,7 +125,14 @@ export function PartnersMousPage({ token, roles = [] }) {
     notes: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const canCreatePartner = roles.includes('ROLE_FINANCE_OFFICER');
+  const canManagePartner = roles.includes('ROLE_ADMINISTRATOR')
+    || roles.includes('ROLE_DEPARTMENT_COORDINATOR');
+  const linkedPartnerId = searchParams.get('partner');
+  useEffect(() => {
+    if (!linkedPartnerId || !overview) return;
+    const partner = overview.partners.find((item) => item.id === linkedPartnerId);
+    if (partner) setSelectedPartner(partner);
+  }, [linkedPartnerId, overview]);
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPartners = overview?.partners.filter((partner) => {
     if (!normalizedSearch) return true;
@@ -206,7 +216,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               fontSize: '11px',
               fontWeight: 800,
               letterSpacing: '0.14em',
-              color: '#1b5e43',
+              color: 'var(--green)',
               textTransform: 'uppercase',
               margin: '0 0 8px 0',
             }}
@@ -219,7 +229,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               fontSize: 'clamp(28px, 3.5vw, 34px)',
               lineHeight: 1.15,
               fontWeight: 600,
-              color: '#16221a',
+              color: 'var(--ink)',
               margin: '0 0 8px 0',
               letterSpacing: '-0.02em',
             }}
@@ -229,7 +239,7 @@ export function PartnersMousPage({ token, roles = [] }) {
           <p
             style={{
               fontSize: '13px',
-              color: '#7a847b',
+              color: 'var(--muted)',
               margin: 0,
               lineHeight: 1.5,
             }}
@@ -237,7 +247,7 @@ export function PartnersMousPage({ token, roles = [] }) {
             Partner organisations, MOU renewal dates and relationship status.
           </p>
         </div>
-        {canCreatePartner && (
+        {canManagePartner && (
           <button
             type="button"
             className="btn btn-primary"
@@ -252,7 +262,7 @@ export function PartnersMousPage({ token, roles = [] }) {
         )}
       </div>
 
-      {isPending && <p role="status">Loading partners…</p>}
+      {isPending && <LoadingSkeleton label="Loading partners…" variant="table" />}
       {isError && (
         <div className="api-error api-error-banner" role="alert">
           <span>{error instanceof Error ? error.message : 'Could not load partners.'}</span>
@@ -276,9 +286,9 @@ export function PartnersMousPage({ token, roles = [] }) {
         {/* Card 1: PARTNERS */}
         <article
           style={{
-            background: '#ffffff',
+            background: 'var(--surface)',
             borderRadius: '16px',
-            border: '1px solid #e3e7df',
+            border: '1px solid var(--border)',
             padding: '22px 24px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
           }}
@@ -296,7 +306,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 fontSize: '10px',
                 fontWeight: 700,
                 letterSpacing: '0.1em',
-                color: '#7a847b',
+                color: 'var(--muted)',
                 textTransform: 'uppercase',
               }}
             >
@@ -307,8 +317,8 @@ export function PartnersMousPage({ token, roles = [] }) {
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: '#eef5eb',
-                color: '#1b5e43',
+                background: 'var(--green-bg)',
+                color: 'var(--green)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -323,7 +333,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               fontFamily: 'var(--font-serif)',
               fontSize: '36px',
               fontWeight: 500,
-              color: '#16221a',
+              color: 'var(--ink)',
               display: 'block',
               lineHeight: 1,
             }}
@@ -411,8 +421,8 @@ export function PartnersMousPage({ token, roles = [] }) {
             minWidth: 0,
             padding: '0 14px',
             borderRadius: '12px',
-            borderColor: '#e3e7df',
-            background: '#ffffff',
+            borderColor: 'var(--border)',
+            background: 'var(--surface)',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
           }}
         >
@@ -439,7 +449,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 border: 0,
                 borderRadius: '50%',
                 background: 'transparent',
-                color: '#758078',
+                color: 'var(--muted)',
                 cursor: 'pointer',
               }}
             >
@@ -449,7 +459,7 @@ export function PartnersMousPage({ token, roles = [] }) {
         </div>
         <span
           role="status"
-          style={{ color: '#7a847b', fontSize: '11px', fontWeight: 600 }}
+          style={{ color: 'var(--muted)', fontSize: '11px', fontWeight: 600 }}
         >
           {filteredPartners.length === overview.partners.length
             ? `${overview.partners.length} ${overview.partners.length === 1 ? 'partner' : 'partners'}`
@@ -460,9 +470,9 @@ export function PartnersMousPage({ token, roles = [] }) {
       {/* Partners & MOUs Data Table Container */}
       <section
         style={{
-          background: '#ffffff',
+          background: 'var(--surface)',
           borderRadius: '16px',
-          border: '1px solid #e3e7df',
+          border: '1px solid var(--border)',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
           overflow: 'hidden',
         }}
@@ -477,13 +487,13 @@ export function PartnersMousPage({ token, roles = [] }) {
             }}
           >
             <thead>
-              <tr style={{ borderBottom: '1px solid #e8eae3' }}>
+              <tr style={{ borderBottom: '1px solid var(--border-soft)' }}>
                 <th
                   style={{
                     fontSize: '10px',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
-                    color: '#7a847b',
+                    color: 'var(--muted)',
                     textTransform: 'uppercase',
                     padding: '16px 24px',
                     width: '35%',
@@ -496,7 +506,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     fontSize: '10px',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
-                    color: '#7a847b',
+                    color: 'var(--muted)',
                     textTransform: 'uppercase',
                     padding: '16px 24px',
                     width: '25%',
@@ -509,7 +519,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     fontSize: '10px',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
-                    color: '#7a847b',
+                    color: 'var(--muted)',
                     textTransform: 'uppercase',
                     padding: '16px 24px',
                     width: '20%',
@@ -522,7 +532,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     fontSize: '10px',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
-                    color: '#7a847b',
+                    color: 'var(--muted)',
                     textTransform: 'uppercase',
                     padding: '16px 24px',
                     width: '20%',
@@ -539,7 +549,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     colSpan={4}
                     style={{
                       padding: '32px 24px',
-                      color: '#7a847b',
+                      color: 'var(--muted)',
                       fontSize: '12px',
                       textAlign: 'center',
                     }}
@@ -566,12 +576,12 @@ export function PartnersMousPage({ token, roles = [] }) {
                       renewMutation.reset();
                     }}
                     style={{
-                      borderBottom: isLast ? 'none' : '1px solid #eff0eb',
+                      borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                       cursor: 'pointer',
                       transition: 'background-color 0.12s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fafbfa';
+                      e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -582,7 +592,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                         padding: '16px 24px',
                         fontSize: '13px',
                         fontWeight: 600,
-                        color: '#16221a',
+                        color: 'var(--ink)',
                       }}
                     >
                       {partner.name}
@@ -591,7 +601,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                       style={{
                         padding: '16px 24px',
                         fontSize: '12px',
-                        color: '#7a847b',
+                        color: 'var(--muted)',
                       }}
                     >
                       {partner.type}
@@ -600,7 +610,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                       style={{
                         padding: '16px 24px',
                         fontSize: '12px',
-                        color: '#7a847b',
+                        color: 'var(--muted)',
                       }}
                     >
                       {partner.renewalDate ?? '—'}
@@ -662,7 +672,7 @@ export function PartnersMousPage({ token, roles = [] }) {
         >
           <div
             style={{
-              background: '#ffffff',
+              background: 'var(--surface)',
               borderRadius: '16px',
               maxWidth: '520px',
               width: '100%',
@@ -686,7 +696,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     fontSize: '10px',
                     fontWeight: 700,
                     textTransform: 'uppercase',
-                    color: '#1b5e43',
+                    color: 'var(--green)',
                     marginBottom: '4px',
                     letterSpacing: '0.08em',
                   }}
@@ -699,7 +709,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                     fontSize: '22px',
                     fontWeight: 600,
                     margin: 0,
-                    color: '#16221a',
+                    color: 'var(--ink)',
                   }}
                 >
                   {selectedPartner.name}
@@ -710,7 +720,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 onClick={() => setSelectedPartner(null)}
                 style={{
                   border: 'none',
-                  background: '#f2f4ee',
+                  background: 'var(--surface-raised)',
                   borderRadius: '50%',
                   width: '30px',
                   height: '30px',
@@ -718,7 +728,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#414842',
+                  color: 'var(--ink-soft)',
                 }}
               >
                 <X size={16} />
@@ -753,8 +763,8 @@ export function PartnersMousPage({ token, roles = [] }) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: '#f4f5f0',
-                  color: '#414842',
+                  background: 'var(--surface-raised)',
+                  color: 'var(--ink-soft)',
                   borderRadius: '9999px',
                   padding: '4px 10px',
                   fontSize: '11px',
@@ -767,10 +777,10 @@ export function PartnersMousPage({ token, roles = [] }) {
 
             <div
               style={{
-                background: '#fafbfa',
+                background: 'var(--surface-raised)',
                 borderRadius: '12px',
                 padding: '14px',
-                border: '1px solid #eef0eb',
+                border: '1px solid var(--border)',
                 marginBottom: '16px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -778,7 +788,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               }}
             >
               {selectedPartner.contactPerson && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#333e35' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--ink-soft)' }}>
                   <User size={14} color="#7a847b" />
                   <span>
                     <strong>Contact:</strong> {selectedPartner.contactPerson}
@@ -786,7 +796,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 </div>
               )}
               {selectedPartner.contactEmail && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#333e35' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--ink-soft)' }}>
                   <Mail size={14} color="#7a847b" />
                   <span>
                     <strong>Email:</strong> {selectedPartner.contactEmail}
@@ -794,7 +804,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 </div>
               )}
               {selectedPartner.notes && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: '#333e35' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: 'var(--ink-soft)' }}>
                   <FileText size={14} color="#7a847b" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <span>
                     <strong>MOU Scope:</strong> {selectedPartner.notes}
@@ -803,7 +813,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               )}
             </div>
 
-            {normalizePartnerStatus(selectedPartner.status) !== 'Active' ? (
+            {canManagePartner && normalizePartnerStatus(selectedPartner.status) !== 'Active' ? (
               <form
                 className="partners-renewal-form"
                 onSubmit={(event) => submitRenewal(event, selectedPartner.id)}
@@ -883,7 +893,7 @@ export function PartnersMousPage({ token, roles = [] }) {
       )}
         </>
       )}
-      {isCreateOpen && canCreatePartner && (
+      {isCreateOpen && canManagePartner && (
         <div
           role="dialog"
           aria-modal="true"
@@ -908,7 +918,7 @@ export function PartnersMousPage({ token, roles = [] }) {
               overflowY: 'auto',
               padding: '24px',
               borderRadius: '16px',
-              background: '#ffffff',
+              background: 'var(--surface)',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
             }}
             onClick={(event) => event.stopPropagation()}
@@ -926,7 +936,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                 <p
                   style={{
                     margin: '0 0 5px',
-                    color: '#1b5e43',
+                    color: 'var(--green)',
                     fontSize: '10px',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
@@ -939,7 +949,7 @@ export function PartnersMousPage({ token, roles = [] }) {
                   id="create-partner-title"
                   style={{
                     margin: 0,
-                    color: '#16221a',
+                    color: 'var(--ink)',
                     fontFamily: 'var(--font-serif)',
                     fontSize: '24px',
                     fontWeight: 600,
@@ -960,8 +970,8 @@ export function PartnersMousPage({ token, roles = [] }) {
                   flexShrink: 0,
                   border: 0,
                   borderRadius: '50%',
-                  background: '#f2f4ee',
-                  color: '#414842',
+                  background: 'var(--surface-raised)',
+                  color: 'var(--ink-soft)',
                   cursor: 'pointer',
                 }}
               >
@@ -1003,9 +1013,9 @@ export function PartnersMousPage({ token, roles = [] }) {
                       className="partners-create-select-menu"
                       style={{
                         zIndex: 10001,
-                        border: '1px solid #d5dad3',
+                        border: '1px solid var(--border)',
                         borderRadius: '14px',
-                        background: '#ffffff',
+                        background: 'var(--surface)',
                         padding: '5px',
                         boxShadow: '0 12px 30px rgba(20, 32, 24, 0.16)',
                       }}

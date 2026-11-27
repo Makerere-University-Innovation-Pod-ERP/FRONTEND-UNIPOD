@@ -116,7 +116,7 @@ export function PodcastBookingPage({ token }) {
       <div className="detail-grid">
         <section className="live-panel tx-table-panel">
           <h3 className="tx-panel-title">Upcoming studio bookings</h3>
-          {upcomingQuery.isPending ? <Loading label="Loading bookings…" /> : (
+          {upcomingQuery.isPending ? <Loading label="Loading bookings…" variant="table" /> : (
             <div className="live-table-wrap">
               <table className="live-table">
                 <thead>

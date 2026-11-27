@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, CircleAlert, ClipboardList, LoaderCircle } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CircleAlert, ClipboardList } from 'lucide-react';
 import { useFactFindingQueue } from '@/hooks/useFactFinding';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export function FactFindingOverview({ token, onUnauthorized }) {
   const { data: queue, isLoading, error } = useFactFindingQueue(token);
@@ -12,7 +13,7 @@ export function FactFindingOverview({ token, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  const received = queue?.filter((item) => item.stage === 'RECEIVED').length ?? 0;
+  const forwarded = queue?.filter((item) => item.stage === 'FORWARDED').length ?? 0;
   const inFactFinding = queue?.filter((item) => item.stage === 'FACT_FINDING').length ?? 0;
 
   return (
@@ -25,13 +26,13 @@ export function FactFindingOverview({ token, onUnauthorized }) {
         <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error instanceof Error ? error.message : 'Could not load the fact-finding queue.'}</div>
       )}
       {isLoading ? (
-        <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading fact-finding queue…</div>
+        <LoadingSkeleton label="Loading fact-finding queue…" variant="metrics-list" />
       ) : (
         <>
           <section className="live-metrics" aria-label="Fact-finding summary">
             <Metric label="In queue" value={queue?.length ?? 0} note="Cases awaiting assessment" />
-            <Metric label="Newly received" value={received} note="Fact-finding not yet started" />
-            <Metric label="In fact-finding" value={inFactFinding} note="Checklist in progress" />
+            <Metric label="Newly forwarded" value={forwarded} note="Fact-finding not yet started" />
+            <Metric label="In fact-finding" value={inFactFinding} note="Assessment in progress" />
           </section>
           <section className="live-panel live-recent">
             <div className="live-panel-heading"><div><p className="eyebrow">PRIORITY QUEUE</p><h2>Needs attention</h2></div><Link to="/fact-finding/queue">Open workspace <ArrowUpRight size={14} /></Link></div>

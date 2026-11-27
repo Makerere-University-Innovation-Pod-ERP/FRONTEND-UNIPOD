@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { http, HttpResponse } from 'msw';
+import { API_BASE_URL } from '@/services/api-client';
+import { server } from '@/mocks/server';
 import { PriceListsInvoicesPage } from './PriceListsInvoicesPage';
 import { invoicesApi } from '@/services/invoices';
 
@@ -23,6 +26,20 @@ function renderPage() {
 }
 
 describe('PriceListsInvoicesPage', () => {
+  it('shows backend load failures with a retry instead of a blank finance screen', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/finance/summary`, () =>
+        HttpResponse.json({ message: 'Finance service unavailable.' }, { status: 503 }),
+      ),
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Finance service unavailable.');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByText('No authorised price list is currently published.')).not.toBeInTheDocument();
+  });
+
   it('downloads payment proof through the finance proof-file endpoint', async () => {
     const proofFile = await invoicesApi.downloadPaymentProof('inv-3', 'mock-token');
 

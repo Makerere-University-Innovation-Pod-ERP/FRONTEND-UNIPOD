@@ -7,6 +7,9 @@ import { useReviewerCase, useSubmitDecision } from '@/hooks/useReviewer';
 import { reviewDecisionSchema } from '@/services/reviewer';
 import { ApiError } from '@/services/api-client';
 import { formatStage } from '@/lib/presentation';
+import { useRules } from '@/hooks/useRules';
+import { RulesAcceptance } from '@/components/RulesAcceptance';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const decisionLabel = {
   pending: 'Decision pending',
@@ -25,6 +28,8 @@ export function ReviewerCaseFile({ token, onUnauthorized }) {
   const { id = '' } = useParams();
   const { data: summary, isLoading, error } = useReviewerCase(token, id);
   const submitDecision = useSubmitDecision(token, id);
+  const rulesQuery = useRules(token);
+  const generalRules = (rulesQuery.data ?? []).filter((rule) => rule.scope === 'GENERAL' && rule.published);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(reviewDecisionSchema),
     defaultValues: { decision: undefined, comment: '' },
@@ -34,7 +39,7 @@ export function ReviewerCaseFile({ token, onUnauthorized }) {
     if (error instanceof ApiError && error.status === 401) onUnauthorized();
   }, [error, onUnauthorized]);
 
-  if (isLoading) return <div className="live-loading"><LoaderCircle className="spin" size={22} />Loading case file…</div>;
+  if (isLoading) return <div className="live-page"><LoadingSkeleton label="Loading case file…" variant="detail" /></div>;
   if (!summary) {
     return (
       <div className="live-page">
@@ -70,8 +75,9 @@ export function ReviewerCaseFile({ token, onUnauthorized }) {
         <aside className="detail-side">
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">REFERENCE</p><h2>Applicable department rules</h2></div></div>
-            <p className="live-note">General rules: reviews must be impartial and evidence-based; conflicts of interest must be declared before a decision is recorded.</p>
-            <p className="field-note" style={{ marginTop: 8 }}>Department-specific rules aren't published yet — this reference will come from the department rules manager (Assignment 12) once it ships.</p>
+            {rulesQuery.isLoading && <p className="field-note">Loading the department rules…</p>}
+            {rulesQuery.isError && <div className="api-error api-error-banner" role="alert">Could not load the department rules.</div>}
+            {rulesQuery.isSuccess && <RulesAcceptance rules={generalRules} readOnly />}
           </section>
           <section className="live-panel">
             <div className="live-panel-heading"><div><p className="eyebrow">SUPPORTING FILES</p><h2>Documents</h2></div></div>

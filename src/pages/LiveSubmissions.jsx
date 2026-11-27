@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { CircleAlert, LoaderCircle, Plus, Search } from 'lucide-react';
+import { CircleAlert, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ApiError, backendApi } from '@/services/backend-api';
 import { canCreateSubmission } from '@/lib/auth';
 import { SubmissionRows } from '@/components/SubmissionRows';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function LiveSubmissions({
@@ -74,7 +75,7 @@ export function LiveSubmissions({
               <SelectTrigger aria-label="Filter by category" className="submission-filter-select-trigger">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
-              <SelectContent className="submission-filter-select-content" sideOffset={6}>
+              <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
                 <SelectItem value="__all__">All categories</SelectItem>
                 <SelectItem value="student">Student projects</SelectItem>
                 <SelectItem value="general">General innovations</SelectItem>
@@ -85,7 +86,7 @@ export function LiveSubmissions({
             <SelectTrigger aria-label="Filter by stage" className="submission-filter-select-trigger">
               <SelectValue placeholder="All stages" />
             </SelectTrigger>
-            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+            <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
               <SelectItem value="__all__">All stages</SelectItem>
               {['DRAFT', 'RECEIVED', 'REGISTERED', 'FACT_FINDING', 'UNDER_REVIEW', 'REFINEMENT_REQUESTED', 'FURTHER_HANDLING', 'FORWARDED', 'IN_PROGRESS', 'COMPLETED']
                 .map((value) => <SelectItem value={value} key={value}>{value.replaceAll('_', ' ')}</SelectItem>)}
@@ -95,7 +96,7 @@ export function LiveSubmissions({
             <SelectTrigger aria-label="Filter by sector" className="submission-filter-select-trigger">
               <SelectValue placeholder="All sectors" />
             </SelectTrigger>
-            <SelectContent className="submission-filter-select-content" sideOffset={6}>
+            <SelectContent className="submission-select-content submission-filter-select-content" sideOffset={6}>
               <SelectItem value="__all__">All sectors</SelectItem>
               {sectors.map((item) => <SelectItem value={item.id} key={item.id}>{item.name}</SelectItem>)}
             </SelectContent>
@@ -105,7 +106,7 @@ export function LiveSubmissions({
         {sectorError && <div className="api-error api-error-banner" role="alert">{sectorError}</div>}
         {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
         {loading && !result
-          ? <div className="live-loading"><LoaderCircle className="spin" size={20} />Loading submissions…</div>
+          ? <LoadingSkeleton label="Loading submissions…" variant="table" />
           : result ? <SubmissionRows rows={result.items} /> : null}
         {result && <div className="pagination">
           <span>{result.totalElements} {result.totalElements === 1 ? 'submission' : 'submissions'}</span>

@@ -74,7 +74,7 @@ export const priceListItemSchema = z.object({
   label: z.string(),
   unit: z.string(),
   unitPrice: z.number(),
-  leadDays: z.number(),
+  leadDays: z.number().optional(),
 });
 
 export const stockItemSchema = z.object({
@@ -184,6 +184,7 @@ export const telecomsApi = {
   request: (token, id, signal) => request(`/telecoms/requests/${encodeURIComponent(id)}`, { token, signal, schema: telecomsRequestSchema }),
   createRequest: (token, payload) => request('/telecoms/requests', { method: 'POST', body: payload, token, schema: telecomsRequestSchema }),
   updateDraft: (token, id, payload) => request(`/telecoms/requests/${encodeURIComponent(id)}/draft`, { method: 'PUT', body: payload, token, schema: telecomsRequestSchema }),
+  submitDraft: (token, id) => request(`/telecoms/requests/${encodeURIComponent(id)}/submit`, { method: 'POST', token, schema: telecomsRequestSchema }),
   sendQuote: (token, id, body) => request(`/telecoms/requests/${encodeURIComponent(id)}/quote`, { method: 'POST', body, token, schema: telecomsRequestSchema }),
   requestDetails: (token, id, message) => request(`/telecoms/requests/${encodeURIComponent(id)}/request-details`, { method: 'POST', body: { message }, token, schema: telecomsRequestSchema }),
   sendBack: (token, id, reason) => request(`/telecoms/requests/${encodeURIComponent(id)}/send-back`, { method: 'POST', body: { reason }, token, schema: telecomsRequestSchema }),
@@ -199,6 +200,12 @@ export const telecomsApi = {
 
   equipment: (token, signal) => request('/telecoms/equipment', { token, signal, schema: z.object({ items: z.array(equipmentItemSchema) }) }).then((res) => res.items),
   reportEquipmentFault: (token, body) => request('/telecoms/equipment/report-fault', { method: 'POST', body, token, schema: equipmentItemSchema }),
+  markEquipmentWorking: (token, id, note) => request(`/telecoms/equipment/${encodeURIComponent(id)}/mark-working`, {
+    method: 'POST',
+    body: note ? { note } : {},
+    token,
+    schema: equipmentItemSchema,
+  }),
   loans: (token, signal) => request('/telecoms/equipment/loans', { token, signal, schema: z.object({ items: z.array(equipmentLoanSchema) }) }).then((res) => res.items),
   requestLoan: (token, body) => request('/telecoms/equipment/loans', { method: 'POST', body, token, schema: equipmentLoanSchema }),
   approveLoan: (token, loanId, note) => request(`/telecoms/equipment/loans/${encodeURIComponent(loanId)}/approve`, { method: 'POST', body: { note }, token, schema: equipmentLoanSchema }),

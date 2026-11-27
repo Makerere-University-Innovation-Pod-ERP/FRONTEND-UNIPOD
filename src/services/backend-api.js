@@ -2,28 +2,63 @@ import { API_BASE_URL, ApiError, request, requestFile } from './api-client';
 
 export { API_BASE_URL, ApiError };
 
+function normalizeAdminUser(user) {
+  const departmentIds = user.departmentIds ?? [];
+  return {
+    ...user,
+    fullName: user.profile?.fullName || user.profile?.displayFirstName || user.email,
+    departmentIds,
+    active: user.active ?? true,
+  };
+}
+
 export const backendApi = {
   health: (signal) =>
     request('/actuator/health', { signal }),
   login: (email, password) =>
     request('/auth/login', { body: { email, password } }),
+  passkeyAuthenticationOptions: () =>
+    request('/auth/passkeys/authentication/options', { body: {} }),
+  finishPasskeyAuthentication: (body) =>
+    request('/auth/passkeys/authentication/verify', { body }),
+  passkeyRegistrationOptions: (token, password) =>
+    request('/auth/passkeys/registration/options', { token, body: { password } }),
+  finishPasskeyRegistration: (token, body) =>
+    request('/auth/passkeys/registration/verify', { token, body }),
   forgotPassword: (email) =>
     request('/auth/forgot-password', { body: { email } }),
   signup: (body) =>
     request('/auth/signup', { body }),
   createUser: (token, body) =>
-    request('/admin/users', { token, body }),
+    request('/admin/users', { token, body }).then(normalizeAdminUser),
   adminUsers: (token) =>
-    request('/admin/users', { token }),
+    request('/users?page=0&size=100', { token })
+      .then((response) => response.items.map(normalizeAdminUser)),
   updateAdminUser: (token, id, body) =>
-    request(`/admin/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body }),
-  setAdminUserActive: (token, id, active, version) =>
-    request(`/admin/users/${encodeURIComponent(id)}/status`, {
+    request(`/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body })
+      .then(normalizeAdminUser),
+  setAdminUserActive: (token, id, active) =>
+    request(`/users/${encodeURIComponent(id)}/${active ? 'reactivate' : 'deactivate'}`, {
       token,
-      method: 'PATCH',
-      body: { active, version },
-    }),
+      method: 'POST',
+    }).then(normalizeAdminUser),
+  auditLogs: (token, options = {}, signal) => {
+    const query = new URLSearchParams({
+      page: String(options.page ?? 0),
+      size: String(options.size ?? 25),
+    });
+    if (options.q?.trim()) query.set('q', options.q.trim());
+    if (options.actor) query.set('actor', options.actor);
+    if (options.action) query.set('action', options.action);
+    if (options.outcome) query.set('outcome', options.outcome);
+    if (options.from) query.set('from', options.from);
+    if (options.to) query.set('to', options.to);
+    return request(`/admin/audit-logs?${query}`, { token, signal });
+  },
   adminRoles: (token) =>
+    request('/roles', { token })
+      .then((roles) => roles.map(({ role, staff }) => ({ id: role, name: role, staff }))),
+  adminPermissionRoles: (token) =>
     request('/admin/roles', { token }),
   adminPermissions: (token) =>
     request('/admin/permissions', { token }),
@@ -34,15 +69,15 @@ export const backendApi = {
       body,
     }),
   adminDepartments: (token) =>
-    request('/admin/departments', { token }),
+    request('/departments', { token })
+      .then((departments) => departments.map((department) => ({ ...department, active: true }))),
   createDepartment: (token, body) =>
-    request('/admin/departments', { token, body }),
-  updateDepartment: (token, id, body) =>
-    request(`/admin/departments/${encodeURIComponent(id)}`, {
-      token,
-      method: 'PUT',
-      body,
-    }),
+    request('/departments', { token, body }),
+  updateDepartment: (
+    token,
+    id,
+    body,
+  ) => request(`/departments/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (
@@ -68,16 +103,24 @@ export const backendApi = {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
     return request(`/submissions/mine?${query}`, { token });
   },
-  submitterSubmissions: (token, page = 0, size = 25, signal) => {
+  submitterSubmissions: (token, { page = 0, size = 25, tab } = {}, signal) => {
     const query = new URLSearchParams({ page: String(page), size: String(size) });
+    if (tab) query.set('tab', tab);
     return request(`/me/submissions?${query}`, { token, signal });
   },
   submitterCapabilities: (token, signal) =>
     request('/me/capabilities', { token, signal }),
   createSubmission: (token, body) =>
     request('/submissions', { token, body }),
+  updateSubmission: (
+    token,
+    id,
+    body,
+  ) => request(`/submissions/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
   submitSubmission: (token, id) =>
     request(`/submissions/${encodeURIComponent(id)}/submit`, { token, method: 'POST' }),
+  submitterSubmissionDetail: (token, id, signal) =>
+    request(`/me/submissions/${encodeURIComponent(id)}`, { token, signal }),
   submissionCaseFile: (token, id, signal) =>
     request(
       `/submissions/${encodeURIComponent(id)}`,
@@ -92,6 +135,20 @@ export const backendApi = {
       `/cases/${encodeURIComponent(id)}/transitions/allowed`,
       { token, signal },
     ),
+  completeFactFinding: (
+    token,
+    id,
+    body,
+  ) => request(`/cases/${encodeURIComponent(id)}/fact-finding/complete`, { token, body }),
+  reviewQueue: (token, signal) =>
+    request('/queues/reviews', { token, signal }),
+  submitReview: (
+    token,
+    id,
+    body,
+  ) => request(`/cases/${encodeURIComponent(id)}/reviews`, { token, body }),
+  myReview: (token, id, signal) =>
+    request(`/cases/${encodeURIComponent(id)}/my-review`, { token, signal }),
   sectors: (token, signal) =>
     request('/sectors', { token, signal }),
   sectorCatalog: (token) =>
@@ -136,7 +193,7 @@ export const backendApi = {
     token,
     id,
     body,
-  ) => request(`/submissions/${encodeURIComponent(id)}/respond`, { token, body }),
+  ) => request(`/submissions/${encodeURIComponent(id)}/reply`, { token, body }),
   assignReviewer: (token, id, subject) =>
     request(`/submissions/${encodeURIComponent(id)}/reviewer`, {
       token,

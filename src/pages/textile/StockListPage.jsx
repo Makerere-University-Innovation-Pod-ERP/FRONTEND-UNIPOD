@@ -24,7 +24,7 @@ export function StockListPage({ token, onUnauthorized }) {
         <Link className="btn btn-primary" to="/textile/stock/movements"><Plus size={15} />Add or use stock</Link>
       </PageHeading>
       <ErrorBanner error={stock.error} fallback="Could not load the stock list." />
-      {stock.isLoading ? <Loading label="Loading stock…" /> : (
+      {stock.isLoading ? <Loading label="Loading stock…" variant="table" /> : (
         <>
           <section className="tx-metrics" aria-label="Stock summary">
             <article className="live-metric"><p>Items tracked <ListChecks size={14} /></p><strong>{items.length}</strong></article>
@@ -59,7 +59,7 @@ export function StockListPage({ token, onUnauthorized }) {
       <section className="live-panel tx-table-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">AUDIT TRAIL</p><h2>Recent movements</h2></div></div>
         <ErrorBanner error={movements.error} fallback="Could not load stock movements." />
-        {movements.isLoading ? <Loading label="Loading movements…" /> : <MovementTable movements={movements.data ?? []} />}
+        {movements.isLoading ? <Loading label="Loading movements…" variant="table" /> : <MovementTable movements={movements.data ?? []} />}
       </section>
     </div>
   );

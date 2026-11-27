@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, TriangleAlert } from 'lucide-react';
 import { useFacilities } from '@/hooks/useBookings';
 import { useSetFacilityStatus } from '@/hooks/useCnc';
@@ -13,6 +13,8 @@ const STATE = {
 };
 
 export function MachineListPage({ token }) {
+  const [searchParams] = useSearchParams();
+  const linkedMachineId = searchParams.get('machine');
   const facilitiesQuery = useFacilities(token);
   const setStatus = useSetFacilityStatus(token);
   const [confirmId, setConfirmId] = useState(null);
@@ -35,29 +37,34 @@ export function MachineListPage({ token }) {
   }
 
   return (
-    <div className="live-page page-enter">
+    <div className="live-page page-enter cnc-machine-list">
       <PageHeading title="Machine List" intro="CNC router, laser cutter, 3D printers and workshop bays. A reported fault blocks bookings until the machine is working again.">
         <Link className="btn btn-outline" to="/cnc/machines/book"><CalendarDays size={15} />Book a machine</Link>
       </PageHeading>
       <ErrorBanner error={facilitiesQuery.error || actionError} fallback="Could not update the machine." />
       {notice && <p className="tx-success">{notice}</p>}
 
-      <section className="live-metrics tx-metrics" aria-label="Machine KPI metrics">
-        <article className="live-metric"><p>MACHINES</p><strong>{machines.length}</strong></article>
-        <article className="live-metric"><p>WORKING</p><strong>{machines.length - faulty}</strong></article>
-        <article className="live-metric"><p>FAULT REPORTED</p><strong>{faulty}</strong></article>
+      <section className="live-metrics tx-metrics cnc-machine-list__metrics" aria-label="Machine KPI metrics">
+        <article className="live-metric cnc-machine-list__metric"><p>MACHINES</p><strong>{machines.length}</strong></article>
+        <article className="live-metric cnc-machine-list__metric"><p>WORKING</p><strong>{machines.length - faulty}</strong></article>
+        <article className="live-metric cnc-machine-list__metric"><p>FAULT REPORTED</p><strong>{faulty}</strong></article>
       </section>
 
-      <section className="live-panel tx-table-panel">
-        {facilitiesQuery.isPending ? <Loading label="Loading machines…" /> : (
-          <div className="live-table-wrap">
-            <table className="live-table">
+      <section className="live-panel tx-table-panel cnc-machine-list__panel">
+        {facilitiesQuery.isPending ? <Loading label="Loading machines…" variant="table" /> : (
+          <div className="live-table-wrap cnc-machine-list__table-wrap">
+            <table className="live-table cnc-machine-list__table">
               <thead><tr><th>MACHINE</th><th>LOCATION</th><th>SAFETY PASS</th><th>STATE</th><th>ACTION</th></tr></thead>
               <tbody>
                 {machines.map((machine) => {
                   const state = STATE[machine.status] ?? { tone: 'neutral', label: machine.status };
                   return (
-                    <tr key={machine.id} data-testid={`machine-row-${machine.id}`}>
+                    <tr
+                      key={machine.id}
+                      data-testid={`machine-row-${machine.id}`}
+                      data-notification-target={machine.id === linkedMachineId ? 'true' : undefined}
+                      style={machine.id === linkedMachineId ? { background: '#fff8e6', outline: '2px solid #d59b3d', outlineOffset: '-2px' } : undefined}
+                    >
                       <td><b className="tx-strong">{machine.name}</b></td>
                       <td>{machine.location ?? '—'}</td>
                       <td>{machine.requiresSafetyPass ? 'Required' : 'Not required'}</td>
