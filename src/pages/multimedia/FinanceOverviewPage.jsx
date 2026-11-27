@@ -153,9 +153,9 @@ export function FinanceOverviewPage({ token, onUnauthorized }) {
             ? 'overview-metric-card card-burgundy'
             : 'overview-metric-card card-default';
 
-          const labelColor = isForest || isBurgundy ? '#ffffff' : '#6b7280';
-          const valueColor = isForest || isBurgundy ? '#ffffff' : '#111827';
-          const subtextColor = isForest || isBurgundy ? '#ffffff' : '#6b7280';
+          const labelColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : 'var(--muted)';
+          const valueColor = isForest || isBurgundy ? '#ffffff' : 'var(--ink)';
+          const subtextColor = isForest ? '#9ec5b1' : isBurgundy ? '#c99b8f' : 'var(--muted)';
 
           return (
             <div key={card.id} className={cardClass}>

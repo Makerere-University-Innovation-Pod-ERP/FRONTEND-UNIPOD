@@ -42,32 +42,9 @@ export const backendApi = {
       token,
       method: 'POST',
     }).then(normalizeAdminUser),
-  auditLogs: (token, options = {}, signal) => {
-    const query = new URLSearchParams({
-      page: String(options.page ?? 0),
-      size: String(options.size ?? 25),
-    });
-    if (options.q?.trim()) query.set('q', options.q.trim());
-    if (options.actor) query.set('actor', options.actor);
-    if (options.action) query.set('action', options.action);
-    if (options.outcome) query.set('outcome', options.outcome);
-    if (options.from) query.set('from', options.from);
-    if (options.to) query.set('to', options.to);
-    return request(`/admin/audit-logs?${query}`, { token, signal });
-  },
   adminRoles: (token) =>
     request('/roles', { token })
       .then((roles) => roles.map(({ role, staff }) => ({ id: role, name: role, staff }))),
-  adminPermissionRoles: (token) =>
-    request('/admin/roles', { token }),
-  adminPermissions: (token) =>
-    request('/admin/permissions', { token }),
-  updateRolePermissions: (token, id, body) =>
-    request(`/admin/roles/${encodeURIComponent(id)}/permissions`, {
-      token,
-      method: 'PUT',
-      body,
-    }),
   adminDepartments: (token) =>
     request('/departments', { token })
       .then((departments) => departments.map((department) => ({ ...department, active: true }))),

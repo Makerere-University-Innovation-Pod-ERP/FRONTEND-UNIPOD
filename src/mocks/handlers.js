@@ -288,16 +288,6 @@ let adminUsers = [
   { id: 'staff-3', fullName: 'Daniel Kato', email: 'daniel.kato@unipod.test', role: 'FINANCE_OFFICER', departmentId: 'dept-2', active: true, version: 1, createdAt: '2026-09-10' },
   { id: 'staff-4', fullName: 'Grace Namuli', email: 'grace.namuli@unipod.test', role: 'DEPARTMENT_COORDINATOR', departmentId: 'dept-1', active: true, version: 1, createdAt: '2026-09-12' },
 ];
-const auditLogs = [
-  { id: 'audit-1', occurredAt: '2026-11-23T15:42:18.000Z', actor: 'admin@unipod.test', action: 'USER_UPDATED', summary: 'Updated Martha Akello’s role to Receptionist', resourceType: 'USER', resourceId: 'staff-1', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
-  { id: 'audit-2', occurredAt: '2026-11-23T14:18:03.000Z', actor: 'martha.akello@unipod.test', action: 'SUBMISSION_REGISTERED', summary: 'Registered submission IH-26026', resourceType: 'SUBMISSION', resourceId: 'IH-26026', outcome: 'SUCCESS', ipAddress: '10.20.4.25' },
-  { id: 'audit-3', occurredAt: '2026-11-23T13:05:41.000Z', actor: 'admin@unipod.test', action: 'PERMISSIONS_UPDATED', summary: 'Updated permissions for Reviewer', resourceType: 'ROLE', resourceId: 'REVIEWER', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
-  { id: 'audit-4', occurredAt: '2026-11-23T11:32:09.000Z', actor: 'daniel.kato@unipod.test', action: 'LOGIN_FAILED', summary: 'Failed sign-in attempt', resourceType: 'SESSION', resourceId: null, outcome: 'FAILURE', ipAddress: '10.20.8.12' },
-  { id: 'audit-5', occurredAt: '2026-11-22T16:47:22.000Z', actor: 'admin@unipod.test', action: 'DEPARTMENT_UPDATED', summary: 'Activated Finance & Administration', resourceType: 'DEPARTMENT', resourceId: 'dept-2', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
-  { id: 'audit-6', occurredAt: '2026-11-22T10:14:55.000Z', actor: 'grace.namuli@unipod.test', action: 'RULE_PUBLISHED', summary: 'Published Technical Assessment Turnaround', resourceType: 'RULE', resourceId: 'rule-2', outcome: 'SUCCESS', ipAddress: '10.20.5.31' },
-  { id: 'audit-7', occurredAt: '2026-11-21T09:28:16.000Z', actor: 'admin@unipod.test', action: 'SECTOR_CREATED', summary: 'Created sector Applied Research', resourceType: 'SECTOR', resourceId: 'sec-4', outcome: 'SUCCESS', ipAddress: '10.20.4.18' },
-  { id: 'audit-8', occurredAt: '2026-11-20T08:51:04.000Z', actor: 'miriam.nsubuga@unipod.test', action: 'CASE_REVIEWED', summary: 'Submitted review for Smart Irrigation Monitoring System', resourceType: 'SUBMISSION', resourceId: 'IH-26022', outcome: 'SUCCESS', ipAddress: '10.20.7.44' },
-];
 const adminPermissions = [
   { id: 'CASE_VIEW', name: 'View submissions', description: "View submissions within the role's assigned scope." },
   { id: 'CASE_EDIT', name: 'Edit submissions', description: "Edit submissions within the role's assigned scope." },
@@ -315,7 +305,6 @@ const adminRoles = [
   { role: 'ADMINISTRATOR', staff: true },
   { role: 'INNOVATION_COORDINATOR', staff: true },
   { role: 'DEPARTMENT_COORDINATOR', staff: true },
-  { role: 'DEPARTMENT_HEAD', staff: true },
   { role: 'RECEPTIONIST', staff: true },
   { role: 'FACT_FINDING_OFFICER', staff: true },
   { role: 'REVIEWER', staff: true },
@@ -324,19 +313,6 @@ const adminRoles = [
   { role: 'SUBMITTER', staff: false },
   { role: 'FINANCE_OFFICER', staff: true },
   { role: 'OBSERVER', staff: true },
-];
-let configurableRoles = [
-  { id: 'ADMINISTRATOR', name: 'Administrator', permissions: adminPermissions.map(({ id }) => id), version: 1, editable: false },
-  { id: 'RECEPTIONIST', name: 'Receptionist', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
-  { id: 'FINANCE_OFFICER', name: 'Finance Officer', permissions: ['PRICE_LIST_MANAGE'], version: 1, editable: true },
-  { id: 'REVIEWER', name: 'Reviewer', permissions: ['CASE_VIEW', 'CASE_REVIEW'], version: 1, editable: true },
-  { id: 'DEPARTMENT_HEAD', name: 'Department Head', permissions: ['CASE_VIEW', 'CASE_DECIDE'], version: 1, editable: true },
-  { id: 'DEPARTMENT_COORDINATOR', name: 'Department Coordinator', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
-  { id: 'INNOVATION_COORDINATOR', name: 'Innovation Coordinator', permissions: ['CASE_VIEW', 'CASE_FORWARD', 'CASE_REVIEW'], version: 1, editable: true },
-  { id: 'FACT_FINDING_OFFICER', name: 'Fact-finding Officer', permissions: ['CASE_VIEW'], version: 1, editable: true },
-  { id: 'SECTOR_OFFICER', name: 'Sector Officer', permissions: ['CASE_VIEW', 'CASE_FORWARD'], version: 1, editable: true },
-  { id: 'IP_LIAISON', name: 'IP Liaison', permissions: ['CASE_VIEW'], version: 1, editable: true },
-  { id: 'SUBMITTER', name: 'Submitter', permissions: [], version: 1, editable: true },
 ];
 
 export const handlers = [
@@ -523,39 +499,6 @@ export const handlers = [
     });
   }),
 
-  http.get(`${API_BASE_URL}/admin/audit-logs`, ({ request }) => {
-    const url = new URL(request.url);
-    const q = url.searchParams.get('q')?.toLowerCase() ?? '';
-    const actor = url.searchParams.get('actor')?.toLowerCase() ?? '';
-    const action = url.searchParams.get('action') ?? '';
-    const outcome = url.searchParams.get('outcome') ?? '';
-    const from = url.searchParams.get('from') ?? '';
-    const to = url.searchParams.get('to') ?? '';
-    const size = Number(url.searchParams.get('size') ?? 25);
-    const page = Number(url.searchParams.get('page') ?? 0);
-    const filtered = auditLogs.filter((item) => {
-      const occurredDate = item.occurredAt.slice(0, 10);
-      return (
-        (!q || `${item.actor} ${item.action} ${item.summary} ${item.resourceType} ${item.resourceId ?? ''}`.toLowerCase().includes(q)) &&
-        (!actor || item.actor.toLowerCase().includes(actor)) &&
-        (!action || item.action === action) &&
-        (!outcome || item.outcome === outcome) &&
-        (!from || occurredDate >= from) &&
-        (!to || occurredDate <= to)
-      );
-    });
-    const items = filtered.slice(page * size, page * size + size);
-    return HttpResponse.json({
-      items,
-      page,
-      size,
-      totalElements: filtered.length,
-      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
-    });
-  }),
-
-  http.get(`${API_BASE_URL}/admin/users`, () => HttpResponse.json(adminUsers)),
-
   http.post(`${API_BASE_URL}/admin/users`, async ({ request }) => {
     const body = await request.json();
     const email = String(body.email ?? '').trim().toLowerCase();
@@ -567,12 +510,10 @@ export const handlers = [
     }
     const created = {
       id: `staff-${Date.now()}`,
-      fullName: String(body.fullName ?? '').trim(),
       email,
       role: body.role,
-      departmentIds: body.departmentIds ?? [],
-      departmentId: body.departmentIds?.[0] ?? '',
-      profile: { fullName: String(body.fullName ?? '').trim() },
+      departmentIds: [],
+      profile: null,
       active: true,
       createdAt: new Date().toISOString(),
     };
@@ -597,7 +538,6 @@ export const handlers = [
     Object.assign(user, {
       role: body.role,
       departmentIds: body.departmentIds,
-      departmentId: body.departmentIds[0] ?? '',
     });
     return HttpResponse.json(user);
   }),
@@ -656,25 +596,6 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/roles`, () => HttpResponse.json(adminRoles)),
-  http.get(`${API_BASE_URL}/admin/roles`, () => HttpResponse.json(configurableRoles)),
-  http.get(`${API_BASE_URL}/admin/permissions`, () => HttpResponse.json(adminPermissions)),
-  http.put(`${API_BASE_URL}/admin/roles/:id/permissions`, async ({ params, request }) => {
-    const role = configurableRoles.find((candidate) => candidate.id === params.id);
-    if (!role) return new HttpResponse(null, { status: 404 });
-    if (!role.editable) {
-      return HttpResponse.json({ message: 'The administrator role is protected.' }, { status: 409 });
-    }
-    const body = await request.json();
-    if (body.version !== role.version) {
-      return HttpResponse.json({ message: 'This role changed elsewhere. Refresh and try again.' }, { status: 409 });
-    }
-    const knownPermissions = new Set(adminPermissions.map(({ id }) => id));
-    if (!Array.isArray(body.permissions) || body.permissions.some((id) => !knownPermissions.has(id))) {
-      return HttpResponse.json({ message: 'One or more permissions are invalid.' }, { status: 400 });
-    }
-    Object.assign(role, { permissions: body.permissions, version: role.version + 1 });
-    return HttpResponse.json(role);
-  }),
 
   http.get(`${API_BASE_URL}/queues/reception`, ({ request }) => {
     const url = new URL(request.url);

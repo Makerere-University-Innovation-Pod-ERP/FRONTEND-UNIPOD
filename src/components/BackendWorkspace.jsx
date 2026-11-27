@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftRight, Bell, Boxes, CalendarDays, ChevronDown,
   ClipboardList, Cog, FileText, GraduationCap, Grid2x2, Handshake, LayoutDashboard, LayoutGrid, Lightbulb,
-  History, List, LogOut, Menu, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
+  List, LogOut, ChevronLeft, ChevronRight, Moon, Plus, Receipt, Search, Settings2, ShieldCheck, Sun, TriangleAlert, Upload, Users, Video,
   Workflow, X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -243,9 +243,7 @@ export function BackendWorkspace({
         { label: 'All Submissions', href: '/submissions', icon: Boxes },
         { label: 'Student Projects', href: '/submissions/student', icon: GraduationCap },
         { label: 'General Innovations', href: '/submissions/general', icon: Lightbulb },
-        { label: 'User Management', href: '/user-management', icon: Users },
         { label: 'Settings', href: '/management', icon: Settings2 },
-        { label: 'Audit Log', href: '/audit-log', icon: History },
         { label: 'Department Rules', href: '/rules/manager', icon: FileText },
       ],
     }] : []),
@@ -610,21 +608,6 @@ export function BackendWorkspace({
       {mobileOpen && <button className="live-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
       <div className="live-main">
         <header className="live-topbar">
-          <button
-            type="button"
-            className="topbar-sidebar-toggle"
-            onClick={() => {
-              if (window.matchMedia('(max-width: 980px)').matches) {
-                setMobileOpen((value) => !value);
-              } else {
-                setCollapsed((value) => !value);
-              }
-            }}
-            aria-label="Toggle navigation"
-            title="Toggle navigation"
-          >
-            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
           <div className="live-breadcrumb">
             <span>{isTelecoms ? 'Telecoms Operations' : 'Workspace'}</span>
             <i style={{ fontStyle: 'normal', margin: '0 8px', color: '#64748b' }}>›</i>
