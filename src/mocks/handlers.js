@@ -6,7 +6,6 @@ import {
   documentsBySubmission,
   sectors,
   submissions,
-  submitterServiceRequests,
   toCaseFile,
 } from './fixtures/submissions';
 import { receptionHandlers, receptionMockUsers, registeredMockUsers } from './reception-handlers';
@@ -189,6 +188,24 @@ function mockSubmitterEmail(request) {
     const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
     return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.email === 'string'
       ? payload.email.toLocaleLowerCase()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// submissions[].submitterId holds the short subject ("brian.s"), not the
+// login email mockSubmitterEmail() above returns — this mirrors that helper
+// but reads the token's `sub` claim, so a submitter's own self-created brief
+// gets an owner id the /me/submissions "mine" filter actually recognizes.
+function mockSubmitterSubject(request) {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const encodedPayload = token?.split('.')[1];
+  if (!encodedPayload) return null;
+  try {
+    const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.roles?.includes('ROLE_SUBMITTER') && typeof payload.sub === 'string'
+      ? payload.sub
       : null;
   } catch {
     return null;
@@ -418,13 +435,22 @@ export const handlers = [
       purpose: String(body.purpose ?? ''),
       problemAddressed: String(body.problemAddressed ?? ''),
       registeredBy: 'Mock account',
-      submitterId: body.submitterId ?? null,
+      // A submitter self-creates without passing submitterId (the backend
+      // derives ownership from the bearer token); staff pass it explicitly
+      // when creating on behalf of someone (Reception's assisted flow).
+      submitterId: body.submitterId ?? mockSubmitterSubject(request),
       receivingOfficer: null,
       assignedReviewerSubject: null,
       studentNumber: body.studentNumber ?? null,
       programme: body.programme ?? null,
       supervisor: body.supervisor ?? null,
       recommendationLetterStatus: body.recommendationLetterStatus ?? null,
+      serviceRequested: body.serviceRequested ?? null,
+      serviceRequester: body.serviceRequester ?? null,
+      department: body.department ?? null,
+      expectedResult: body.expectedResult ?? null,
+      preferredAt: body.preferredAt ?? null,
+      submitterPhone: body.submitterPhone ?? null,
       acceptedRulesVersion: body.acceptedRulesVersion ?? null,
       responsibleSectorId: null,
       responsibleSectorName: null,
@@ -437,6 +463,25 @@ export const handlers = [
     };
     submissions.unshift(created);
     return HttpResponse.json(created);
+  }),
+
+  // PUT /submissions/{id} — edits a DRAFT (or a RETURNED/AWAITING_DETAILS
+  // one being resubmitted) before POST .../submit is called; only the
+  // owner's own in-progress fields are expected to change here.
+  http.put(`${API_BASE_URL}/submissions/:id`, async ({ params, request }) => {
+    const index = submissions.findIndex((item) => item.id === params.id);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const body = await request.json();
+    const now = new Date().toISOString().slice(0, 10);
+    submissions[index] = {
+      ...submissions[index],
+      ...body,
+      id: submissions[index].id,
+      stage: submissions[index].stage,
+      updatedAt: now,
+      version: submissions[index].version + 1,
+    };
+    return HttpResponse.json(submissions[index]);
   }),
 
   http.get(`${API_BASE_URL}/sectors`, () => HttpResponse.json(sectors)),
@@ -610,11 +655,21 @@ export const handlers = [
     const url = new URL(request.url);
     const size = Number(url.searchParams.get('size') ?? 25);
     const page = Number(url.searchParams.get('page') ?? 0);
+    // Service requests are the same /submissions resource as briefs — the
+    // tab just filters by category, not a different table (§5.4).
     const mine = url.searchParams.get('tab') === 'SERVICE_REQUESTS'
-      ? submitterServiceRequests
-      : submissions.filter((item) => item.submitterId);
+      ? submissions.filter((item) => item.submitterId && item.category === 'service_request')
+      : submissions.filter((item) => item.submitterId && item.category !== 'service_request');
     const items = mine.slice(page * size, page * size + size);
     return HttpResponse.json({ items, page, size, totalElements: mine.length, totalPages: Math.max(1, Math.ceil(mine.length / size)) });
+  }),
+
+  // GET /me/submissions/{id} — the submitter's own "My brief page" view,
+  // distinct from the shared staff GET /cases/{id} aggregate (§5.4).
+  http.get(`${API_BASE_URL}/me/submissions/:id`, ({ params }) => {
+    const item = submissions.find((submission) => submission.id === params.id && submission.submitterId);
+    if (!item) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(toCaseFile(item));
   }),
 
   http.get(`${API_BASE_URL}/me/capabilities`, () => HttpResponse.json({
@@ -635,8 +690,7 @@ export const handlers = [
   })),
 
   http.get(`${API_BASE_URL}/submissions/:id`, ({ params }) => {
-    const item = submissions.find((submission) => submission.id === params.id)
-      ?? submitterServiceRequests.find((submission) => submission.id === params.id);
+    const item = submissions.find((submission) => submission.id === params.id);
     if (!item) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(toCaseFile(item));
   }),
