@@ -73,4 +73,48 @@ describe('SubmissionDetailPage', () => {
     expect(screen.queryByRole('region', { name: 'Case permissions' })).not.toBeInTheDocument();
     expect(screen.queryByText('Your role can view this case but cannot make workflow changes.')).not.toBeInTheDocument();
   });
+
+  it('loads a submitter\'s own brief through the dedicated /me/submissions/{id} endpoint', async () => {
+    const caseFileSpy = vi.spyOn(backendApi, 'caseFile');
+    vi.spyOn(backendApi, 'submitterSubmissionDetail').mockResolvedValue({
+      submission: {
+        title: 'Smart Irrigation Monitoring System',
+        category: 'student',
+        stage: 'SUBMITTED',
+        version: 1,
+        purpose: 'Improve water efficiency.',
+        problemAddressed: 'Manual schedules are imprecise.',
+      },
+      reference: 'STU-2026-001',
+      stepper: [],
+      outcome: null,
+      capabilities: {
+        nextStep: { enabled: false, reason: null },
+        saveOutcome: { enabled: false, reason: null },
+        updateDocumentStatus: { enabled: false, reason: null },
+      },
+      stageHistory: [],
+      documents: [],
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/submissions/submission-1']}>
+        <Routes>
+          <Route
+            path="/submissions/:id"
+            element={(
+              <SubmissionDetailPage
+                session={{ accessToken: 'test-token', roles: ['ROLE_SUBMITTER'] }}
+                onUnauthorized={vi.fn()}
+              />
+            )}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Smart Irrigation Monitoring System' })).toBeInTheDocument();
+    expect(backendApi.submitterSubmissionDetail).toHaveBeenCalledWith('test-token', 'submission-1', expect.any(AbortSignal));
+    expect(caseFileSpy).not.toHaveBeenCalled();
+  });
 });
