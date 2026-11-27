@@ -24,6 +24,14 @@ Use any non-empty password for these mock-only accounts:
 | `admin@unipod.test` | Administrator |
 | `factfinding@unipod.test` | Fact-finding officer |
 | `reviewer@unipod.test` | Reviewer |
+| `coordinator@unipod.test` | Innovation coordinator |
+| `reception@unipod.test` | Receptionist |
+| `submitter@unipod.test` | Submitter |
+| `finance@unipod.test` | Finance officer |
+| `multimedia@unipod.test` | Multimedia officer |
+| `textile@unipod.test` | Textile domain owner |
+| `cnc@unipod.test` | CNC domain owner |
+| `telecoms@unipod.test` | Telecoms domain owner |
 
 These accounts work only with the local mock API; they are not provisioned on
 the deployed backend. The admin account is for testing role-gated UI; some
