@@ -53,7 +53,14 @@ export function SubmitterBriefPage({ session, onUnauthorized }) {
   const load = useCallback(async (signal) => {
     if (!id || id.startsWith('local-')) return;
     try {
-      const value = await backendApi.submissionCaseFile(session.accessToken, id, signal);
+      let value;
+      try {
+        value = await backendApi.submitterSubmissionDetail(session.accessToken, id, signal);
+      } catch (reason) {
+        if (reason instanceof ApiError && reason.status === 401) throw reason;
+        if (reason instanceof DOMException && reason.name === 'AbortError') throw reason;
+        value = await backendApi.submissionCaseFile(session.accessToken, id, signal);
+      }
       const submission = value.submission;
       setCurrent({
         id: submission.id,

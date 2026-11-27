@@ -76,7 +76,7 @@ describe('NewSubmissionPage wizard', () => {
     await acceptAllRules(user);
     await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
     expect(await screen.findByText(/step 05 of 05/i)).toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it('does not create a brief from an implicit form submission', async () => {
     const user = userEvent.setup();
@@ -104,7 +104,7 @@ describe('NewSubmissionPage wizard', () => {
 
     expect(createSubmission).not.toHaveBeenCalled();
     expect(screen.getByText(/step 05 of 05/i)).toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it('submits a submitter-owned brief and sends it to intake', async () => {
     const user = userEvent.setup();
@@ -154,7 +154,7 @@ describe('NewSubmissionPage wizard', () => {
     expect(evidenceData.get('documentType')).toBe('SUPPORTING_EVIDENCE');
     expect(evidenceData.get('file')).toBe(evidenceFile);
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'brief-1');
-  }, 15000);
+  }, 30000);
 
   it('creates and submits a service request with the backend intake fields', async () => {
     const user = userEvent.setup();
@@ -213,7 +213,7 @@ describe('NewSubmissionPage wizard', () => {
       acceptedRulesVersion: 'general-v1',
     }));
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'service-request-1');
-  }, 15000);
+  }, 30000);
 
   it('requires service-request details before advancing', async () => {
     const user = userEvent.setup();

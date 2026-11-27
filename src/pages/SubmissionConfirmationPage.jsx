@@ -32,7 +32,14 @@ export function SubmissionConfirmationPage({ token, roles, onUnauthorized }) {
   const load = useCallback(async (signal) => {
     if (!id || id.startsWith('local-')) return;
     try {
-      const value = await backendApi.submissionCaseFile(token, id, signal);
+      let value;
+      try {
+        value = await backendApi.submissionCaseFile(token, id, signal);
+      } catch (reason) {
+        if (reason instanceof ApiError && reason.status === 401) throw reason;
+        if (reason instanceof DOMException && reason.name === 'AbortError') throw reason;
+        value = await backendApi.submitterSubmissionDetail(token, id, signal);
+      }
       setCurrent({
         id: value.submission.id,
         code: value.submission.code,
