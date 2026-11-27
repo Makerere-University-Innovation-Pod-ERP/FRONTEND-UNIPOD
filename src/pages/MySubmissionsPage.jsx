@@ -153,14 +153,16 @@ export function MySubmissionsPage({
                   <tr><td colSpan={5}><LoadingSkeleton label="Loading your submissions…" variant="table" className="my-submissions-table-state" /></td></tr>
                 ) : visibleSubmissions.length ? visibleSubmissions.map((item) => {
                   const waitingOnYou = item.stage === 'REFINEMENT_REQUESTED';
+                  const isDraft = item.stage === 'DRAFT';
                   const stageClass = item.stage.toLowerCase().replaceAll('_', '-');
                   return (
                     <tr key={item.id}>
                       <td data-label="Submission">
-                        <Link className="case-title" to={`/submissions/${item.id}`}>
+                        <Link className="case-title" to={isDraft ? `/submissions/${item.id}/edit` : `/submissions/${item.id}`}>
                           <b>{item.title}</b>
                           <small>{item.code || 'Draft · no reference yet'}</small>
                         </Link>
+                        {isDraft && <Link to={`/submissions/${item.id}/edit`} className="decision-badge decision-pending my-submissions-response">Continue draft</Link>}
                         {waitingOnYou && <Link to={`/submissions/${item.id}/respond`} className="decision-badge decision-changes_needed my-submissions-response">Waiting on you — respond</Link>}
                       </td>
                       <td data-label="Category"><span className="my-submissions-category">{item.category === 'student' ? 'Student project' : 'General innovation'}</span></td>

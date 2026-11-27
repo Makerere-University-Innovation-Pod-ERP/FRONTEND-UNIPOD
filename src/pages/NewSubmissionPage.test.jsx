@@ -14,6 +14,7 @@ function renderPage({ isSubmitter = false, initialEntry = '/submissions/new' } =
       <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route path="/submissions/new" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
+          <Route path="/submissions/:id/edit" element={<NewSubmissionPage token="test-token" onUnauthorized={vi.fn()} isSubmitter={isSubmitter} />} />
           <Route path="/submissions/new/confirmation" element={<BriefSubmittedPage isSubmitter={isSubmitter} />} />
         </Routes>
       </MemoryRouter>
@@ -268,5 +269,67 @@ describe('NewSubmissionPage wizard', () => {
       'One file',
       'Not required',
     ]);
+  });
+
+  it('saves an incomplete draft without submitting it', async () => {
+    const user = userEvent.setup();
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue({ id: 'draft-1', title: 'Untitled' });
+    const submitSubmission = vi.spyOn(backendApi, 'submitSubmission');
+    renderPage({ isSubmitter: true });
+
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+    await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Half-finished idea');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+
+    expect(await screen.findByText(/draft saved/i)).toBeInTheDocument();
+    expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Half-finished idea' }));
+    expect(submitSubmission).not.toHaveBeenCalled();
+  });
+
+  it('PUTs instead of POSTing when saving a draft a second time', async () => {
+    const user = userEvent.setup();
+    const createSubmission = vi.spyOn(backendApi, 'createSubmission').mockResolvedValue({ id: 'draft-2', title: 'Untitled' });
+    const updateSubmission = vi.spyOn(backendApi, 'updateSubmission').mockResolvedValue({ id: 'draft-2', title: 'Untitled' });
+    renderPage({ isSubmitter: true });
+
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+    await user.type(screen.getByPlaceholderText(/give the project a clear/i), 'Draft one');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+    await screen.findByText(/draft saved/i);
+
+    await user.type(screen.getByPlaceholderText(/what does this project aim/i), 'More context now.');
+    await user.click(screen.getByRole('button', { name: /^save draft$/i }));
+
+    expect(await screen.findAllByText(/draft saved/i)).toHaveLength(1);
+    expect(createSubmission).toHaveBeenCalledTimes(1);
+    expect(updateSubmission).toHaveBeenCalledWith('test-token', 'draft-2', expect.objectContaining({ purpose: 'More context now.' }));
+  });
+
+  it('resumes an existing draft, prefilling its fields from /me/submissions/{id}', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(backendApi, 'submitterSubmissionDetail').mockResolvedValue({
+      submission: {
+        id: 'draft-3',
+        category: 'student',
+        title: 'Resumed idea',
+        purpose: 'Resumed purpose.',
+        problemAddressed: 'Resumed problem.',
+        studentNumber: 'S24/0001',
+        programme: 'BSc Software Engineering',
+        supervisor: 'Dr. Resumed',
+        recommendationLetterStatus: 'not_required',
+        acceptedRulesVersion: null,
+      },
+      documents: [],
+    });
+    renderPage({ isSubmitter: true, initialEntry: '/submissions/draft-3/edit' });
+
+    expect(backendApi.submitterSubmissionDetail).toHaveBeenCalledWith('test-token', 'draft-3', expect.any(AbortSignal));
+    await screen.findByRole('radio', { name: /student project/i, checked: true });
+    await user.click(screen.getByRole('button', { name: /^(next|continue)$/i }));
+
+    expect(await screen.findByDisplayValue('Resumed idea')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Resumed purpose.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('S24/0001')).toBeInTheDocument();
   });
 });

@@ -32,14 +32,19 @@ export function SubmissionDetailPage({
   const canIntake = session.roles.some((role) => INTAKE_ROLES.includes(role));
   const canTransition = session.roles.some((role) => TRANSITION_ROLES.includes(role));
   const isReceptionist = session.roles.includes('ROLE_RECEPTIONIST');
-  const backHref = session.roles.includes('ROLE_SUBMITTER') ? '/my-submissions' : '/submissions';
-  const backLabel = session.roles.includes('ROLE_SUBMITTER') ? 'Back to my submissions' : 'Back to submissions';
+  const isSubmitterViewer = session.roles.includes('ROLE_SUBMITTER');
+  const backHref = isSubmitterViewer ? '/my-submissions' : '/submissions';
+  const backLabel = isSubmitterViewer ? 'Back to my submissions' : 'Back to submissions';
 
   const load = useCallback(async (signal) => {
     try {
+      // A submitter's own brief page is a dedicated endpoint (§5.4), not the
+      // shared staff case-file aggregate every other role here reads.
       const current = isReceptionist
         ? asIntakeCaseFile(await backendApi.submissionCaseFile(session.accessToken, id, signal))
-        : await backendApi.caseFile(session.accessToken, id, signal);
+        : isSubmitterViewer
+          ? await backendApi.submitterSubmissionDetail(session.accessToken, id, signal)
+          : await backendApi.caseFile(session.accessToken, id, signal);
       setCaseFile(current);
       setReviewerSubject(current.submission.assignedReviewerSubject || '');
       setOutcomeDecision(current.outcome?.decision || '');
@@ -63,7 +68,7 @@ export function SubmissionDetailPage({
     } finally {
       setLoading(false);
     }
-  }, [session.accessToken, id, canIntake, canTransition, isReceptionist, onUnauthorized]);
+  }, [session.accessToken, id, canIntake, canTransition, isReceptionist, isSubmitterViewer, onUnauthorized]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -198,7 +203,7 @@ export function SubmissionDetailPage({
         <span className="case-hero-decoration" aria-hidden="true" />
       </header>
       {error && <div className="api-error api-error-banner" role="alert"><CircleAlert size={17} />{error}</div>}
-      {submission.stage === 'REFINEMENT_REQUESTED' && session.roles.includes('ROLE_SUBMITTER') && (
+      {submission.stage === 'REFINEMENT_REQUESTED' && isSubmitterViewer && (
         <section className="live-panel capability-notice" aria-label="Open request">
           <p className="eyebrow">OPEN REQUEST</p>
           <p className="capability-summary">The reviewer has asked for changes before this brief can continue.</p>
