@@ -1619,9 +1619,9 @@ export const handlers = [
     return HttpResponse.json(updated);
   }),
 
-  // Department Rules Manager (Assignment 12) has no real /rules* endpoint
-  // family on the backend — see src/services/rules.js for why this is now a
-  // browser-persisted, backend-free module instead of MSW handlers.
+  // Department rules are served by the deployed /rules API. Explicit mock
+  // mode keeps a browser-persisted fixture store in src/services/rules.js,
+  // so no MSW /rules handlers are needed here.
 
   // Operations / Multimedia - Partners & MOUs
   http.get(`${API_BASE_URL}/operations/partners/overview`, () => {

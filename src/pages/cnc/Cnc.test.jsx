@@ -109,7 +109,7 @@ describe('New job', () => {
     await user.click(screen.getByRole('button', { name: /send job/i }));
 
     await waitFor(() => expect(sentBody).not.toBeNull());
-    expect(sentBody.accepted_rules_version).toMatch(/^general-[a-f0-9]{32}$/);
+    expect(sentBody.accepted_rules_version).toMatch(/^[a-f0-9]{32}$/);
   });
 
   it('versions the complete required ruleset while ignoring optional rules', async () => {
@@ -120,7 +120,7 @@ describe('New job', () => {
     ];
     const version = await computeAcceptedRulesVersion(rules);
 
-    expect(version).toMatch(/^general-[a-f0-9]{32}$/);
+    expect(version).toMatch(/^[a-f0-9]{32}$/);
     expect(await computeAcceptedRulesVersion([...rules].reverse())).toBe(version);
     expect(await computeAcceptedRulesVersion([
       rules[0],

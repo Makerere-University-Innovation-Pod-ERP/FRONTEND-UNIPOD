@@ -141,7 +141,7 @@ describe('NewSubmissionPage wizard', () => {
     expect(await screen.findByRole('heading', { name: /thanks — your brief is in/i })).toBeInTheDocument();
     expect(createSubmission).toHaveBeenCalledWith('test-token', expect.objectContaining({ title: 'Community solar dryer' }));
     expect(createSubmission.mock.calls[0][1]).not.toHaveProperty('submitterId');
-    expect(createSubmission.mock.calls[0][1].acceptedRulesVersion).toMatch(/^general-[a-f\d]{32}$/);
+    expect(createSubmission.mock.calls[0][1].acceptedRulesVersion).toMatch(/^[a-f\d]{32}$/);
     expect(uploadDocument).toHaveBeenCalledTimes(2);
     expect(maxActiveUploads).toBe(1);
     expect(uploadDocument).toHaveBeenNthCalledWith(1, 'test-token', 'brief-1', expect.any(FormData));
@@ -211,7 +211,7 @@ describe('NewSubmissionPage wizard', () => {
       expectedResult: 'A tested prototype for field trials.',
       preferredAt: new Date(preferredAt).toISOString(),
       submitterPhone: '+256 700 123456',
-      acceptedRulesVersion: expect.stringMatching(/^general-[a-f\d]{32}$/),
+      acceptedRulesVersion: expect.stringMatching(/^[a-f\d]{32}$/),
     }));
     expect(submitSubmission).toHaveBeenCalledWith('test-token', 'service-request-1');
   }, 30000);

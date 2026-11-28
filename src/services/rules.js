@@ -1,10 +1,7 @@
 import { z } from 'zod';
 import { initialRules } from '@/mocks/fixtures/rules';
+import { request } from './api-client';
 
-/**
- * Rule-content CRUD is not part of the deployed backend contract. The rules
- * manager uses this in-memory store only when the explicit mock API is on.
- */
 export const ruleScopeSchema = z.enum(['GENERAL', 'SECTOR']);
 
 export const ruleSchema = z.object({
@@ -19,14 +16,11 @@ export const ruleSchema = z.object({
   updatedAt: z.string(),
 });
 
-const unavailableMessage = 'Rule management is unavailable because the backend rule-content API is not deployed.';
 const storageKey = 'unipod.rules.v1';
 let mockRules = initialRules.map((rule) => ({ ...rule }));
 
-function assertMockMode() {
-  if (import.meta.env.MODE !== 'test' && import.meta.env.VITE_ENABLE_MOCKS !== 'true') {
-    throw new Error(unavailableMessage);
-  }
+function shouldUseBackend() {
+  return import.meta.env.MODE !== 'test' && import.meta.env.VITE_ENABLE_MOCKS !== 'true';
 }
 
 function currentMockRules() {
@@ -35,7 +29,7 @@ function currentMockRules() {
       const raw = localStorage.getItem(storageKey);
       if (raw) return z.array(ruleSchema).parse(JSON.parse(raw));
     } catch {
-      // Test fixtures may seed invalid or stale data; use the in-memory mock instead.
+      return mockRules;
     }
   }
   return mockRules;
@@ -45,18 +39,28 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function parseList(value) {
+  return z.array(ruleSchema).parse(value);
+}
+
+function parseOne(value) {
+  return ruleSchema.parse(value);
+}
+
 export function resetMockRules() {
   mockRules = initialRules.map((rule) => ({ ...rule }));
 }
 
 export const rulesApi = {
-  async list() {
-    assertMockMode();
+  async list(token) {
+    if (shouldUseBackend()) return parseList(await request('/rules', { token }));
     return currentMockRules().map((rule) => ({ ...rule }));
   },
 
-  async create(body) {
-    assertMockMode();
+  async create(token, body) {
+    if (shouldUseBackend()) {
+      return parseOne(await request('/rules', { token, body }));
+    }
     const newRule = ruleSchema.parse({
       id: `rule-${Date.now()}`,
       scope: 'GENERAL',
@@ -71,8 +75,10 @@ export const rulesApi = {
     return newRule;
   },
 
-  async update(id, body) {
-    assertMockMode();
+  async update(token, id, body) {
+    if (shouldUseBackend()) {
+      return parseOne(await request(`/rules/${encodeURIComponent(id)}`, { token, method: 'PATCH', body }));
+    }
     const index = mockRules.findIndex((rule) => rule.id === id);
     if (index === -1) throw new Error('This rule no longer exists.');
     const updatedRule = ruleSchema.parse({
@@ -85,8 +91,10 @@ export const rulesApi = {
     return updatedRule;
   },
 
-  async retire(id) {
-    assertMockMode();
+  async retire(token, id) {
+    if (shouldUseBackend()) {
+      return parseOne(await request(`/rules/${encodeURIComponent(id)}/retire`, { token, body: {} }));
+    }
     const index = mockRules.findIndex((rule) => rule.id === id);
     if (index === -1) throw new Error('This rule no longer exists.');
     const updatedRule = { ...mockRules[index], published: false, updatedAt: today() };

@@ -18,11 +18,9 @@ export function allMustAcceptAccepted(rules, value) {
 }
 
 /**
- * The real backend's acceptedRulesVersion/rulesVersion fields are a single opaque
- * string (max ~32-40 chars), not a per-rule {id, version} array — rule *content*
- * stays frontend-managed, but the acceptance record sent to the backend must
- * collapse down to one version label. A truncated SHA-256 fingerprint keeps
- * the label within the backend's length limit while changing for additions,
+ * The backend's acceptedRulesVersion field is a single opaque string with a
+ * 32-character limit, not a per-rule {id, version} array. A truncated SHA-256
+ * fingerprint keeps the label within that limit while changing for additions,
  * edits, and retirements of required rules.
  * Returns null when there's nothing to accept yet (matches the field's nullable contract).
  */
@@ -40,7 +38,7 @@ export async function computeAcceptedRulesVersion(rules) {
   const fingerprint = Array.from(new Uint8Array(digest).slice(0, 16), (byte) =>
     byte.toString(16).padStart(2, '0'),
   ).join('');
-  return `general-${fingerprint}`;
+  return fingerprint;
 }
 
 export function RulesAcceptance({ rules, value = [], onChange, readOnly = false }) {
