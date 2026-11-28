@@ -3,41 +3,38 @@ import { rulesApi } from '@/services/rules';
 
 const RULES_KEY = ['rules', 'list'];
 
-// token gates fetching the same way every other hook in this app does
-// (only once signed in); rulesApi itself is a local, browser-persisted store
-// with no backend call to authenticate (see services/rules.js).
 export function useRules(token) {
   return useQuery({
     queryKey: RULES_KEY,
-    queryFn: () => rulesApi.list(),
+    queryFn: () => rulesApi.list(token),
     enabled: Boolean(token),
   });
 }
 
-export function useCreateRule() {
+export function useCreateRule(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body) => rulesApi.create(body),
+    mutationFn: (body) => rulesApi.create(token, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RULES_KEY });
     },
   });
 }
 
-export function useUpdateRule() {
+export function useUpdateRule(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }) => rulesApi.update(id, body),
+    mutationFn: ({ id, ...body }) => rulesApi.update(token, id, body),
     onSuccess: (updated) => {
       queryClient.setQueryData(RULES_KEY, (old) => (old ?? []).map((item) => (item.id === updated.id ? updated : item)));
     },
   });
 }
 
-export function useRetireRule() {
+export function useRetireRule(token) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => rulesApi.retire(id),
+    mutationFn: (id) => rulesApi.retire(token, id),
     onSuccess: (updated) => {
       queryClient.setQueryData(RULES_KEY, (old) => (old ?? []).map((item) => (item.id === updated.id ? updated : item)));
     },

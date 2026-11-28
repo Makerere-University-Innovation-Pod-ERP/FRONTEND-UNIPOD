@@ -18,8 +18,8 @@ const EMPTY_FORM = { title: '', body: '', scope: 'GENERAL', scopeId: '', mustAcc
  * head) until that role is actually modeled — a project-owner decision,
  * per the doc's own Section 9 pattern, not something to guess at here.
  *
- * The real backend has no rule-content storage (Assignment 12, §5.12), so
- * rule management is available only in the explicit mock environment.
+ * Rule content is served by the deployed backend; the explicit mock
+ * environment keeps a local fixture store for offline development/tests.
  */
 export function RulesManagerPage({ token }) {
   const rulesQuery = useRules(token);
@@ -28,9 +28,9 @@ export function RulesManagerPage({ token }) {
     queryFn: ({ signal }) => backendApi.sectors(token, signal),
     enabled: Boolean(token),
   });
-  const createRule = useCreateRule();
-  const updateRule = useUpdateRule();
-  const retireRule = useRetireRule();
+  const createRule = useCreateRule(token);
+  const updateRule = useUpdateRule(token);
+  const retireRule = useRetireRule(token);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);

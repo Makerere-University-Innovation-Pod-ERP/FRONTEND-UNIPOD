@@ -13,6 +13,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 function renderPage() {
@@ -120,15 +121,24 @@ describe('RulesManagerPage', () => {
     expect(within(dialog).getByText(/must not infringe existing intellectual property/i)).toBeInTheDocument();
   });
 
-  it('does not read or write administrator rules from local storage outside mock mode', async () => {
+  it('uses the backend rules API outside mock mode and ignores local storage', async () => {
     vi.stubEnv('MODE', 'production');
     vi.stubEnv('VITE_ENABLE_MOCKS', 'false');
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => [],
+    });
+    vi.stubGlobal('fetch', fetchMock);
     const storedRules = JSON.stringify([{ id: 'browser-rule', title: 'Untrusted', body: 'Not authoritative.' }]);
     localStorage.setItem('unipod.rules.v1', storedRules);
 
-    await expect(rulesApi.list()).rejects.toThrow(/backend rule-content API is not deployed/i);
-    await expect(rulesApi.create({ title: 'Unsupported', body: 'Do not persist this.' }))
-      .rejects.toThrow(/backend rule-content API is not deployed/i);
+    await expect(rulesApi.list('test-token')).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/rules'),
+      expect.objectContaining({ headers: expect.anything() }),
+    );
     expect(localStorage.getItem('unipod.rules.v1')).toBe(storedRules);
   });
 });
