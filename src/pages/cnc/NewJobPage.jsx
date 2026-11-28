@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoaderCircle, Send } from 'lucide-react';
 import { useCreateCncJob } from '@/hooks/useCnc';
 import { useRules } from '@/hooks/useRules';
-import { computeAcceptedRulesVersion } from '@/components/RulesAcceptance';
+import { allMustAcceptAccepted, computeAcceptedRulesVersion, RulesAcceptance } from '@/components/RulesAcceptance';
 import { PageHeading } from './shared';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -19,7 +19,6 @@ const EMPTY_JOB = {
   dateNeeded: '',
   designLink: '',
   notes: '',
-  rulesAccepted: false,
 };
 
 const MATERIALS = ['Plywood', 'MDF', 'Hardwood', 'Softwood', 'Acrylic', 'Aluminium sheet', 'PLA (3D print)', 'Other'];
@@ -32,6 +31,8 @@ export function NewJobPage({ token }) {
   // UniPod-wide ones contribute to the accepted version label.
   const rulesQuery = useRules(token);
   const generalRules = (rulesQuery.data ?? []).filter((rule) => rule.scope === 'GENERAL' && rule.published);
+  const requiredRules = generalRules.filter((rule) => rule.mustAccept);
+  const [acceptedRuleIds, setAcceptedRuleIds] = useState([]);
   const [form, setForm] = useState(EMPTY_JOB);
   const [formError, setFormError] = useState('');
 
@@ -58,16 +59,25 @@ export function NewJobPage({ token }) {
       setFormError('The design link must start with http:// or https://.');
       return;
     }
-    if (!form.rulesAccepted) {
+    if (rulesQuery.isLoading) {
+      setFormError('Wait for the CNC rules to load before sending the job.');
+      return;
+    }
+    if (rulesQuery.isError) {
+      setFormError('Could not load the CNC rules. Try again before sending the job.');
+      return;
+    }
+    if (!allMustAcceptAccepted(requiredRules, acceptedRuleIds)) {
       setFormError('The CNC & Carpentry rules must be accepted before sending the job.');
       return;
     }
     try {
+      const acceptedRulesVersion = await computeAcceptedRulesVersion(requiredRules);
       const job = await createJob.mutateAsync({
         title: form.title.trim(),
         quantity,
         dateNeeded: form.dateNeeded || undefined,
-        acceptedRulesVersion: computeAcceptedRulesVersion(generalRules),
+        acceptedRulesVersion,
         specs: {
           whatIsMade: form.title.trim(),
           customerName: form.customerName.trim(),
@@ -130,13 +140,19 @@ export function NewJobPage({ token }) {
           <label className="form-field">Notes
             <textarea rows={3} value={form.notes} onChange={set('notes')} />
           </label>
-          <label className="tx-check">
-            <input type="checkbox" checked={form.rulesAccepted} onChange={set('rulesAccepted')} />
-            I have read and accept the UniPod general rules and the CNC & Carpentry department rules.
-          </label>
+          <fieldset className="form-field">
+            <legend>Applicable rules</legend>
+            {rulesQuery.isLoading && <p className="field-note">Loading CNC rules…</p>}
+            {rulesQuery.isError && (
+              <p className="tx-field-error" role="alert">Could not load the CNC rules. Try again before sending the job.</p>
+            )}
+            {rulesQuery.isSuccess && (
+              <RulesAcceptance rules={generalRules} value={acceptedRuleIds} onChange={setAcceptedRuleIds} />
+            )}
+          </fieldset>
           {formError && <p className="tx-field-error" role="alert">{formError}</p>}
           <div className="tx-actions">
-            <button type="submit" className="btn btn-primary" disabled={createJob.isPending}>
+            <button type="submit" className="btn btn-primary" disabled={createJob.isPending || rulesQuery.isLoading || rulesQuery.isError}>
               {createJob.isPending ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}Send job
             </button>
           </div>

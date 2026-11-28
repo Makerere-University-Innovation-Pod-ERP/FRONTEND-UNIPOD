@@ -1,8 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RulesManagerPage } from './RulesManagerPage';
+import { resetMockRules, rulesApi } from '@/services/rules';
+
+beforeEach(() => {
+  vi.stubEnv('VITE_ENABLE_MOCKS', 'true');
+  resetMockRules();
+  localStorage.removeItem('unipod.rules.v1');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -40,6 +51,7 @@ describe('RulesManagerPage', () => {
 
     await user.click(within(row).getByRole('button', { name: /publish/i }));
     expect(await within(row).findByText('Published')).toBeInTheDocument();
+    expect(localStorage.getItem('unipod.rules.v1')).toBeNull();
   });
 
   it('keeps a rule as a draft when only its wording is edited', async () => {
@@ -63,6 +75,9 @@ describe('RulesManagerPage', () => {
     await user.click(screen.getByRole('button', { name: /save draft/i }));
 
     expect(within(row).getByText('Draft')).toBeInTheDocument();
+    await user.click(within(row).getByRole('button', { name: /preview/i }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('The lab is open 9am to 6pm on weekdays.')).toBeInTheDocument();
   });
 
   it('keeps a published rule published when only its wording is edited', async () => {
@@ -72,9 +87,16 @@ describe('RulesManagerPage', () => {
     const row = await screen.findByRole('row', { name: /impartial review/i });
     await user.click(within(row).getByRole('button', { name: /^edit$/i }));
     expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+    const revisedWording = 'Reviews must use evidence-based reasoning and disclose any conflict of interest before a decision.';
+    const wording = screen.getByLabelText(/^wording/i);
+    await user.clear(wording);
+    await user.type(wording, revisedWording);
 
     await user.click(screen.getByRole('button', { name: /save changes/i }));
     expect(within(row).getByText('Published')).toBeInTheDocument();
+    await user.click(within(row).getByRole('button', { name: /preview/i }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(revisedWording)).toBeInTheDocument();
   });
 
   it('retires a published rule', async () => {
@@ -96,5 +118,17 @@ describe('RulesManagerPage', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/must not infringe existing intellectual property/i)).toBeInTheDocument();
+  });
+
+  it('does not read or write administrator rules from local storage outside mock mode', async () => {
+    vi.stubEnv('MODE', 'production');
+    vi.stubEnv('VITE_ENABLE_MOCKS', 'false');
+    const storedRules = JSON.stringify([{ id: 'browser-rule', title: 'Untrusted', body: 'Not authoritative.' }]);
+    localStorage.setItem('unipod.rules.v1', storedRules);
+
+    await expect(rulesApi.list()).rejects.toThrow(/backend rule-content API is not deployed/i);
+    await expect(rulesApi.create({ title: 'Unsupported', body: 'Do not persist this.' }))
+      .rejects.toThrow(/backend rule-content API is not deployed/i);
+    expect(localStorage.getItem('unipod.rules.v1')).toBe(storedRules);
   });
 });

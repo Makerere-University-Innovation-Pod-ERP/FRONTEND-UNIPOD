@@ -1,9 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getAccountIdentity } from '@/lib/auth';
 import { bookingsApi } from '@/services/bookings';
 import { notificationKeys } from '@/hooks/useNotifications';
 
 const BOOKINGS_KEY = ['bookings'];
 const SUBMITTER_BOOKINGS_KEY = ['submitter', 'bookings'];
+const submitterBookingsKey = (token) => [
+  ...SUBMITTER_BOOKINGS_KEY,
+  getAccountIdentity(token),
+];
 
 export function useFacilities(token) {
   return useQuery({
@@ -25,7 +30,7 @@ export function useBookings(token, filters = {}) {
 
 export function useSubmitterBookings(token, { page = 0, size = 25 } = {}) {
   return useQuery({
-    queryKey: [...SUBMITTER_BOOKINGS_KEY, page, size],
+    queryKey: [...submitterBookingsKey(token), page, size],
     queryFn: ({ signal }) => bookingsApi.listMyBookings({ page, size }, token, signal),
     enabled: Boolean(token),
     retry: false,
@@ -35,7 +40,7 @@ export function useSubmitterBookings(token, { page = 0, size = 25 } = {}) {
 
 export function useSubmitterBooking(token, id, enabled = true) {
   return useQuery({
-    queryKey: [...SUBMITTER_BOOKINGS_KEY, 'detail', id],
+    queryKey: [...submitterBookingsKey(token), 'detail', id],
     queryFn: ({ signal }) => bookingsApi.myBooking(id, token, signal),
     enabled: Boolean(token && id && enabled),
     retry: false,
@@ -45,10 +50,11 @@ export function useSubmitterBooking(token, id, enabled = true) {
 
 function useSubmitterBookingMutation(mutationFn, token, refreshNotifications = false) {
   const queryClient = useQueryClient();
+  const accountBookingsKey = submitterBookingsKey(token);
   return useMutation({
     mutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SUBMITTER_BOOKINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: accountBookingsKey });
       if (refreshNotifications) {
         queryClient.invalidateQueries({ queryKey: notificationKeys.list(token) });
         queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount(token) });

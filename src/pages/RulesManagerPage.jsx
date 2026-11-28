@@ -18,11 +18,8 @@ const EMPTY_FORM = { title: '', body: '', scope: 'GENERAL', scopeId: '', mustAcc
  * head) until that role is actually modeled — a project-owner decision,
  * per the doc's own Section 9 pattern, not something to guess at here.
  *
- * This page's "Publish"/"Retire" actions persist to the browser, not a
- * backend database (see src/services/rules.js) — the real backend has no
- * rule-content storage at all (Assignment 12, §5.12). Rules created here
- * are real for this browser, but won't appear on another device or survive
- * clearing site data, until the backend team builds real rule-content CRUD.
+ * The real backend has no rule-content storage (Assignment 12, §5.12), so
+ * rule management is available only in the explicit mock environment.
  */
 export function RulesManagerPage({ token }) {
   const rulesQuery = useRules(token);
@@ -95,10 +92,17 @@ export function RulesManagerPage({ token }) {
           <p>General and department-specific rules shown at the point of request, with required accept tick-boxes.</p>
         </div>
         <div className="heading-actions">
-          <button type="button" className="btn btn-primary" onClick={startCreate}><Plus size={15} />New rule</button>
+          <button type="button" className="btn btn-primary" onClick={startCreate} disabled={!rulesQuery.isSuccess}>
+            <Plus size={15} />New rule
+          </button>
         </div>
       </div>
 
+      {rulesQuery.isError && (
+        <div className="api-error api-error-banner" role="alert">
+          {rulesQuery.error instanceof Error ? rulesQuery.error.message : 'Could not load rules.'}
+        </div>
+      )}
       {mutationError && <div className="api-error api-error-banner" role="alert">{mutationError.message || 'Could not save the rule.'}</div>}
 
       {showForm && (
@@ -153,7 +157,7 @@ export function RulesManagerPage({ token }) {
               </tr>
             </thead>
             <tbody>
-              {rules.map((rule) => (
+              {rulesQuery.isSuccess && rules.map((rule) => (
                 <tr key={rule.id}>
                   <td><b className="tx-strong">{rule.title}</b></td>
                   <td>{rule.scope === 'GENERAL' ? 'General' : sectors.find((sector) => sector.id === rule.scopeId)?.name ?? rule.scopeId}</td>
@@ -173,7 +177,10 @@ export function RulesManagerPage({ token }) {
                   </td>
                 </tr>
               ))}
-              {rules.length === 0 && <tr><td colSpan={6} className="live-empty">No rules created yet.</td></tr>}
+              {rulesQuery.isLoading && <tr><td colSpan={6} className="live-empty">Loading rules…</td></tr>}
+              {rulesQuery.isSuccess && rules.length === 0 && (
+                <tr><td colSpan={6} className="live-empty">No rules created yet.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

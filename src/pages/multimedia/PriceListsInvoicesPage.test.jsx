@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { server } from '@/mocks/server';
 import { PriceListsInvoicesPage } from './PriceListsInvoicesPage';
 import { invoicesApi } from '@/services/invoices';
 
-function renderPage() {
+function renderPage(route = '/finance/invoices') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -18,7 +18,7 @@ function renderPage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>
         <PriceListsInvoicesPage token="mock-token" />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -81,8 +81,9 @@ describe('PriceListsInvoicesPage', () => {
     renderPage();
 
     expect(await screen.findByText('Authorised price list')).toBeInTheDocument();
-    expect(screen.getByText('Facility booking — half day')).toBeInTheDocument();
-    expect(screen.getByText('UGX 40,000')).toBeInTheDocument();
+    const priceList = within(screen.getByText('Authorised price list').closest('.invoices-panel-card'));
+    expect(priceList.getByText('Facility booking — half day')).toBeInTheDocument();
+    expect(priceList.getByText('UGX 40,000')).toBeInTheDocument();
     expect(screen.queryByText('No authorised price list is currently published.')).not.toBeInTheDocument();
   });
 
@@ -100,26 +101,67 @@ describe('PriceListsInvoicesPage', () => {
     expect(screen.getByText('INV-2026-115')).toBeInTheDocument();
     expect(screen.getByText('Telecoms Lab booking — Peter Okello')).toBeInTheDocument();
     expect(screen.getByText('UGX 30,000')).toBeInTheDocument();
-    expect(screen.getByText('Pending evidence')).toBeInTheDocument();
+    expect(within(screen.getByText('INV-2026-115').closest('.invoice-item-row'))
+      .getByText('Pending evidence')).toBeInTheDocument();
 
     // Invoice 116
     expect(screen.getByText('INV-2026-116')).toBeInTheDocument();
     expect(screen.getByText('Promo filming — UNIPOD Open Day')).toBeInTheDocument();
-    expect(screen.getByText('Awaiting verification')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^verify$/i })).toBeInTheDocument();
+    const invoice116 = within(screen.getByText('INV-2026-116').closest('.invoice-item-row'));
+    expect(invoice116.getByText('Awaiting verification')).toBeInTheDocument();
+    expect(invoice116.getByRole('button', { name: /^verify$/i })).toBeInTheDocument();
 
     // Invoice 117
     expect(screen.getByText('INV-2026-117')).toBeInTheDocument();
     expect(screen.getByText('Bootcamp seat x3 — Telecoms dept')).toBeInTheDocument();
-    expect(screen.getByText('UGX 180,000')).toBeInTheDocument();
-    expect(screen.getByText('Receipted')).toBeInTheDocument();
+    const invoice117 = within(screen.getByText('INV-2026-117').closest('.invoice-item-row'));
+    expect(invoice117.getByText('UGX 180,000')).toBeInTheDocument();
+    expect(invoice117.getByText('Receipted')).toBeInTheDocument();
+  });
+
+  it('loads a linked invoice that is beyond the overview page', async () => {
+    const linkedInvoice = {
+      id: 'invoice-beyond-overview',
+      number: 'INV-2026-999',
+      customerEmail: 'client@unipod.test',
+      customerName: 'Linked client',
+      description: 'Invoice available through direct lookup',
+      amount: 125000,
+      currency: 'UGX',
+      sourceType: 'REQUEST',
+      sourceId: null,
+      status: 'WAITING_FOR_PROOF',
+      statusLabel: 'Awaiting payment',
+      issuedBy: 'Finance Officer',
+      createdAt: '2026-11-20T08:00:00Z',
+      updatedAt: '2026-11-20T08:00:00Z',
+      paymentProof: null,
+      receipt: null,
+    };
+    server.use(
+      http.get(`${API_BASE_URL}/invoices`, () => HttpResponse.json({
+        items: [],
+        page: 0,
+        size: 100,
+        totalElements: 101,
+        totalPages: 2,
+      })),
+      http.get(`${API_BASE_URL}/invoices/${linkedInvoice.id}`, () => HttpResponse.json(linkedInvoice)),
+    );
+
+    renderPage(`/finance/invoices?invoice=${linkedInvoice.id}`);
+
+    expect(await screen.findByText('INV-2026-999')).toBeInTheDocument();
+    expect(screen.getByText('Invoice available through direct lookup')).toBeInTheDocument();
   });
 
   it('opens payment verification modal when clicking verify on invoice 116', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const verifyBtn = await screen.findByRole('button', { name: /^verify$/i });
+    const invoiceRow = await screen.findByText('INV-2026-116');
+    const verifyBtn = within(invoiceRow.closest('.invoice-item-row'))
+      .getByRole('button', { name: /^verify$/i });
     await user.click(verifyBtn);
 
     expect(await screen.findByText('Verify Payment Evidence')).toBeInTheDocument();

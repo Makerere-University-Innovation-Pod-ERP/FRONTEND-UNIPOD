@@ -3,13 +3,51 @@ import { API_BASE_URL, ApiError, request, requestFile } from './api-client';
 export { API_BASE_URL, ApiError };
 
 function normalizeAdminUser(user) {
-  const departmentIds = user.departmentIds ?? [];
   return {
     ...user,
     fullName: user.profile?.fullName || user.profile?.displayFirstName || user.email,
-    departmentIds,
+    departmentId: user.departmentId ?? '',
     active: user.active ?? true,
   };
+}
+
+function responseItems(response) {
+  if (Array.isArray(response)) return response;
+  return response?.items ?? response?.content ?? [];
+}
+
+async function loadAllAdminUsers(token) {
+  const size = 100;
+  const users = [];
+  const seen = new Set();
+  for (let page = 0; ; page += 1) {
+    const query = new URLSearchParams({ page: String(page), size: String(size) });
+    const response = await request(`/admin/users?${query}`, { token });
+    const items = responseItems(response);
+    if (!Array.isArray(items)) throw new TypeError('The admin users response must contain an array of users.');
+
+    let added = 0;
+    for (const user of items) {
+      const key = user.id ?? user.email;
+      if (key !== undefined && seen.has(key)) continue;
+      if (key !== undefined) seen.add(key);
+      users.push(normalizeAdminUser(user));
+      added += 1;
+    }
+
+    const totalPages = Number(response?.totalPages ?? NaN);
+    const totalElements = Number(response?.totalElements ?? NaN);
+    if (
+      Array.isArray(response) ||
+      items.length === 0 ||
+      added === 0 ||
+      (Number.isFinite(totalPages) && totalPages > 0 && page + 1 >= totalPages) ||
+      (Number.isFinite(totalElements) && totalElements >= 0 && users.length >= totalElements) ||
+      (!Number.isFinite(totalPages) && !Number.isFinite(totalElements) && items.length < size)
+    ) {
+      return users;
+    }
+  }
 }
 
 export const backendApi = {
@@ -31,16 +69,15 @@ export const backendApi = {
     request('/auth/signup', { body }),
   createUser: (token, body) =>
     request('/admin/users', { token, body }).then(normalizeAdminUser),
-  adminUsers: (token) =>
-    request('/users?page=0&size=100', { token })
-      .then((response) => response.items.map(normalizeAdminUser)),
+  adminUsers: loadAllAdminUsers,
   updateAdminUser: (token, id, body) =>
-    request(`/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body })
+    request(`/admin/users/${encodeURIComponent(id)}`, { token, method: 'PATCH', body })
       .then(normalizeAdminUser),
-  setAdminUserActive: (token, id, active) =>
-    request(`/users/${encodeURIComponent(id)}/${active ? 'reactivate' : 'deactivate'}`, {
+  setAdminUserActive: (token, id, active, version) =>
+    request(`/admin/users/${encodeURIComponent(id)}/status`, {
       token,
-      method: 'POST',
+      method: 'PATCH',
+      body: { active, version },
     }).then(normalizeAdminUser),
   auditLogs: (token, options = {}, signal) => {
     const query = new URLSearchParams({
@@ -56,8 +93,12 @@ export const backendApi = {
     return request(`/admin/audit-logs?${query}`, { token, signal });
   },
   adminRoles: (token) =>
-    request('/roles', { token })
-      .then((roles) => roles.map(({ role, staff }) => ({ id: role, name: role, staff }))),
+    request('/admin/roles', { token })
+      .then((response) => responseItems(response).map((item) => ({
+        ...item,
+        id: item.id ?? item.role,
+        name: item.name ?? item.role,
+      }))),
   adminPermissionRoles: (token) =>
     request('/admin/roles', { token }),
   adminPermissions: (token) =>
@@ -69,15 +110,14 @@ export const backendApi = {
       body,
     }),
   adminDepartments: (token) =>
-    request('/departments', { token })
-      .then((departments) => departments.map((department) => ({ ...department, active: true }))),
+    request('/admin/departments', { token }).then(responseItems),
   createDepartment: (token, body) =>
-    request('/departments', { token, body }),
+    request('/admin/departments', { token, body }),
   updateDepartment: (
     token,
     id,
     body,
-  ) => request(`/departments/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
+  ) => request(`/admin/departments/${encodeURIComponent(id)}`, { token, method: 'PUT', body }),
   dashboard: (token, signal) =>
     request('/dashboard/overview', { token, signal }),
   submissions: (

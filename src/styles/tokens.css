@@ -90,12 +90,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --mak-red-500: #ff7478;
+    --mak-red-600: #ff8989;
+    --mak-red-700: #ffaaaa;
+    --mak-red-800: #ffc3c3;
     --mak-black-900: #f1ece9;
     --mak-black-800: #c9c0bc;
-    --mak-green-500: #5fc98c;
-    --mak-green-600: #5fc98c;
+    --mak-green-500: #72d99b;
+    --mak-green-600: #72d99b;
     --mak-green-tint: #1a2b20;
-    --mak-gold-700: #e3b765;
+    --mak-gold-500: #ffd166;
+    --mak-gold-700: #ffd166;
     --mak-gold-tint: #2e2515;
     --mak-red-tint: #2e1b19;
     --mak-silver-100: #241f1e;
@@ -106,12 +111,17 @@
 }
 
 :root[data-theme="dark"] {
+  --mak-red-500: #ff7478;
+  --mak-red-600: #ff8989;
+  --mak-red-700: #ffaaaa;
+  --mak-red-800: #ffc3c3;
   --mak-black-900: #f1ece9;
   --mak-black-800: #c9c0bc;
-  --mak-green-500: #5fc98c;
-  --mak-green-600: #5fc98c;
+  --mak-green-500: #72d99b;
+  --mak-green-600: #72d99b;
   --mak-green-tint: #1a2b20;
-  --mak-gold-700: #e3b765;
+  --mak-gold-500: #ffd166;
+  --mak-gold-700: #ffd166;
   --mak-gold-tint: #2e2515;
   --mak-red-tint: #2e1b19;
   --mak-silver-100: #241f1e;

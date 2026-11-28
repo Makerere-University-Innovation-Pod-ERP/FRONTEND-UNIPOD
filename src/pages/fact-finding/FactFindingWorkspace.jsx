@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CircleAlert, FileCheck2, LoaderCircle, Undo2 } from 'lucide-react';
 import {
+  factFindingKeys,
   useFactFindingQueue,
   useFactFindingCase,
   useCompleteFactFinding,
@@ -64,6 +66,7 @@ export function FactFindingWorkspace({ token, onUnauthorized }) {
 }
 
 function AssessmentPanel({ token, id, onUnauthorized }) {
+  const queryClient = useQueryClient();
   const { data: caseFile, isLoading, error } = useFactFindingCase(token, id);
   const completeFactFinding = useCompleteFactFinding(token, id);
   const requestImprovement = useRequestImprovement(token, id);
@@ -85,7 +88,17 @@ function AssessmentPanel({ token, id, onUnauthorized }) {
     setDocumentBusyId(documentId);
     setDocumentError('');
     try {
-      await backendApi.updateDocumentStatus(token, id, documentId, { status, version: submission.version });
+      const updatedCaseFile = await backendApi.updateDocumentStatus(
+        token,
+        id,
+        documentId,
+        { status, version: submission.version },
+      );
+      if (updatedCaseFile?.submission && Array.isArray(updatedCaseFile.documents)) {
+        queryClient.setQueryData(factFindingKeys.case(token, id), updatedCaseFile);
+      } else {
+        await queryClient.invalidateQueries({ queryKey: factFindingKeys.case(token, id) });
+      }
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) onUnauthorized();
       else setDocumentError(reason instanceof Error ? reason.message : 'Could not update this document.');

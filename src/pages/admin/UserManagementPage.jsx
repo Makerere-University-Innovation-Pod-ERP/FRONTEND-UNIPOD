@@ -60,7 +60,7 @@ export function UserManagementPage({ token, onUnauthorized }) {
       setRoles(currentRoles);
       setUserDrafts(Object.fromEntries(currentUsers.map((user) => [user.id, {
         role: user.role,
-        departmentId: user.departmentId ?? user.departmentIds?.[0] ?? '',
+        departmentId: user.departmentId ?? '',
       }])));
       setRole((current) => current || currentRoles.find((item) => item.id !== 'ADMINISTRATOR')?.id || '');
     } catch (reason) {
@@ -92,14 +92,14 @@ export function UserManagementPage({ token, onUnauthorized }) {
         email: email.trim(),
         password,
         role,
-        departmentIds: accountDepartmentId ? [accountDepartmentId] : [],
+        departmentId: accountDepartmentId,
       });
       setUsers((current) => [created, ...current]);
       setUserDrafts((current) => ({
         ...current,
         [created.id]: {
           role: created.role,
-          departmentId: created.departmentId ?? created.departmentIds?.[0] ?? '',
+          departmentId: created.departmentId ?? '',
         },
       }));
       setCreatedUser(created);
@@ -116,14 +116,14 @@ export function UserManagementPage({ token, onUnauthorized }) {
   }
 
   async function saveUser(user) {
-    const draft = userDrafts[user.id] ?? { role: user.role, departmentId: user.departmentId ?? user.departmentIds?.[0] ?? '' };
+    const draft = userDrafts[user.id] ?? { role: user.role, departmentId: user.departmentId ?? '' };
     setBusy(true);
     setError('');
     setNotice('');
     try {
       const updated = await backendApi.updateAdminUser(token, user.id, {
         role: draft.role,
-        departmentIds: draft.departmentId ? [draft.departmentId] : [],
+        departmentId: draft.departmentId,
         version: user.version,
       });
       setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
@@ -131,7 +131,7 @@ export function UserManagementPage({ token, onUnauthorized }) {
         ...current,
         [updated.id]: {
           role: updated.role,
-          departmentId: updated.departmentId ?? updated.departmentIds?.[0] ?? '',
+          departmentId: updated.departmentId ?? '',
         },
       }));
       setNotice(`Access settings updated for ${updated.email}.`);

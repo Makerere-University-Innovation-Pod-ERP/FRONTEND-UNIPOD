@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
   Receipt,
@@ -19,6 +20,7 @@ import {
   useDownloadPaymentProof,
   useDownloadInvoiceReceipt,
 } from '@/hooks/useInvoices';
+import { invoicesApi } from '@/services/invoices';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 function downloadBlob(file, filename) {
@@ -38,8 +40,8 @@ function downloadBlob(file, filename) {
  * verifying client bank payments, and issuing official gated receipts.
  */
 export function PriceListsInvoicesPage({ token, onUnauthorized }) {
-  const { data: overview, isLoading, error, refetch, isFetching } = useInvoicesOverview(token);
   const [searchParams] = useSearchParams();
+  const { data: overview, isLoading, error, refetch, isFetching } = useInvoicesOverview(token);
   const verifyMutation = useVerifyInvoice(token);
   const rejectMutation = useRejectInvoice(token);
   const receiptMutation = useReleaseReceipt(token);
@@ -52,16 +54,24 @@ export function PriceListsInvoicesPage({ token, onUnauthorized }) {
   const [selectedPriceItem, setSelectedPriceItem] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const linkedInvoiceId = searchParams.get('invoice');
+  const listedLinkedInvoice = overview?.invoices.find((item) => item.id === linkedInvoiceId);
+  const deepLinkedInvoiceQuery = useQuery({
+    queryKey: ['finance', 'invoice', linkedInvoiceId],
+    queryFn: ({ signal }) => invoicesApi.getInvoice(linkedInvoiceId, token, signal),
+    enabled: Boolean(overview && linkedInvoiceId && !listedLinkedInvoice),
+    retry: false,
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
-    if (error?.status === 401) onUnauthorized?.();
-  }, [error, onUnauthorized]);
+    if (error?.status === 401 || deepLinkedInvoiceQuery.error?.status === 401) onUnauthorized?.();
+  }, [deepLinkedInvoiceQuery.error, error, onUnauthorized]);
 
   useEffect(() => {
     if (!linkedInvoiceId || !overview) return;
-    const invoice = overview.invoices.find((item) => item.id === linkedInvoiceId);
+    const invoice = listedLinkedInvoice ?? deepLinkedInvoiceQuery.data;
     if (invoice) setSelectedInvoice(invoice);
-  }, [linkedInvoiceId, overview]);
+  }, [deepLinkedInvoiceQuery.data, linkedInvoiceId, listedLinkedInvoice, overview]);
 
   if (isLoading && !overview) {
     return <LoadingSkeleton label="Loading authorised prices and invoice queue…" variant="invoices" />;

@@ -7,6 +7,9 @@ import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/services/api-client';
 import { server } from '@/mocks/server';
+import { CNC_MOVEMENT_TYPES, evaluateCncMovement } from '@/lib/cnc';
+import { computeAcceptedRulesVersion } from '@/components/RulesAcceptance';
+import { rulesApi } from '@/services/rules';
 import { NewJobPage } from './NewJobPage';
 import { DesignCheckPage } from './DesignCheckPage';
 import { JobBoardPage } from './JobBoardPage';
@@ -52,6 +55,14 @@ describe('CNC job board', () => {
 });
 
 describe('New job', () => {
+  it('fails closed when the rules cannot be loaded', async () => {
+    vi.spyOn(rulesApi, 'list').mockRejectedValue(new Error('Rules service unavailable.'));
+    renderAt('/cnc/jobs/new', [['/cnc/jobs/new', NewJobPage]]);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not load the cnc rules/i);
+    expect(screen.getByRole('button', { name: /send job/i })).toBeDisabled();
+  });
+
   it('requires the rules to be accepted, then creates the job and opens it', async () => {
     const user = userEvent.setup();
     renderAt('/cnc/jobs/new', [['/cnc/jobs/new', NewJobPage]]);
@@ -62,7 +73,9 @@ describe('New job', () => {
     await user.click(screen.getByRole('button', { name: /send job/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/rules must be accepted/i);
 
-    await user.click(screen.getByLabelText(/accept the unipod general rules/i));
+    for (const checkbox of await screen.findAllByLabelText(/i have read and accept this rule/i)) {
+      await user.click(checkbox);
+    }
     await user.click(screen.getByRole('button', { name: /send job/i }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Bookshelf' })).toBeInTheDocument();
   });
@@ -90,11 +103,39 @@ describe('New job', () => {
     await user.type(screen.getByLabelText(/customer name/i), 'Arthur Kanyike');
     await user.selectOptions(screen.getByLabelText(/^material/i), 'MDF');
     await user.type(screen.getByLabelText(/^size/i), '900 × 300 mm');
-    await user.click(screen.getByLabelText(/accept the unipod general rules/i));
+    for (const checkbox of await screen.findAllByLabelText(/i have read and accept this rule/i)) {
+      await user.click(checkbox);
+    }
     await user.click(screen.getByRole('button', { name: /send job/i }));
 
     await waitFor(() => expect(sentBody).not.toBeNull());
-    expect(sentBody.accepted_rules_version).toBe('general-v1');
+    expect(sentBody.accepted_rules_version).toMatch(/^general-[a-f0-9]{32}$/);
+  });
+
+  it('versions the complete required ruleset while ignoring optional rules', async () => {
+    const rules = [
+      { id: 'required-old', mustAccept: true, version: 3 },
+      { id: 'optional-new', mustAccept: false, version: 90 },
+      { id: 'required-new', mustAccept: true, version: 5 },
+    ];
+    const version = await computeAcceptedRulesVersion(rules);
+
+    expect(version).toMatch(/^general-[a-f0-9]{32}$/);
+    expect(await computeAcceptedRulesVersion([...rules].reverse())).toBe(version);
+    expect(await computeAcceptedRulesVersion([
+      rules[0],
+      { ...rules[1], version: 91 },
+      rules[2],
+    ])).toBe(version);
+    expect(await computeAcceptedRulesVersion([{ id: 'optional', mustAccept: false, version: 90 }])).toBeNull();
+    expect(await computeAcceptedRulesVersion([
+      { ...rules[0], version: 4 },
+      ...rules.slice(1),
+    ])).not.toBe(version);
+    expect(await computeAcceptedRulesVersion(rules.filter((rule) => rule.id !== 'required-new')))
+      .not.toBe(version);
+    expect(await computeAcceptedRulesVersion([...rules, { id: 'required-latest', mustAccept: true, version: 6 }]))
+      .not.toBe(version);
   });
 });
 
@@ -267,6 +308,39 @@ describe('Safety course', () => {
 });
 
 describe('CNC stock', () => {
+  it('rejects a negative raw balance even when display rounding would show zero', () => {
+    const result = evaluateCncMovement(
+      { id: 'stock', name: 'Plywood', unit: 'sheets', quantity: 1, minimum: 0 },
+      { type: CNC_MOVEMENT_TYPES.CORRECTION, quantity: -1.004, note: 'Count correction' },
+    );
+
+    expect(result.error).toMatch(/quantity can never go below zero/i);
+  });
+
+  it('shows a non-401 stock movement failure explicitly', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/cnc/stock/movements`, () =>
+        HttpResponse.json({ detail: 'Stock service unavailable.' }, { status: 503 })),
+    );
+    const user = userEvent.setup();
+    renderAt('/cnc/stock/movements', [['/cnc/stock/movements', StockMovementPage]]);
+    await user.selectOptions(await screen.findByLabelText('Item*'), 'cnc-stk-mdf');
+    await user.type(screen.getByLabelText('Quantity*'), '1');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/stock service unavailable/i);
+  });
+
+  it('shows a non-401 audit-trail load failure instead of an empty state', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/cnc/stock/movements`, () =>
+        HttpResponse.json({ detail: 'Movement history unavailable.' }, { status: 503 })),
+    );
+    renderAt('/cnc/stock/movements', [['/cnc/stock/movements', StockMovementPage]]);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/movement history unavailable/i);
+  });
+
   it('lists stock with low-stock flags and the job linked to a movement', async () => {
     renderAt('/cnc/stock', [['/cnc/stock', StockListPage]]);
     expect(await screen.findByRole('heading', { level: 1, name: 'Stock List' })).toBeInTheDocument();
@@ -296,5 +370,40 @@ describe('CNC stock', () => {
     await user.click(screen.getByRole('button', { name: 'Register item' }));
     expect(await screen.findByRole('status')).toHaveTextContent(/Added Acrylic offcuts to the stock list/);
     expect((await screen.findAllByText('Acrylic offcuts')).length).toBeGreaterThan(1);
+  });
+
+  it('rejects unknown jobs but accepts jobs created in the shared mock store', async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    const invalidMovement = await fetch(`${API_BASE_URL}/cnc/stock/movements`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        itemId: 'cnc-stk-mdf',
+        type: CNC_MOVEMENT_TYPES.USED_ON_ORDER,
+        quantity: 1,
+        jobId: 'missing-job',
+      }),
+    });
+    expect(invalidMovement.status).toBe(400);
+
+    const createJob = await fetch(`${API_BASE_URL}/departments/cnc/orders`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ title: 'Shared mock job', quantity: 1, specs: { whatIsMade: 'Shared mock job' } }),
+    });
+    const job = await createJob.json();
+    const validMovement = await fetch(`${API_BASE_URL}/cnc/stock/movements`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        itemId: 'cnc-stk-mdf',
+        type: CNC_MOVEMENT_TYPES.USED_ON_ORDER,
+        quantity: 1,
+        jobId: job.id,
+      }),
+    });
+
+    expect(createJob.status).toBe(201);
+    expect(validMovement.status).toBe(201);
   });
 });

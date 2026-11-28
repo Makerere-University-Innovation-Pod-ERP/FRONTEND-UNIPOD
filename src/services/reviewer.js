@@ -53,9 +53,9 @@ function decisionStatusForStage(stage) {
 }
 
 function pendingActionFor(decisionStatus) {
-  return decisionStatus === 'changes_needed'
-    ? 'Changes requested — waiting on resubmission'
-    : 'Submit your independent decision';
+  if (decisionStatus === 'changes_needed') return 'Changes requested — waiting on resubmission';
+  if (decisionStatus === 'pending') return 'Submit your independent decision';
+  return `${decisionStatus === 'recommended' ? 'Recommended' : 'Not recommended'} — awaiting next stage`;
 }
 
 async function myReviewOrNull(token, id, signal) {
@@ -70,8 +70,11 @@ async function myReviewOrNull(token, id, signal) {
 export const reviewerApi = {
   assigned: async (token, signal) => {
     const payload = await backendApi.reviewQueue(token, signal);
-    return payload.items.map((item) => {
-      const decisionStatus = decisionStatusForStage(item.stage);
+    return Promise.all(payload.items.map(async (item) => {
+      const myReview = await myReviewOrNull(token, item.id, signal);
+      const decisionStatus = myReview
+        ? DECISION_FROM_WIRE[myReview.decision] ?? decisionStatusForStage(item.stage)
+        : decisionStatusForStage(item.stage);
       return reviewerAssignedCaseSchema.parse({
         id: item.id,
         code: item.code,
@@ -82,7 +85,7 @@ export const reviewerApi = {
         pendingAction: pendingActionFor(decisionStatus),
         decisionStatus,
       });
-    });
+    }));
   },
   caseSummary: async (token, id, signal) => {
     const [caseFile, myReview] = await Promise.all([

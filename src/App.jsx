@@ -26,6 +26,7 @@ import {
 import { TEXTILE_MODE_PIPELINE_LINKS, TEXTILE_MODE_WORKSPACE_LINKS } from '@/lib/textile-nav';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
+import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
 import { NotificationRecordRedirectPage } from '@/pages/NotificationRecordRedirectPage';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { LiveSubmissions } from '@/pages/LiveSubmissions';
@@ -169,6 +170,7 @@ function AuthenticatedApp({
   health,
   onLogout,
 }) {
+  const browserPush = useBrowserPushNotifications(session.accessToken, onLogout);
   const canFactFind = isFactFindingOfficer(session.roles);
   const canReview = isReviewer(session.roles);
   const canCoordinate = isInnovationCoordinator(session.roles);
@@ -252,8 +254,7 @@ function AuthenticatedApp({
   const isTelecoms = isTelecomsDomainOwner(session.roles);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+    <BrowserRouter>
       <BackendWorkspace session={session} health={health} onLogout={onLogout} textileOnly={TEXTILE_ONLY}>
         <Routes>
           {isTelecoms ? (
@@ -274,7 +275,7 @@ function AuthenticatedApp({
               <Route path="/telecoms/stock" element={telecoms(TelecomsStockListPage)} />
               <Route path="/telecoms/stock/movements" element={telecoms(TelecomsStockMovementPage)} />
               <Route path="/notifications/open/:entityType/:entityId" element={<NotificationRecordRedirectPage token={session.accessToken} onUnauthorized={onLogout} />} />
-              <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} />} />
+              <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} browserPush={browserPush} />} />
               <Route path="*" element={<Navigate to="/telecoms/requests" replace />} />
             </>
           ) : (
@@ -387,7 +388,7 @@ function AuthenticatedApp({
           <Route path="/telecoms/stock" element={telecomsEquipment(TelecomsStockListPage)} />
           <Route path="/telecoms/stock/movements" element={telecomsEquipment(TelecomsStockMovementPage)} />
           <Route path="/notifications/open/:entityType/:entityId" element={<NotificationRecordRedirectPage token={session.accessToken} onUnauthorized={onLogout} />} />
-          <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} />} />
+          <Route path="/notifications" element={<NotificationsPage token={session.accessToken} roles={session.roles} onUnauthorized={onLogout} browserPush={browserPush} />} />
           {TEXTILE_ONLY && [...TEXTILE_MODE_WORKSPACE_LINKS, ...TEXTILE_MODE_PIPELINE_LINKS].map(({ href, label }) => (
             <Route key={href} path={href} element={<OtherModulePage title={label} />} />
           ))}
@@ -397,8 +398,7 @@ function AuthenticatedApp({
           )}
         </Routes>
       </BackendWorkspace>
-      </BrowserRouter>
-    </QueryClientProvider>
+    </BrowserRouter>
   );
 }
 
@@ -479,7 +479,11 @@ function App() {
   if (!session && TEXTILE_ONLY) return null;
   if (!session && showSignUp) return <SignUpPage onBackToSignIn={() => setShowSignUp(false)} onLogin={acceptSession} />;
   if (!session) return <LoginPage onLogin={acceptSession} onCreateAccount={() => setShowSignUp(true)} />;
-  return <AuthenticatedApp session={session} health={health} onLogout={logout} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthenticatedApp session={session} health={health} onLogout={logout} />
+    </QueryClientProvider>
+  );
 }
 
 export default App;

@@ -126,7 +126,7 @@ export function StockMovementPage({ token, onUnauthorized }) {
             <p className="tx-inline-note" aria-live="polite">New balance: <b>{evaluation.balance} {item.unit}</b>{evaluation.balance < item.minimum ? ' — below the minimum, will show as low stock' : ''}</p>
           )}
           {showError && evaluation.error && <p className="tx-field-error" role="alert">{evaluation.error}</p>}
-          <ErrorBanner error={record.error} fallback="Could not record the movement." />
+          <ErrorBanner error={record.error} fallback="Stock movement failed. Could not record the movement." />
           {saved && (
             <p className="tx-success" role="status">
               Saved: {CNC_MOVEMENT_TYPE_LABELS[saved.movement.type]} {Math.abs(saved.movement.quantity)} {saved.item.unit} of {saved.item.name}. Balance now {saved.item.quantity}.
@@ -171,6 +171,7 @@ export function StockMovementPage({ token, onUnauthorized }) {
 
       <section className="live-panel tx-table-panel">
         <div className="live-panel-heading"><div><p className="eyebrow">AUDIT TRAIL</p><h2>Recent movements</h2></div></div>
+        <ErrorBanner error={movements.error} fallback="Could not load stock movements." />
         {movements.isLoading ? <Loading label="Loading movements…" /> : <MovementTable movements={movements.data ?? []} limit={8} />}
       </section>
     </div>

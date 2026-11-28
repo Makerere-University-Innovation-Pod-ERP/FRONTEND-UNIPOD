@@ -1,11 +1,18 @@
-import { clearSession, createSession, loadSession, saveSession } from '@/lib/auth';
+import {
+  clearSession,
+  createSession,
+  getAccountIdentity,
+  isSameAccount,
+  loadSession,
+  saveSession,
+} from '@/lib/auth';
 
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 export const API_BASE_URL = (
   configuredApiUrl || 'https://backend-unipod.onrender.com/api'
 ).replace(/\/+$/, '');
 const SESSION_REFRESHED_EVENT = 'unipod:session-refreshed';
-let refreshInFlight;
+const refreshesInFlight = new Map();
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -84,22 +91,49 @@ async function performRequest(
 }
 
 async function refreshSession(token) {
-  if (refreshInFlight) {
-    const refreshed = await refreshInFlight;
-    if (refreshed) return refreshed;
+  const identity = getAccountIdentity(token);
+  const inFlight = refreshesInFlight.get(identity);
+  if (inFlight) {
+    const refreshed = await inFlight;
+    if (refreshed && isSameAccount(token, refreshed.accessToken)) return refreshed;
   }
 
   const renew = async () => {
     const current = loadSession();
     if (!current) return null;
-    if (current.accessToken !== token) return current;
+    if (current.accessToken !== token) {
+      return isSameAccount(token, current.accessToken) ? current : null;
+    }
     if (!current.refreshToken) return null;
 
-    const response = await request('/auth/refresh', {
-      body: { refreshToken: current.refreshToken },
-    });
+    const stillCurrent = () => {
+      const session = loadSession();
+      return session?.accessToken === current.accessToken &&
+        session?.refreshToken === current.refreshToken;
+    };
+
+    let response;
+    try {
+      response = await request('/auth/refresh', {
+        body: { refreshToken: current.refreshToken },
+      });
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401 && stillCurrent()) {
+        clearSession();
+      }
+      throw reason;
+    }
+
+    if (!stillCurrent()) {
+      const latest = loadSession();
+      return latest && isSameAccount(token, latest.accessToken) ? latest : null;
+    }
     if (!response.refreshToken) {
-      clearSession();
+      if (stillCurrent()) clearSession();
+      throw new ApiError('Your session could not be renewed. Sign in again.', 401);
+    }
+    if (!isSameAccount(token, response.accessToken)) {
+      if (stillCurrent()) clearSession();
       throw new ApiError('Your session could not be renewed. Sign in again.', 401);
     }
 
@@ -113,16 +147,23 @@ async function refreshSession(token) {
       ? navigator.locks.request('unipod-auth-refresh', renew)
       : renew()
   );
-  refreshInFlight = runWithLock();
+  const refreshPromise = runWithLock();
+  refreshesInFlight.set(identity, refreshPromise);
 
   try {
-    return await refreshInFlight;
-  } catch (reason) {
-    if (reason instanceof ApiError && reason.status === 401) clearSession();
-    throw reason;
+    return await refreshPromise;
   } finally {
-    refreshInFlight = null;
+    if (refreshesInFlight.get(identity) === refreshPromise) {
+      refreshesInFlight.delete(identity);
+    }
   }
+}
+
+function getCurrentRefreshResult(token, refreshed) {
+  const current = loadSession();
+  return current &&
+    current.accessToken === refreshed.accessToken &&
+    isSameAccount(token, current.accessToken);
 }
 
 export async function request(path, options = {}) {
@@ -138,7 +179,7 @@ export async function request(path, options = {}) {
       if (refreshError instanceof ApiError && refreshError.status === 401) throw reason;
       throw refreshError;
     }
-    if (!refreshed) throw reason;
+    if (!refreshed || !getCurrentRefreshResult(options.token, refreshed)) throw reason;
     return performRequest(path, { ...options, token: refreshed.accessToken });
   }
 }
@@ -183,7 +224,7 @@ export async function requestFile(path, token, signal) {
       if (refreshError instanceof ApiError && refreshError.status === 401) throw reason;
       throw refreshError;
     }
-    if (!refreshed) throw reason;
+    if (!refreshed || !getCurrentRefreshResult(token, refreshed)) throw reason;
     return performRequestFile(path, refreshed.accessToken, signal);
   }
 }

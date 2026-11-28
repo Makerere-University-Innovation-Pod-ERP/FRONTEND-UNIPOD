@@ -55,6 +55,7 @@ export function TrainingMentorshipPage({ token, roles = [], variant = 'training'
 
   const safety = variant === 'safety';
   const canManage = roles.some((role) => TRAINING_MANAGER_ROLES.includes(role));
+  const canBookMachine = roles.includes('ROLE_CNC_DOMAIN_OWNER') || roles.includes('ROLE_ADMINISTRATOR');
   const overview = overviewQuery.data;
   const departments = departmentsQuery.data ?? [];
   const cncDepartmentId = departments.find((department) => /cnc|carpentry/i.test(department.name))?.id ?? '';
@@ -178,7 +179,7 @@ export function TrainingMentorshipPage({ token, roles = [], variant = 'training'
           )}
         </div>
         <div className={`heading-actions${safety ? ' cnc-safety-hero__actions' : ''}`}>
-          {safety && (
+          {safety && canBookMachine && (
             <Link to="/cnc/machines/book" className="btn cnc-safety-hero__book">
               Book a machine <ChevronRight size={15} aria-hidden="true" />
             </Link>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpRight,
   BellRing,
@@ -25,12 +25,13 @@ import {
 } from '@/hooks/useNotifications';
 import { notificationTarget } from '@/services/notifications';
 import { useBrowserPushNotifications } from '@/hooks/useBrowserPushNotifications';
+import { ApiError } from '@/services/api-client';
 import { LoadingSkeleton } from '@/components/ui/skeleton';
 import './notifications.css';
 
 const PAGE_SIZE = 20;
 
-export function NotificationsPage({ token, roles = [] }) {
+export function NotificationsPage({ token, roles = [], onUnauthorized, browserPush: sharedBrowserPush }) {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -43,7 +44,8 @@ export function NotificationsPage({ token, roles = [] }) {
   const unreadCountQuery = useUnreadNotificationCount(token);
   const markAllRead = useMarkAllNotificationsRead(token);
   const markRead = useMarkNotificationRead(token);
-  const browserPush = useBrowserPushNotifications(token);
+  const localBrowserPush = useBrowserPushNotifications(token, onUnauthorized, !sharedBrowserPush);
+  const browserPush = sharedBrowserPush ?? localBrowserPush;
   const data = notificationsQuery.data;
   const unreadCount = unreadCountQuery.data ?? 0;
   const isSubmitter = roles.includes('ROLE_SUBMITTER');
@@ -57,18 +59,34 @@ export function NotificationsPage({ token, roles = [] }) {
       : items;
   }, [data?.items, isSubmitter, search]);
   const groups = useMemo(() => groupNotifications(visibleItems), [visibleItems]);
+  const unauthorized = [
+    notificationsQuery.error,
+    unreadCountQuery.error,
+    markRead.error,
+    markAllRead.error,
+  ].some((error) => error instanceof ApiError && error.status === 401);
+  const notificationsUnavailable = [
+    notificationsQuery.error,
+    unreadCountQuery.error,
+  ].some((error) => error instanceof ApiError && [404, 501].includes(error.status));
+
+  useEffect(() => {
+    if (unauthorized) onUnauthorized?.();
+  }, [onUnauthorized, unauthorized]);
 
   const pushStatus = browserPush.loading
     ? 'Checking this browser…'
-    : !browserPush.supported
-      ? 'This browser cannot receive background alerts.'
-      : !browserPush.enabled
-        ? 'Background alerts are not configured for this workspace.'
-        : browserPush.permission === 'denied'
-          ? 'Notifications are blocked in your browser settings.'
-          : browserPush.subscribed
-            ? 'You are set to receive alerts on this browser.'
-            : 'Get the important updates, even when the app is closed.';
+    : browserPush.unavailable
+      ? 'Browser alerts are not available for this workspace yet.'
+      : !browserPush.supported
+        ? 'This browser cannot receive background alerts.'
+        : !browserPush.enabled
+          ? 'Background alerts are not configured for this workspace.'
+          : browserPush.permission === 'denied'
+            ? 'Notifications are blocked in your browser settings.'
+            : browserPush.subscribed
+              ? 'You are set to receive alerts on this browser.'
+              : 'Get the important updates, even when the app is closed.';
 
   async function togglePush() {
     const wasSubscribed = browserPush.subscribed;
@@ -181,16 +199,22 @@ export function NotificationsPage({ token, roles = [] }) {
 
           {(notificationsQuery.isError || unreadCountQuery.isError) && (
             <div className="inbox-error" role="alert">
-              <span>We couldn’t load your notifications.</span>
-              <button
-                type="button"
-                onClick={() => {
-                  notificationsQuery.refetch();
-                  unreadCountQuery.refetch();
-                }}
-              >
-                Try again
-              </button>
+              <span>
+                {notificationsUnavailable
+                  ? 'Notifications are not available for this workspace yet.'
+                  : 'We couldn’t load your notifications.'}
+              </span>
+              {!notificationsUnavailable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    notificationsQuery.refetch();
+                    unreadCountQuery.refetch();
+                  }}
+                >
+                  Try again
+                </button>
+              )}
             </div>
           )}
           {(markRead.isError || markAllRead.isError) && (

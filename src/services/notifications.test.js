@@ -98,6 +98,30 @@ describe('notifications API', () => {
     ]);
   });
 
+  it('uses the entity-derived destination when the nullable link is null', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      items: [{
+        id: 'nullable-link',
+        type: 'PAYMENT_CONFIRMED',
+        title: 'Invoice paid',
+        entityType: 'invoice',
+        entityId: 'invoice-456',
+        createdAt: '2026-11-19T08:00:00Z',
+        read: false,
+        link: null,
+      }],
+      page: 0,
+      size: 25,
+      totalElements: 1,
+      totalPages: 1,
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const page = await notificationsApi.list('submitter-token');
+
+    expect(page.items[0].link).toBe('/my-submissions/invoices?invoice=invoice-456');
+  });
+
   it('uses the role-appropriate invoice and media record screens', () => {
     expect(notificationTarget({
       entityType: 'invoice',

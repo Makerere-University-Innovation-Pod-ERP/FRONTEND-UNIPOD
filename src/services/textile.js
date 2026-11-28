@@ -2,13 +2,10 @@ import { z } from 'zod';
 import { request } from './api-client';
 
 /**
- * Textile Operations API (/textile/*). These methods use the deployed backend
- * contract and retain the mock handlers for local/offline development.
- *
- * Payment is owned by the shared Finance screens (Assignment 6): this module
- * only reads `order.payment`. The backend must refuse to schedule an order
- * whose payment is not CONFIRMED (409), and must refuse any stock movement
- * that would take an item below zero (409).
+ * Proposed Textile Operations API (/textile/*). These endpoints are not
+ * deployed; the UI and contract are for the explicit MSW mock environment.
+ * Payment is owned by shared Finance screens; the mock only reads payment
+ * state and enforces the scheduling and stock constraints.
  */
 
 const orderStatus = z.enum(['DRAFT', 'NEW', 'AWAITING_DETAILS', 'RETURNED', 'QUOTED', 'SCHEDULED', 'BEING_MADE', 'READY', 'COLLECTED']);
@@ -188,8 +185,11 @@ export const textileApi = {
     orderSchema.parse(await request('/textile/orders', { token, body: multipart('order', order, photo) })),
   updateDraft: async (token, id, { order, photo }) =>
     orderSchema.parse(await request(`/textile/orders/${path(id)}`, { token, method: 'PUT', body: multipart('order', order, photo) })),
-  /** Proposed endpoint: DELETE /textile/orders/:id → 204. Only a DRAFT can be discarded (409 otherwise). */
+  /** Mock-only draft discard. The DELETE endpoint is not deployed. */
   discardDraft: async (token, id) => {
+    if (import.meta.env.MODE !== 'test' && import.meta.env.VITE_ENABLE_MOCKS !== 'true') {
+      throw new Error('Draft discard is available only in the Textile mock; its API endpoint is not deployed.');
+    }
     await request(`/textile/orders/${path(id)}`, { token, method: 'DELETE' });
   },
   sendQuote: async (token, id, body) =>

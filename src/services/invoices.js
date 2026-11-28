@@ -321,6 +321,11 @@ export const invoicesApi = {
     });
   },
 
+  async getInvoice(id, token, signal) {
+    const data = await request(`/invoices/${encodeURIComponent(id)}`, { token, signal });
+    return invoiceSchema.parse(toInvoiceViewModel(data));
+  },
+
   async verifyPayment(id, proofId, token, signal) {
     const data = await request(`/invoices/${encodeURIComponent(id)}/verify?proofId=${encodeURIComponent(proofId)}`, {
       method: 'POST',

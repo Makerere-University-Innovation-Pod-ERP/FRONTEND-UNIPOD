@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { EquipmentListPage } from './EquipmentListPage';
@@ -35,5 +36,16 @@ describe('EquipmentListPage', () => {
     renderPage();
 
     expect(await screen.findByRole('link', { name: /take equipment out/i })).toHaveAttribute('href', '/multimedia/equipment/lending');
+  });
+
+  it('marks a faulty item working through the mock API', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /mark working/i }));
+
+    const equipmentRow = await screen.findByRole('row', { name: /aputure 120d ii led light kit/i });
+    expect(within(equipmentRow).getByText('Available')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark working/i })).not.toBeInTheDocument();
   });
 });

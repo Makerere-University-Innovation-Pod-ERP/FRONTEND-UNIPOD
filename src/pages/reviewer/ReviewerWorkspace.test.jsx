@@ -4,15 +4,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReviewerWorkspace } from './ReviewerWorkspace';
 import { submissions } from '@/mocks/fixtures/submissions';
+import { makeMockToken } from '@/mocks/jwt';
 
 const reviewerAssigned = submissions.filter((item) => ['UNDER_REVIEW', 'REFINEMENT_REQUESTED'].includes(item.stage));
+const reviewerToken = makeMockToken(['ROLE_REVIEWER'], 'Dr. Miriam Nsubuga', 'reviewer@unipod.test');
 
 function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ReviewerWorkspace token="test-token" onUnauthorized={vi.fn()} />
+        <ReviewerWorkspace token={reviewerToken} onUnauthorized={vi.fn()} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
