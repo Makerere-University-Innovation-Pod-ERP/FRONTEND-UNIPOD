@@ -21,14 +21,50 @@ function renderApp() {
   );
 }
 
+function removeStaleMockWorker() {
+  if (!('serviceWorker' in navigator)) {
+    renderApp();
+    return;
+  }
+
+  const isMockWorker = (worker) => (
+    worker && new URL(worker.scriptURL).pathname === '/mockServiceWorker.js'
+  );
+  if (!isMockWorker(navigator.serviceWorker.controller)) {
+    renderApp();
+    return;
+  }
+
+  const reloadMarker = 'unipod:stale-mock-worker-reloaded';
+  navigator.serviceWorker.getRegistrations()
+    .then((registrations) => {
+      const staleRegistrations = registrations.filter((registration) =>
+        [registration.active, registration.waiting, registration.installing].some(isMockWorker));
+      return Promise.all(staleRegistrations.map((registration) => registration.unregister()));
+    })
+    .then(() => {
+      if (sessionStorage.getItem(reloadMarker) === '1') {
+        sessionStorage.removeItem(reloadMarker);
+        renderApp();
+        return;
+      }
+      sessionStorage.setItem(reloadMarker, '1');
+      window.location.reload();
+    })
+    .catch((error) => {
+      console.error('Could not remove a stale mock service worker.', error);
+      renderApp();
+    });
+}
+
 const shouldEnableMocks =
   import.meta.env.VITE_ENABLE_MOCKS === 'true' ||
   import.meta.env.MODE === 'textile';
 
 if (shouldEnableMocks) {
   import('./mocks/browser').then(({ worker }) =>
-    worker.start({ onUnhandledFrame: 'bypass' }),
+    worker.start({ onUnhandledRequest: 'bypass' }),
   ).then(renderApp);
 } else {
-  renderApp();
+  removeStaleMockWorker();
 }

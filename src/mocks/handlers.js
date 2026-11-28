@@ -1650,7 +1650,7 @@ export const handlers = [
     return HttpResponse.json(partners[index]);
   }),
 
-  http.put(`${API_BASE_URL}/operations/partners/:id`, async ({ params, request }) => {
+  http.patch(`${API_BASE_URL}/operations/partners/:id`, async ({ params, request }) => {
     const { id } = params;
     const body = await request.json();
     const index = partners.findIndex((p) => p.id === id);

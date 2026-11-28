@@ -66,7 +66,7 @@ export const partnersApi = {
 
   async updatePartner(id, body, token, signal) {
     const data = await request(`/operations/partners/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body,
       token,
       signal,
