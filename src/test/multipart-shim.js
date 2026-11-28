@@ -68,11 +68,18 @@ if (isJsdom) {
           if (typeof value === 'string') {
             copy.append(name, value);
           } else {
-            const bytes = await value.arrayBuffer();
-            copy.append(name, new JsdomFile([bytes], value.name ?? 'blob', {
+            const bytes = new Uint8Array(await value.arrayBuffer());
+            const file = new JsdomFile([bytes], value.name ?? 'blob', {
               type: value.type,
               lastModified: value.lastModified,
-            }));
+            });
+            if (typeof file.text !== 'function') {
+              file.text = async () => new TextDecoder().decode(bytes);
+            }
+            if (typeof file.arrayBuffer !== 'function') {
+              file.arrayBuffer = async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            }
+            copy.append(name, file);
           }
         }
         return copy;
